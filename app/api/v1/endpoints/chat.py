@@ -1,23 +1,44 @@
-from fastapi import APIRouter, HTTPException
+"""Chat API endpoints with Phase 2 SQL analytics."""
+
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Literal
 import uuid
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.core.config import get_settings
+from app.services.sql_analytics.service import SqlAnalyticsService
+
 router = APIRouter(tags=["chat"])
+
+
+def _get_sync_session():
+    settings = get_settings()
+    db_url = settings.DATABASE_URL_SYNC
+    if "postgresql+asyncpg" in db_url:
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+    engine = create_engine(db_url, echo=False)
+    SessionLocal = sessionmaker(bind=engine)
+    return SessionLocal()
+
 
 class ChatSessionCreate(BaseModel):
     title: Optional[str] = None
+
 
 class ChatSession(BaseModel):
     id: str
     title: Optional[str]
     created_at: str
 
+
 class ChatMessageCreate(BaseModel):
     content: str
     options: Optional[dict] = {}
 
-class ChatMessage(BaseModel):
+
+class ChatMessageResponse(BaseModel):
     message_id: str
     run_id: str
     intent: str
@@ -26,34 +47,47 @@ class ChatMessage(BaseModel):
     evidence: dict
     warnings: list[str]
     confidence: dict
-    phase: str = "phase_0_stub"
+    debug: dict
+    phase: str = "phase_2"
+
 
 @router.post("/sessions", response_model=ChatSession)
 def create_session(data: ChatSessionCreate):
+    """Create a new chat session."""
     return ChatSession(
         id=str(uuid.uuid4()),
         title=data.title,
         created_at="2025-01-01T00:00:00Z"
     )
 
-@router.post("/sessions/{session_id}/messages", response_model=ChatMessage)
+
+@router.post("/sessions/{session_id}/messages", response_model=ChatMessageResponse)
 def send_message(session_id: str, data: ChatMessageCreate):
-    return ChatMessage(
-        message_id=str(uuid.uuid4()),
-        run_id=str(uuid.uuid4()),
-        intent="safety",
-        answer={
-            "summary": "Phase 0: no agent yet. Stub response only.",
-            "sections": [
-                {
-                    "title": "Phase 0 Status",
-                    "content": "GraphRAG agent, Text-to-SQL engine, and NHTSA ingestion are deferred to Phase 1.",
-                    "type": "text"
-                }
-            ]
-        },
-        sql={"used": False, "query": None, "validated": True},
-        evidence={"citations": [], "graph_paths": []},
-        warnings=["Complaint volume alone does not prove a safety defect or official causality."],
-        confidence={"label": "low", "score": 0.0, "reasons": ["Phase 0 stub - no real agent"]}
-    )
+    """
+    Send a message in a chat session.
+
+    Phase 2: routes SQL analytics questions through template-based SQL engine.
+    Returns structured answer conforming to answer_contract.md.
+    """
+    session = _get_sync_session()
+    try:
+        # Run SQL analytics service
+        response = SqlAnalyticsService(session).answer(data.content)
+
+        return ChatMessageResponse(
+            message_id=str(uuid.uuid4()),
+            run_id=response.run_id,
+            intent=response.intent,
+            answer=response.answer.to_dict(),
+            sql=response.sql.to_dict(),
+            evidence=response.evidence.to_dict(),
+            warnings=response.warnings,
+            confidence=response.confidence.to_dict(),
+            debug={
+                "tool_call_count": response.tool_call_count,
+                "latency_ms": response.latency_ms,
+            },
+            phase="phase_2",
+        )
+    finally:
+        session.close()

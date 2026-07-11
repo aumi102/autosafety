@@ -227,3 +227,41 @@ python scripts/ingest_phase1_nhtsa.py \
 - Complaints only — recalls still use Phase 1 API
 - No production file upload yet (local file path required)
 
+---
+
+## Phase 2: SQL Analytics Foundation
+
+### What was built
+
+- SQL analytics service with template-based query generation
+- Deterministic question parser (no LLM) extracting make/model/year/limit
+- 6 supported question templates covering complaints and recalls
+- Read-only SQL executor with safety validation
+- Answer contract conforming responses via `/v1/sql-analytics/query` and `/v1/chat/.../messages`
+
+### Supported questions
+
+```bash
+# Start server
+uvicorn app.main:app --reload --port 8000
+
+# SQL analytics endpoint
+curl -X POST http://localhost:8000/v1/sql-analytics/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Top complaint components for Ford F-150 2020"}'
+
+curl -X POST http://localhost:8000/v1/sql-analytics/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How many complaints does Honda Accord 2021 have?"}'
+
+curl -X POST http://localhost:8000/v1/sql-analytics/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "List recalls for Ford F-150 2020"}'
+
+curl -X POST http://localhost:8000/v1/sql-analytics/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which vehicles have the most complaints?"}'
+```
+
+> **WARNING:** Phase 2 is **deterministic template-based** SQL analytics. Full LLM Text-to-SQL is deferred to Phase 3.
+> **WARNING:** Complaint volume alone does not prove a safety defect.

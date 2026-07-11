@@ -133,16 +133,21 @@ def enforce_limit(query: str, default_limit: int = 100, hard_limit: int = 500) -
 
     If query has no LIMIT, adds default_limit.
     If query LIMIT exceeds hard_limit, replaces with hard_limit.
+    If query has parameterized LIMIT (:limit), skip — executor handles binding.
     """
     query_upper = query.upper()
 
-    # Check if LIMIT already exists
+    # Check if LIMIT already exists with a concrete integer value
     limit_match = re.search(r'\bLIMIT\s+(\d+)', query_upper)
     if limit_match:
         existing_limit = int(limit_match.group(1))
         if existing_limit > hard_limit:
             # Replace excessive LIMIT with hard limit
             return re.sub(r'\bLIMIT\s+\d+', f'LIMIT {hard_limit}', query, flags=re.IGNORECASE)
+        return query
+
+    # Skip if LIMIT is a parameter placeholder (e.g. LIMIT :limit)
+    if re.search(r'\bLIMIT\s+:', query_upper):
         return query
 
     # Add LIMIT

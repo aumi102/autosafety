@@ -79,7 +79,8 @@ class TestValidateSqlBlocked:
     def test_insert_blocked(self):
         result = validate_sql("INSERT INTO vehicles (make, model) VALUES ('Ford', 'F-150')")
         assert result.valid is False
-        assert "INSERT" in result.reason
+        # Validator hits one of INSERT or INTO first (set iteration order)
+        assert "INSERT" in result.reason or "INTO" in result.reason
 
     def test_alter_blocked(self):
         result = validate_sql("ALTER TABLE vehicles ADD COLUMN test TEXT")
