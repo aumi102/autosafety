@@ -12,9 +12,15 @@ from app.api.v1.endpoints.ingestion_schemas import (
     Phase1RunResponse,
     IngestionStatsResponse,
     DataQualitySummaryResponse,
+    Phase15RunRequest,
+    Phase15RunResponse,
+    ComplaintsFlatFileStatsResponse,
 )
 from app.services.ingestion.nhtsa_ingestion import run_nhtsa_phase1_ingestion, IngestionStats
 from app.services.ingestion.data_quality import get_data_quality_summary
+from app.services.ingestion.complaints_flat_file import (
+    run_complaints_flat_file_ingestion, ComplaintsFlatFileStats,
+)
 from app.db.models.domain import SourceRun
 from app.db.session import get_async_session
 from app.core.config import get_settings
@@ -135,6 +141,49 @@ def get_source_run(source_run_id: str):
         session.close()
 
 
+@router.post("/nhtsa/phase1-5/complaints-flat-file/run", response_model=Phase15RunResponse)
+def run_phase15_complaints_flat_file(data: Phase15RunRequest):
+    """
+    Run Phase 1.5 flat-file complaint ingestion.
+
+    Accepts a server-local file path for the complaints CSV.
+    For developer/local use only. Production upload/storage deferred.
+
+    Deduplication: by ODI number.
+    Only ingests records matching seeded vehicles.
+    """
+    session = _get_sync_session()
+    try:
+        source_run_id, stats = run_complaints_flat_file_ingestion(
+            session=session,
+            seed_csv_path=data.seed_path,
+            complaints_csv_path=data.complaints_flat_file_path,
+            dry_run=data.dry_run,
+            limit_vehicles=data.limit_vehicles,
+        )
+
+        source_run = session.query(SourceRun).filter_by(id=source_run_id).first()
+        status = source_run.status if source_run else "unknown"
+
+        return Phase15RunResponse(
+            source_run_id=str(source_run_id),
+            status=status,
+            stats=ComplaintsFlatFileStatsResponse(
+                vehicles_seen=stats.vehicles_seen,
+                complaint_rows_seen=stats.complaint_rows_seen,
+                complaint_rows_matched=stats.complaint_rows_matched,
+                complaints_inserted=stats.complaints_inserted,
+                complaints_skipped_duplicates=stats.complaints_skipped_duplicates,
+                rows_skipped=stats.rows_skipped,
+                errors_count=stats.errors_count,
+                errors=stats.errors,
+            ),
+            phase="phase_1_5",
+        )
+    finally:
+        session.close()
+
+
 @router.get("/data-quality/summary", response_model=DataQualitySummaryResponse)
 def get_quality_summary():
     """Get data quality summary for all ingested data."""
@@ -153,6 +202,9 @@ def get_quality_summary():
             recalls_missing_component=summary.recalls_missing_component,
             duplicate_complaint_candidates=summary.duplicate_complaint_candidates,
             duplicate_recall_candidates=summary.duplicate_recall_candidates,
+            complaints_missing_vehicle_link=summary.complaints_missing_vehicle_link,
+            duplicate_odi_candidates=summary.duplicate_odi_candidates,
+            complaints_flat_file_runs=summary.complaints_flat_file_runs,
             source_run_count=summary.source_run_count,
             successful_runs=summary.successful_runs,
             failed_runs=summary.failed_runs,

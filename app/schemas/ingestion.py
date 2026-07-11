@@ -69,3 +69,28 @@ class DataQualitySummaryResponse(BaseModel):
     failed_runs: int
     partial_runs: int
     ingestion_errors: list[str]
+
+
+class ComplaintsFlatFileStatsResponse(BaseModel):
+    vehicles_seen: int
+    complaint_rows_seen: int
+    complaint_rows_matched: int
+    complaints_inserted: int
+    complaints_skipped_duplicates: int
+    rows_skipped: int
+    errors_count: int
+    errors: list[str]
+
+
+class Phase15RunRequest(BaseModel):
+    seed_path: str = "data/seeds/phase1_vehicles.csv"
+    complaints_flat_file_path: str
+    dry_run: bool = False
+    limit_vehicles: Optional[int] = None
+
+
+class Phase15RunResponse(BaseModel):
+    source_run_id: str
+    status: str
+    stats: ComplaintsFlatFileStatsResponse
+    phase: str = "phase_1_5"

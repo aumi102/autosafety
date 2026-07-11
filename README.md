@@ -184,3 +184,46 @@ curl "http://localhost:8000/v1/vehicles/search?make=Ford"
 - Neo4j graph population
 - Text-to-SQL and GraphRAG
 - JWT auth, frontend, eval dashboard
+
+---
+
+## Phase 1.5: Reliable Complaints Ingestion (Flat-File)
+
+### Why
+
+Phase 1 complaint API (`/complaints/complaintsByVehicle`) is unreliable for Ford F-150 due to API model-name normalization issues (400/empty responses). Phase 1.5 solves this with local flat-file ingestion.
+
+### What was built
+
+- `app/services/ingestion/complaints_flat_file.py` — flat-file complaint ingestor
+- `--complaints-flat-file` and `--complaints-source` CLI flags
+- `POST /v1/ingestion/nhtsa/phase1-5/complaints-flat-file/run` API endpoint
+- Extended data quality metrics for complaints
+
+### Commands
+
+```bash
+# Dry run with test fixture
+python scripts/ingest_phase1_nhtsa.py \
+  --seed data/seeds/phase1_vehicles.csv \
+  --complaints-only --complaints-source flat-file \
+  --complaints-flat-file tests/fixtures/nhtsa_complaints_sample.csv \
+  --dry-run
+
+# Live ingestion
+python scripts/ingest_phase1_nhtsa.py \
+  --seed data/seeds/phase1_vehicles.csv \
+  --complaints-only --complaints-source flat-file \
+  --complaints-flat-file tests/fixtures/nhtsa_complaints_sample.csv
+```
+
+> **WARNING:** `tests/fixtures/nhtsa_complaints_sample.csv` is **synthetic test fixture data** — NOT real NHTSA records. Provide a real NHTSA complaint flat-file export for actual ingestion.
+
+> **WARNING:** Complaint volume alone does not prove a safety defect. Complaint records are user-submitted public reports and may be noisy.
+
+### Limitations
+
+- Real NHTSA complaint flat-file must be provided by developer (not auto-downloaded)
+- Complaints only — recalls still use Phase 1 API
+- No production file upload yet (local file path required)
+

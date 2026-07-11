@@ -60,3 +60,15 @@ def normalize_model(model: Optional[str]) -> str:
     if not model:
         return ""
     return re.sub(r"\s+", " ", model.strip().upper())
+
+
+def models_equivalent(a: str, b: str) -> bool:
+    """
+    Check if two model names refer to the same vehicle model.
+
+    Handles F-150 / F150 / F 150 equivalence by stripping dashes and spaces.
+    Case-insensitive comparison.
+    """
+    norm_a = normalize_model(a).replace("-", "").replace(" ", "")
+    norm_b = normalize_model(b).replace("-", "").replace(" ", "")
+    return norm_a == norm_b

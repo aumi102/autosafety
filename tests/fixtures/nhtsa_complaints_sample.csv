@@ -1,0 +1,10 @@
+make,model,model_year,odi_number,component,summary,crash,fire,injury,death,received_date,incident_date,source_url
+Ford,F-150,2020,11420001,SERVICE BRAKES,Brake pedal felt soft and brake lights stayed on after parking.,N,N,N,N,20230415,20230320,https://api.nhtsa.gov/complaints/complaint?odi=11420001
+Ford,F150,2021,11430002,ELECTRICAL SYSTEM,Radio and backup camera stopped working after software update.,N,N,N,N,20230510,20230428,https://api.nhtsa.gov/complaints/complaint?odi=11430002
+Honda,Accord,2021,11440003,ENGINE,Engine made rattling noise during cold start and lost power.,N,N,Y,N,20230620,20230601,https://api.nhtsa.gov/complaints/complaint?odi=11440003
+Toyota,Camry,2022,11450004,STEERING,Steering wheel shook at highway speeds above 65 mph.,N,N,N,N,20230701,20230615,https://api.nhtsa.gov/complaints/complaint?odi=11450004
+Chevrolet,Silverado,2021,11460005,STRUCTURE,Driver seat frame cracked without accident involvement.,N,N,N,N,20230715,20230701,https://api.nhtsa.gov/complaints/complaint?odi=11460005
+Ford,,2020,11470006,SERVICE BRAKES,Missing model field test row.,N,N,N,N,20230720,20230710,
+,Tacoma,2021,11480007,ENGINE,Missing make field test row.,N,N,N,N,20230725,20230715,
+Ford,F-150,2020,11420001,SERVICE BRAKES,Duplicate ODI number should be skipped on re-run.,N,N,N,N,20230415,20230320,https://api.nhtsa.gov/complaints/complaint?odi=11420001
+Toyota,Camry,2022,11450009,VISIBILITY,Windshield wiper blade fell apart during rain.,N,N,N,N,20230801,20230725,https://api.nhtsa.gov/complaints/complaint?odi=11450009
