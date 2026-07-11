@@ -131,3 +131,56 @@ All endpoints return stub responses. Real implementation in Phase 1.
 - `POST /v1/chat/sessions` — creates session stub
 - `POST /v1/chat/sessions/{id}/messages` — returns safety response, notes Phase 0
 - `POST /v1/ingestion/nhtsa/probe` — returns deferred status
+
+---
+
+## Phase 1: NHTSA Ingestion Foundation
+
+### What was built
+
+- NHTSA API client (`app/services/nhtsa_client.py`) — complaints and recalls via EIEARS API
+- Ingestion service (`app/services/ingestion/`) — idempotent upserts, per-vehicle error isolation
+- CLI script (`scripts/ingest_phase1_nhtsa.py`) — dry-run, limit flags
+- Real DB-backed vehicle/complaint/recall APIs
+- Data quality summary endpoint
+
+### Seed scope
+
+9 vehicles: Ford F-150, Honda Accord, Toyota Camry (2020–2022).
+
+### Setup
+
+```bash
+# Install
+pip install -e ".[dev]"
+
+# Start infra
+docker compose up postgres redis neo4j -d
+
+# Migrate
+alembic upgrade head
+
+# Dry run ingestion
+python scripts/ingest_phase1_nhtsa.py --seed data/seeds/phase1_vehicles.csv --dry-run --limit-vehicles 2
+
+# Live ingestion
+python scripts/ingest_phase1_nhtsa.py --seed data/seeds/phase1_vehicles.csv
+
+# Start server
+uvicorn app.main:app --reload --port 8000
+```
+
+### Verify ingestion
+
+```bash
+curl http://localhost:8000/v1/ingestion/data-quality/summary
+curl "http://localhost:8000/v1/vehicles/search?make=Ford"
+```
+
+### Intentional gaps (Phase 2+)
+
+- Full NHTSA bulk flat file ingestion
+- Investigations and manufacturer communications
+- Neo4j graph population
+- Text-to-SQL and GraphRAG
+- JWT auth, frontend, eval dashboard

@@ -1,78 +1,242 @@
 """
-NHTSA API client placeholder.
+NHTSA API client for complaints and recalls.
 
-Phase 0: no real ingestion. Stubs only.
-Phase 1: implement bulk download from NHTSA flat files.
-        See docs/02_data_sources_and_ingestion.md for strategy.
+Phase 1: lightweight API-based ingestion (not bulk flat files).
+Bulk flat files deferred to Phase 1.5/2.
+
+API docs: https://api.nhtsa.gov/
 """
 
+import httpx
+import logging
 from typing import Optional
+from dataclasses import dataclass, field
 
-# NHTSA EIEARS / complaints API base URL (for probe/test use only)
+logger = logging.getLogger(__name__)
+
+# NHTSA EIEARS API base
 NHTSA_API_BASE = "https://api.nhtsa.gov"
 NHTSA_COMPLAINTS_API = f"{NHTSA_API_BASE}/complaints/complaintsByVehicle"
+NHTSA_RECALLS_API = f"{NHTSA_API_BASE}/recalls/recallsByVehicle"
 
-# NHTSA flat file download URLs (bulk data)
-NHTSA_FLATS_BASE = "https://static.nhtsa.gov/odi/ffds"
+# Timeout for HTTP requests (seconds)
+REQUEST_TIMEOUT = 30.0
 
-COMPLAINT_FLATS = {
-    "complaints_2024": f"{NHTSA_FLATS_BASE}/complaints/FLAT_COMPLAINTS_2024.zip",
-    "complaints_2025": f"{NHTSA_FLATS_BASE}/complaints/FLAT_COMPLAINTS_2025.zip",
-}
 
-RECALL_FLATS = {
-    "recalls_2024": f"{NHTSA_FLATS_BASE}/recalls/FLAT_RCL_2024.zip",
-}
+class NhtsaApiError(Exception):
+    """Raised when NHTSA API returns an error."""
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        super().__init__(message)
+        self.status_code = status_code
 
-INVESTIGATION_FLATS = {
-    "investigations_2024": f"{NHTSA_FLATS_BASE}/investigations/FLAT_INVESTIGATIONS_2024.zip",
-}
 
-MANUFACTURER_COMM_FLATS = {
-    "mfgr_comm_2024": f"{NHTSA_FLATS_BASE}/manufacturer_communications/FLAT_MFR_COMM_2024.zip",
-}
+@dataclass
+class NhtsaVehicle:
+    """Vehicle descriptor used for API queries."""
+    make: str
+    model: str
+    model_year: int
 
-async def lookup_complaints(
-    make: Optional[str] = None,
-    model: Optional[str] = None,
-    model_year: Optional[int] = None,
-    component: Optional[str] = None,
-) -> list[dict]:
+
+@dataclass
+class NhtsaComplaintRecord:
+    """Normalized complaint record from NHTSA API."""
+    odi_number: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    model_year: Optional[int] = None
+    component: Optional[str] = None
+    summary: Optional[str] = None
+    crash: str = "N"
+    fire: str = "N"
+    injury: str = "N"
+    death: str = "N"
+    received_date: Optional[str] = None
+    incident_date: Optional[str] = None
+    source_url: Optional[str] = None
+    raw_json: dict = field(default_factory=dict)
+
+
+@dataclass
+class NhtsaRecallRecord:
+    """Normalized recall record from NHTSA API."""
+    campaign_number: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    model_year: Optional[int] = None
+    component: Optional[str] = None
+    summary: Optional[str] = None
+    consequence: Optional[str] = None
+    remedy: Optional[str] = None
+    notes: Optional[str] = None
+    units_affected: Optional[int] = None
+    report_received_date: Optional[str] = None
+    source_url: Optional[str] = None
+    raw_json: dict = field(default_factory=dict)
+
+
+def _build_complaint_from_raw(raw: dict) -> NhtsaComplaintRecord:
+    """Parse a raw NHTSA complaint API record into NhtsaComplaintRecord."""
+    return NhtsaComplaintRecord(
+        odi_number=raw.get("odiNumber"),
+        make=raw.get("make"),
+        model=raw.get("model"),
+        model_year=_safe_int(raw.get("modelYear")),
+        component=raw.get("component"),
+        summary=raw.get("summary"),
+        crash=raw.get("crash", "N"),
+        fire=raw.get("fire", "N"),
+        injury=raw.get("injury", "N"),
+        death=raw.get("death", "N"),
+        received_date=raw.get("dateComplaintFiled"),
+        incident_date=raw.get("dateIncident"),
+        source_url=raw.get("ODIURL"),
+        raw_json=raw,
+    )
+
+
+def _build_recall_from_raw(raw: dict) -> NhtsaRecallRecord:
+    """Parse a raw NHTSA recall API record into NhtsaRecallRecord."""
+    return NhtsaRecallRecord(
+        campaign_number=raw.get("NHTSACampaignNumber"),
+        make=raw.get("make"),
+        model=raw.get("model"),
+        model_year=_safe_int(raw.get("modelYear")),
+        component=raw.get("component"),
+        summary=raw.get("summary"),
+        consequence=raw.get("consequence"),
+        remedy=raw.get("remedy"),
+        notes=raw.get("notes"),
+        units_affected=_safe_int(raw.get("numberVehiclesAffected")),
+        report_received_date=raw.get("reportReceivedDate"),
+        source_url=raw.get("remedyUrl"),
+        raw_json=raw,
+    )
+
+
+def _safe_int(value) -> Optional[int]:
+    """Safely convert value to int, return None on failure."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def fetch_complaints_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaComplaintRecord]:
     """
-    Lookup complaints from NHTSA API.
+    Fetch complaints from NHTSA EIEARS API for a specific vehicle.
 
-    TODO Phase 1:
-    - Implement actual API calls using httpx
-    - Parse NHTSA complaint response format
-    - Apply vehicle/component filtering
-    - Return structured complaint records
+    Args:
+        vehicle: NhtsaVehicle with make, model, model_year
+
+    Returns:
+        List of NhtsaComplaintRecord
+
+    Raises:
+        NhtsaApiError: on hard network/HTTP errors (not soft 400s with empty results)
     """
-    raise NotImplementedError("Phase 1: implement NHTSA complaint lookup")
+    # NHTSA API may reject special chars like dashes; strip them from model for lookup
+    model_for_api = vehicle.model.replace("-", "").replace(" ", "")
+    params = {
+        "make": vehicle.make,
+        "model": model_for_api,
+        "modelYear": str(vehicle.model_year),
+    }
 
-async def lookup_recalls(
-    make: Optional[str] = None,
-    model: Optional[str] = None,
-    campaign_number: Optional[str] = None,
-) -> list[dict]:
+    try:
+        with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
+            response = client.get(NHTSA_COMPLAINTS_API, params=params)
+    except httpx.TimeoutException:
+        raise NhtsaApiError(f"Timeout fetching complaints for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+    except httpx.RequestError as e:
+        raise NhtsaApiError(f"Network error fetching complaints: {e}")
+
+    # NHTSA sometimes returns 400 with a body saying "Results returned successfully" — treat as empty
+    if response.status_code == 400:
+        try:
+            body = response.json()
+            if body.get("message", "").startswith("Results returned successfully"):
+                logger.info(f"No complaints found for {vehicle.make} {vehicle.model} {vehicle.model_year} (API returned 400 with empty results)")
+                return []
+        except Exception:
+            pass
+        raise NhtsaApiError(
+            f"NHTSA complaints API returned status {response.status_code}: {response.text[:200]}",
+            status_code=response.status_code,
+        )
+
+    if response.status_code != 200:
+        raise NhtsaApiError(
+            f"NHTSA API returned status {response.status_code}: {response.text[:200]}",
+            status_code=response.status_code,
+        )
+
+    data = response.json()
+    results = data.get("results", [])
+
+    if results is None:
+        logger.warning(f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+        return []
+
+    records = []
+    for raw in results:
+        try:
+            records.append(_build_complaint_from_raw(raw))
+        except Exception as e:
+            logger.warning(f"Failed to parse complaint record: {e}")
+            continue
+
+    return records
+
+
+def fetch_recalls_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaRecallRecord]:
     """
-    Lookup recalls from NHTSA.
+    Fetch recalls from NHTSA API for a specific vehicle.
 
-    TODO Phase 1:
-    - Use NHTSA recall API or flat files
-    - Match recalls to vehicles
+    Args:
+        vehicle: NhtsaVehicle with make, model, model_year
+
+    Returns:
+        List of NhtsaRecallRecord
+
+    Raises:
+        NhtsaApiError: on HTTP errors or API-level errors
     """
-    raise NotImplementedError("Phase 1: implement NHTSA recall lookup")
+    params = {
+        "make": vehicle.make,
+        "model": vehicle.model,
+        "modelYear": str(vehicle.model_year),
+    }
 
-async def lookup_investigations(
-    investigation_number: Optional[str] = None,
-    component: Optional[str] = None,
-) -> list[dict]:
-    """TODO Phase 1: implement NHTSA investigation lookup."""
-    raise NotImplementedError("Phase 1: implement NHTSA investigation lookup")
+    try:
+        with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
+            response = client.get(NHTSA_RECALLS_API, params=params)
+    except httpx.TimeoutException:
+        raise NhtsaApiError(f"Timeout fetching recalls for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+    except httpx.RequestError as e:
+        raise NhtsaApiError(f"Network error fetching recalls: {e}")
 
-async def lookup_manufacturer_communications(
-    communication_number: Optional[str] = None,
-    component: Optional[str] = None,
-) -> list[dict]:
-    """TODO Phase 1: implement NHTSA manufacturer communication lookup."""
-    raise NotImplementedError("Phase 1: implement NHTSA manufacturer communication lookup")
+    if response.status_code != 200:
+        raise NhtsaApiError(
+            f"NHTSA API returned status {response.status_code}: {response.text[:200]}",
+            status_code=response.status_code,
+        )
+
+    data = response.json()
+    results = data.get("results", [])
+
+    if results is None:
+        logger.warning(f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+        return []
+
+    records = []
+    for raw in results:
+        try:
+            records.append(_build_recall_from_raw(raw))
+        except Exception as e:
+            logger.warning(f"Failed to parse recall record: {e}")
+            continue
+
+    return records
