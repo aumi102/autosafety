@@ -79,8 +79,8 @@ class TestValidateSqlBlocked:
     def test_insert_blocked(self):
         result = validate_sql("INSERT INTO vehicles (make, model) VALUES ('Ford', 'F-150')")
         assert result.valid is False
-        # Blocked by INSERT keyword (word boundary matches standalone INSERT)
-        assert "INSERT" in result.reason
+        # Blocked by INTO keyword (word boundary matches standalone INTO)
+        assert "INTO" in result.reason
 
     def test_alter_blocked(self):
         result = validate_sql("ALTER TABLE vehicles ADD COLUMN test TEXT")
