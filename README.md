@@ -324,7 +324,69 @@ VehicleMake → HAS_MODEL → VehicleModel → HAS_YEAR → ModelYear
 - Vector embeddings and semantic similarity
 - Full GraphRAG retrieval
 - LLM Text-to-Cypher
+- LLM Text-to-SQL
 - LLM-based path ranking
+- Graph visualization frontend
+- Background job / Celery for large builds
+- JWT auth
+
+---
+
+## Phase 4: Hybrid SQL + Graph Evidence Answers
+
+### What was built
+
+- Hybrid service: orchestrates Phase 2 SQL analytics + Phase 3 graph retrieval
+- Hybrid parser: deterministic detection of SQL+graph question patterns
+- Answer composer: merges SQL results + graph evidence into answer contract
+- Hybrid API endpoint: `POST /v1/hybrid/query`
+- Chat endpoint routes hybrid questions to Phase 4
+
+### Setup
+
+Phase 4 requires Phase 2 SQL analytics and Phase 3 graph to be populated:
+
+```bash
+# Start infra
+docker compose up postgres redis neo4j -d
+
+# Setup and build graph (if not done)
+python scripts/build_phase3_graph.py --setup-schema
+python scripts/build_phase3_graph.py --build --limit-vehicles 5
+
+# Try hybrid endpoint
+curl -X POST http://localhost:8000/v1/hybrid/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which component has the most complaints for Ford F-150 2020, and are there related recalls?"}'
+
+# Or via chat endpoint
+curl -X POST http://localhost:8000/v1/chat/sessions/test-session/messages \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Show complaints and recall evidence for Honda Accord 2021."}'
+```
+
+### Supported hybrid question patterns
+
+| Question | Returns |
+|---|---|
+| "Top component + related recalls for Ford F-150 2020" | SQL top components + graph recall paths |
+| "Complaints and recall evidence for Honda Accord 2021" | SQL count + graph recall neighborhood |
+| "Does Toyota Camry have complaints and recalls?" | SQL + graph evidence |
+| "Vehicles with most complaints + graph" | SQL ranking + top vehicle recall paths |
+
+### Safety caveats
+
+- **Complaint volume alone does not prove a safety defect.**
+- **Graph recall links via shared component are POTENTIAL associations only.**
+- **Only Recall → AFFECTS → ModelYear is official** when NHTSA campaign explicitly applies.
+- No causality claims from complaint-recall co-occurrence.
+
+### Intentional gaps (Phase 5+)
+
+- Vector embeddings and semantic similarity
+- Full GraphRAG with semantic chunk retrieval
+- LLM Text-to-Cypher and LLM Text-to-SQL
+- Embedding-based complaint-recall matching
 - Graph visualization frontend
 - Background job / Celery for large builds
 - JWT auth

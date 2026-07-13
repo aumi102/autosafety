@@ -221,7 +221,7 @@ OPTIONAL MATCH (r:Recall)-[:AFFECTS]->(year)
 OPTIONAL MATCH (comp:Component)
 OPTIONAL MATCH (r)-[:RELATED_TO_COMPONENT]->(comp)
 OPTIONAL MATCH (year)-[:HAS_COMPLAINT]->(c:Complaint)-[:MENTIONS_COMPONENT]->(comp)
-WITH year, r, comp, count(DISTINCT c) AS shared_complaint_count
+WITH make, model, year, r, comp, count(DISTINCT c) AS shared_complaint_count
 WHERE r IS NOT NULL
 RETURN
     make.normalized_name AS make_name,

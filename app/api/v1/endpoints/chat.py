@@ -1,14 +1,15 @@
-"""Chat API endpoints with Phase 2 SQL analytics."""
+"""Chat API endpoints with Phase 2 SQL analytics and Phase 4 hybrid answers."""
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional
 import uuid
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.config import get_settings
 from app.services.sql_analytics.service import SqlAnalyticsService
+from app.services.hybrid.hybrid_parser import is_hybrid_question
 
 router = APIRouter(tags=["chat"])
 
@@ -48,7 +49,7 @@ class ChatMessageResponse(BaseModel):
     warnings: list[str]
     confidence: dict
     debug: dict
-    phase: str = "phase_2"
+    phase: str
 
 
 @router.post("/sessions", response_model=ChatSession)
@@ -66,12 +67,32 @@ def send_message(session_id: str, data: ChatMessageCreate):
     """
     Send a message in a chat session.
 
-    Phase 2: routes SQL analytics questions through template-based SQL engine.
+    Phase 4: routes hybrid questions (SQL + graph) through hybrid service.
+    Routes SQL-only questions through Phase 2 SQL analytics.
     Returns structured answer conforming to answer_contract.md.
     """
+    # Detect hybrid vs SQL-only
+    if is_hybrid_question(data.content):
+        # Phase 4: hybrid answer
+        from app.services.hybrid import answer_hybrid_question
+        response = answer_hybrid_question(data.content)
+
+        return ChatMessageResponse(
+            message_id=str(uuid.uuid4()),
+            run_id=response["run_id"],
+            intent=response["intent"],
+            answer=response["answer"],
+            sql=response["sql"],
+            evidence=response["evidence"],
+            warnings=response["warnings"],
+            confidence=response["confidence"],
+            debug=response.get("debug", {}),
+            phase="phase_4",
+        )
+
+    # Phase 2: SQL analytics
     session = _get_sync_session()
     try:
-        # Run SQL analytics service
         response = SqlAnalyticsService(session).answer(data.content)
 
         return ChatMessageResponse(
