@@ -1,0 +1,224 @@
+"""
+Pydantic/dataclass models for graph nodes, relationships, and build stats.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Optional
+from datetime import date
+
+
+@dataclass
+class GraphNodeStats:
+    label: str
+    count: int
+
+
+@dataclass
+class GraphRelStats:
+    type: str
+    count: int
+
+
+@dataclass
+class GraphBuildStats:
+    """Statistics from a graph build run."""
+    vehicle_makes_seen: int = 0
+    vehicle_models_seen: int = 0
+    model_years_seen: int = 0
+    components_seen: int = 0
+    complaints_seen: int = 0
+    recalls_seen: int = 0
+    nodes_merged: int = 0
+    relationships_merged: int = 0
+    rows_skipped: int = 0
+    errors_count: int = 0
+    errors: list[str] = field(default_factory=list)
+    duration_ms: int = 0
+    dry_run: bool = False
+
+    def to_dict(self) -> dict:
+        return {
+            "vehicle_makes_seen": self.vehicle_makes_seen,
+            "vehicle_models_seen": self.vehicle_models_seen,
+            "model_years_seen": self.model_years_seen,
+            "components_seen": self.components_seen,
+            "complaints_seen": self.complaints_seen,
+            "recalls_seen": self.recalls_seen,
+            "nodes_merged": self.nodes_merged,
+            "relationships_merged": self.relationships_merged,
+            "rows_skipped": self.rows_skipped,
+            "errors_count": self.errors_count,
+            "errors": self.errors,
+            "duration_ms": self.duration_ms,
+            "dry_run": self.dry_run,
+        }
+
+
+@dataclass
+class GraphStatus:
+    """Current status of the graph database."""
+    neo4j_connected: bool
+    node_count: int
+    relationship_count: int
+    node_labels: list[GraphNodeStats]
+    relationship_types: list[GraphRelStats]
+    postgres_vehicle_count: int
+    postgres_complaint_count: int
+    postgres_recall_count: int
+    postgres_component_count: int
+    last_build: Optional[dict] = None
+    error: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "neo4j_connected": self.neo4j_connected,
+            "node_count": self.node_count,
+            "relationship_count": self.relationship_count,
+            "node_labels": [{"label": n.label, "count": n.count} for n in self.node_labels],
+            "relationship_types": [{"type": r.type, "count": r.count} for r in self.relationship_types],
+            "postgres_vehicle_count": self.postgres_vehicle_count,
+            "postgres_complaint_count": self.postgres_complaint_count,
+            "postgres_recall_count": self.postgres_recall_count,
+            "postgres_component_count": self.postgres_component_count,
+            "last_build": self.last_build,
+            "error": self.error,
+        }
+
+
+@dataclass
+class VehicleMakeNode:
+    normalized_name: str
+    name: str
+
+
+@dataclass
+class VehicleModelNode:
+    normalized_name: str
+    name: str
+
+
+@dataclass
+class ModelYearNode:
+    year: int
+    vehicle_id: str
+
+
+@dataclass
+class ComponentNode:
+    normalized_name: str
+    name: str
+    category: Optional[str] = None
+
+
+@dataclass
+class ComplaintNode:
+    odi_number: Optional[str]
+    received_date: Optional[str]
+    summary: Optional[str] = None
+    crash_flag: bool = False
+    injury_flag: bool = False
+    death_flag: bool = False
+
+
+@dataclass
+class RecallNode:
+    campaign_number: str
+    report_received_date: Optional[str] = None
+    summary: Optional[str] = None
+    component: Optional[str] = None
+    remedy: Optional[str] = None
+    units_affected: Optional[int] = None
+
+
+@dataclass
+class NeighborhoodNode:
+    id: str
+    label: str
+    properties: dict
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "label": self.label, "properties": self.properties}
+
+
+@dataclass
+class NeighborhoodEdge:
+    type: str
+    source_id: str
+    target_id: str
+    properties: dict = field(default_factory=dict)
+
+
+@dataclass
+class VehicleNeighborhood:
+    """Vehicle neighborhood from graph retrieval."""
+    make: str
+    model: str
+    year: int
+    vehicle_id: str
+    nodes: list[NeighborhoodNode]
+    edges: list[NeighborhoodEdge]
+    complaint_count: int
+    recall_count: int
+    components: list[str]
+
+    def to_dict(self) -> dict:
+        return {
+            "make": self.make,
+            "model": self.model,
+            "year": self.year,
+            "vehicle_id": self.vehicle_id,
+            "nodes": [n.to_dict() for n in self.nodes],
+            "edges": [{"type": e.type, "source_id": e.source_id, "target_id": e.target_id, "properties": e.properties} for e in self.edges],
+            "complaint_count": self.complaint_count,
+            "recall_count": self.recall_count,
+            "components": self.components,
+        }
+
+
+@dataclass
+class RecallPathResult:
+    """Recall paths for a vehicle from graph retrieval."""
+    make: str
+    model: str
+    year: int
+    vehicle_id: str
+    recalls: list[RecallNode]
+    path_type: str  # "potentially related by shared vehicle/component"
+
+    def to_dict(self) -> dict:
+        return {
+            "make": self.make,
+            "model": self.model,
+            "year": self.year,
+            "vehicle_id": self.vehicle_id,
+            "recalls": [
+                {
+                    "campaign_number": r.campaign_number,
+                    "report_received_date": r.report_received_date,
+                    "summary": r.summary,
+                    "component": r.component,
+                    "remedy": r.remedy,
+                    "units_affected": r.units_affected,
+                }
+                for r in self.recalls
+            ],
+            "path_type": self.path_type,
+        }
+
+
+@dataclass
+class GraphSchemaSetupResult:
+    success: bool
+    constraints_created: int
+    indexes_created: int
+    errors: list[str]
+
+    def to_dict(self) -> dict:
+        return {
+            "success": self.success,
+            "constraints_created": self.constraints_created,
+            "indexes_created": self.indexes_created,
+            "errors": self.errors,
+        }

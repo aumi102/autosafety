@@ -1,7 +1,9 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     APP_ENV: str = "development"
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/autosafety"
     DATABASE_URL_SYNC: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/autosafety"
@@ -11,10 +13,6 @@ class Settings(BaseSettings):
     NEO4J_PASSWORD: str = "neo4j"
     LOG_LEVEL: str = "INFO"
     AUTH_ENABLED: bool = False
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
 
 @lru_cache
 def get_settings() -> Settings:

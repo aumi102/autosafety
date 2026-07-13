@@ -263,5 +263,68 @@ curl -X POST http://localhost:8000/v1/sql-analytics/query \
   -d '{"question": "Which vehicles have the most complaints?"}'
 ```
 
-> **WARNING:** Phase 2 is **deterministic template-based** SQL analytics. Full LLM Text-to-SQL is deferred to Phase 3.
+> **WARNING:** Phase 2 is **deterministic template-based** SQL analytics. Full LLM Text-to-SQL is deferred to Phase 4.
 > **WARNING:** Complaint volume alone does not prove a safety defect.
+
+---
+
+## Phase 3: Neo4j Graph Foundation
+
+### What was built
+
+- Neo4j client with dependency injection
+- Graph schema: 6 uniqueness constraints + 4 indexes for MERGE idempotency
+- Graph builder: PostgreSQL → Neo4j projection via MERGE (idempotent, per-vehicle error isolation)
+- Graph retrieval: vehicle neighborhood, recall paths via predefined Cypher templates
+- API endpoints: health, schema/setup, build, status, vehicle neighborhood, recall paths
+- CLI: `scripts/build_phase3_graph.py`
+- 27 tests (no live Neo4j required)
+
+### Setup and commands
+
+```bash
+# Start infra (Neo4j + Postgres)
+docker compose up postgres redis neo4j -d
+
+# Setup schema (constraints + indexes) — idempotent
+python scripts/build_phase3_graph.py --setup-schema
+
+# Dry run — count records without writing
+python scripts/build_phase3_graph.py --dry-run --limit-vehicles 5
+
+# Build graph projection
+python scripts/build_phase3_graph.py --build --limit-vehicles 5
+
+# Check graph status
+python scripts/build_phase3_graph.py --status
+
+# API endpoints
+curl http://localhost:8000/v1/graph/health
+curl http://localhost:8000/v1/graph/status
+```
+
+### Graph model
+
+```
+VehicleMake → HAS_MODEL → VehicleModel → HAS_YEAR → ModelYear
+                                                    ↓
+                                        HAS_COMPLAINT → Complaint → MENTIONS_COMPONENT → Component
+                                                    ↓
+                                      AFFECTS ← Recall → RELATED_TO_COMPONENT → Component
+```
+
+### Safety caveats
+
+- **Complaint volume alone does not prove a safety defect.**
+- **Recall links via AFFECTS are official only** when campaign records explicitly apply.
+- **Recall links via RELATED_TO_COMPONENT are "potentially related by shared vehicle/component"** — NOT "caused by" or "officially linked."
+
+### Intentional gaps (Phase 4+)
+
+- Vector embeddings and semantic similarity
+- Full GraphRAG retrieval
+- LLM Text-to-Cypher
+- LLM-based path ranking
+- Graph visualization frontend
+- Background job / Celery for large builds
+- JWT auth
