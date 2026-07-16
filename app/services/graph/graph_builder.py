@@ -46,7 +46,7 @@ def build_graph(
 
     Reads: vehicles, components, complaints, recalls, recall_vehicle_links.
     Writes: VehicleMake, VehicleModel, ModelYear, Component, Complaint, Recall,
-            and relationships between them.
+            and all relationships including MENTIONS_COMPONENT and RELATED_TO_COMPONENT.
 
     Uses MERGE so subsequent runs are idempotent.
 
@@ -64,17 +64,38 @@ def build_graph(
     errors: list[str] = []
 
     try:
-        # Build component map first (used by complaints and recalls)
+        # Build component map (used by complaints and recalls)
         component_map: dict[str, dict] = _build_component_map(pg_session, errors)
         stats.components_seen = len(component_map)
-        if dry_run:
-            stats.nodes_merged = stats.components_seen
 
         # Build recall map
         recall_map: dict[str, dict] = _build_recall_map(pg_session, errors)
         stats.recalls_seen = len(recall_map)
+
         if dry_run:
-            stats.nodes_merged += stats.recalls_seen
+            # Count component nodes
+            for comp_data in component_map.values():
+                stats.component_nodes_merged += 1
+            for vehicle in _fetch_vehicles(pg_session, limit_vehicles):
+                # Count vehicle model/year stats
+                model_key = f"{vehicle.normalized_make}:{vehicle.normalized_model}"
+                year_key = f"{model_key}:{vehicle.year}"
+                stats.vehicle_makes_seen += 1
+                stats.vehicle_models_seen += 1
+                stats.model_years_seen += 1
+                complaint_count = pg_session.query(Complaint).filter(
+                    Complaint.vehicle_id == vehicle.id
+                ).count()
+                stats.complaints_seen += complaint_count
+                stats.complaint_component_links_seen += complaint_count
+                stats.nodes_merged += 1  # ModelYear node
+            stats.rows_skipped = stats.components_seen - stats.component_nodes_merged
+            stats.duration_ms = int((time.time() - start_time) * 1000)
+            stats.errors = errors
+            return stats
+
+        # Phase 5: MERGE all Component nodes first
+        _upsert_all_components(neo4j_client, component_map, stats)
 
         # Iterate vehicles
         vehicles = _fetch_vehicles(pg_session, limit_vehicles)
@@ -82,7 +103,7 @@ def build_graph(
             try:
                 _process_vehicle(
                     vehicle, pg_session, neo4j_client,
-                    component_map, recall_map, dry_run, stats,
+                    component_map, recall_map, stats,
                 )
             except Exception as e:
                 stats.errors_count += 1
@@ -100,6 +121,38 @@ def build_graph(
         logger.exception(f"Graph build fatal error: {e}")
 
     return stats
+
+
+def _upsert_all_components(
+    neo4j_client: Neo4jClient,
+    component_map: dict[str, dict],
+    stats: GraphBuildStats,
+) -> None:
+    """MERGE all Component nodes into Neo4j."""
+    for comp_data in component_map.values():
+        normalized = comp_data.get("normalized_name")
+        if not normalized:
+            stats.component_links_skipped += 1
+            continue
+        try:
+            neo4j_client.execute(
+                """
+                MERGE (comp:Component {normalized_name: $name})
+                ON CREATE SET
+                    comp.name = $display_name,
+                    comp.category = $category
+                """,
+                {
+                    "name": normalized,
+                    "display_name": comp_data.get("name", normalized),
+                    "category": comp_data.get("category"),
+                },
+            )
+            stats.component_nodes_merged += 1
+            stats.nodes_merged += 1
+        except Exception as e:
+            stats.component_link_errors += 1
+            stats.errors.append(f"Component {normalized}: {e}")
 
 
 def _build_component_map(session: Session, errors: list[str]) -> dict[str, dict]:
@@ -163,7 +216,6 @@ def _process_vehicle(
     neo4j_client: Neo4jClient,
     component_map: dict[str, dict],
     recall_map: dict[str, dict],
-    dry_run: bool,
     stats: GraphBuildStats,
 ) -> None:
     """Process one vehicle and its complaints/recalls into Neo4j."""
@@ -177,22 +229,12 @@ def _process_vehicle(
     stats.vehicle_models_seen += 1
     stats.model_years_seen += 1
 
-    if dry_run:
-        # Count complaints and recalls
-        complaint_count = pg_session.query(Complaint).filter(
-            Complaint.vehicle_id == vehicle.id
-        ).count()
-        stats.complaints_seen += complaint_count
-        stats.nodes_merged += complaint_count
-        return
-
     # ── MERGE VehicleMake ────────────────────────────────────────────────────
     neo4j_client.execute(
         """
         MERGE (make:VehicleMake {normalized_name: $make})
         ON CREATE SET make.name = $make_name
-        """
-        if True else "",
+        """,
         {"make": make_key, "make_name": vehicle.make},
     )
     stats.nodes_merged += 1
@@ -298,25 +340,6 @@ def _process_vehicle(
                     year_key, component_map, neo4j_client, stats,
                 )
 
-    # ── Link recalls to components if component is known ─────────────────────
-    # For each recall on this vehicle, also link to component
-    for link in recall_links:
-        recall_obj = pg_session.get(Recall, link.recall_id)
-        if recall_obj and recall_obj.component_id:
-            comp_data = component_map.get(recall_obj.component_id.hex if hasattr(recall_obj.component_id, 'hex') else str(recall_obj.component_id))
-            # Try by normalized name from original_component
-            if not comp_data and recall_obj.original_component:
-                from app.services.ingestion.normalization import normalize_component_name
-                norm = normalize_component_name(recall_obj.original_component)
-                comp_data = component_map.get(norm)
-            if comp_data:
-                recall_campaign = recall_map.get(
-                    recall_obj.campaign_number
-                ) or {"campaign_number": recall_obj.campaign_number}
-                _link_recall_to_component(
-                    recall_campaign, comp_data, neo4j_client, stats,
-                )
-
 
 def _upsert_complaint(
     complaint,
@@ -361,21 +384,29 @@ def _upsert_complaint(
     )
     stats.relationships_merged += 1
 
-    # Link to Component if known
-    if complaint.component_id and complaint.original_component:
+    # Link Complaint → Component (MENTIONS_COMPONENT)
+    if complaint.original_component:
         from app.services.ingestion.normalization import normalize_component_name
         norm = normalize_component_name(complaint.original_component)
         comp_data = component_map.get(norm)
-        if comp_data:
-            neo4j_client.execute(
-                """
-                MATCH (c:Complaint {odi_number: $odi})
-                MATCH (comp:Component {normalized_name: $comp_name})
-                MERGE (c)-[:MENTIONS_COMPONENT]->(comp)
-                """,
-                {"odi": odi, "comp_name": norm},
-            )
-            stats.relationships_merged += 1
+        if comp_data and norm:
+            stats.complaint_component_links_seen += 1
+            try:
+                neo4j_client.execute(
+                    """
+                    MATCH (c:Complaint {odi_number: $odi})
+                    MATCH (comp:Component {normalized_name: $comp_name})
+                    MERGE (c)-[:MENTIONS_COMPONENT]->(comp)
+                    """,
+                    {"odi": odi, "comp_name": norm},
+                )
+                stats.complaint_component_links_merged += 1
+                stats.relationships_merged += 1
+            except Exception as e:
+                stats.component_link_errors += 1
+                stats.errors.append(f"MENTIONS_COMPONENT {odi}→{norm}: {e}")
+        else:
+            stats.component_links_skipped += 1
 
 
 def _upsert_recall_and_affects(
@@ -422,34 +453,26 @@ def _upsert_recall_and_affects(
     )
     stats.relationships_merged += 1
 
-    # Link Recall → Component if known
+    # Link Recall → Component (RELATED_TO_COMPONENT) if known
     if recall_data.get("original_component"):
         from app.services.ingestion.normalization import normalize_component_name
         norm = normalize_component_name(recall_data["original_component"])
         comp_data = component_map.get(norm)
-        if comp_data:
-            _link_recall_to_component(recall_data, comp_data, neo4j_client, stats)
-
-
-def _link_recall_to_component(
-    recall_data: dict,
-    comp_data: dict,
-    neo4j_client: Neo4jClient,
-    stats: GraphBuildStats,
-) -> None:
-    """MERGE Recall → RELATED_TO_COMPONENT relationship."""
-    campaign = recall_data.get("campaign_number")
-    if not campaign:
-        return
-    comp_name = comp_data.get("normalized_name")
-    if not comp_name:
-        return
-    neo4j_client.execute(
-        """
-        MATCH (r:Recall {campaign_number: $campaign})
-        MATCH (comp:Component {normalized_name: $comp_name})
-        MERGE (r)-[:RELATED_TO_COMPONENT {relation_source: 'normalized_join'}]->(comp)
-        """,
-        {"campaign": campaign, "comp_name": comp_name},
-    )
-    stats.relationships_merged += 1
+        if comp_data and norm:
+            stats.recall_component_links_seen += 1
+            try:
+                neo4j_client.execute(
+                    """
+                    MATCH (r:Recall {campaign_number: $campaign})
+                    MATCH (comp:Component {normalized_name: $comp_name})
+                    MERGE (r)-[:RELATED_TO_COMPONENT {relation_source: 'normalized_join'}]->(comp)
+                    """,
+                    {"campaign": campaign, "comp_name": norm},
+                )
+                stats.recall_component_links_merged += 1
+                stats.relationships_merged += 1
+            except Exception as e:
+                stats.component_link_errors += 1
+                stats.errors.append(f"RELATED_TO_COMPONENT {campaign}→{norm}: {e}")
+        else:
+            stats.component_links_skipped += 1

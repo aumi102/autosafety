@@ -10,6 +10,8 @@ from app.services.graph import (
     get_graph_status,
     get_vehicle_neighborhood,
     get_vehicle_recall_paths,
+    get_vehicle_component_evidence,
+    get_vehicle_shared_component_recalls,
 )
 
 router = APIRouter(tags=["graph"])
@@ -70,6 +72,20 @@ class GraphRecallPathsResponse(BaseModel):
     recalls: list[dict]
     path_type: str
     phase: str = "phase_3"
+
+
+class ComponentEvidenceResponse(BaseModel):
+    make: str
+    model: str
+    year: int
+    vehicle_id: str
+    complaint_components: list[dict]
+    components: list[str]
+    complaint_count: int
+    shared_recalls: list[dict]
+    recall_count: int
+    path_type: str
+    phase: str = "phase_5"
 
 
 class GraphHealthResponse(BaseModel):
@@ -203,4 +219,37 @@ def graph_recall_paths(vehicle_id: str):
         vehicle_id=result.vehicle_id,
         recalls=[r.to_dict() for r in result.recalls],
         path_type=result.path_type,
+    )
+
+
+@router.get("/vehicles/{vehicle_id}/component-evidence", response_model=ComponentEvidenceResponse)
+def graph_component_evidence(vehicle_id: str):
+    """
+    Retrieve component-level evidence for a vehicle.
+
+    Returns complaints linked via MENTIONS_COMPONENT and recalls
+    linked via RELATED_TO_COMPONENT to shared components.
+
+    WARNING: Shared component links are POTENTIAL ASSOCIATIONS only.
+    Complaint volume alone does not prove a safety defect.
+    Only Recall → AFFECTS → ModelYear is official when campaign applies.
+    """
+    # Get component evidence (complaint → component links)
+    evidence = get_vehicle_component_evidence(vehicle_id)
+    if evidence is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
+        )
+    return ComponentEvidenceResponse(
+        make=evidence.make,
+        model=evidence.model,
+        year=evidence.year,
+        vehicle_id=evidence.vehicle_id,
+        complaint_components=evidence.complaint_components,
+        components=evidence.components,
+        complaint_count=evidence.complaint_count,
+        shared_recalls=evidence.shared_recalls,
+        recall_count=evidence.recall_count,
+        path_type=evidence.path_type,
     )

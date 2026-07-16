@@ -31,6 +31,11 @@ CAVEAT_NEO4J_UNAVAILABLE = (
     "Graph evidence unavailable — Neo4j is not connected or returned an error. "
     "SQL analytics results are still valid."
 )
+CAVEAT_COMPONENT_RECALL_MISSING = (
+    "Recall component links (RELATED_TO_COMPONENT) may be zero because current "
+    "NHTSA recall records lack component fields. This reflects missing source data, "
+    "not absence of safety relevance."
+)
 
 
 def compose_hybrid_answer(
@@ -77,6 +82,15 @@ def compose_hybrid_answer(
         warnings.append(CAVEAT_NEO4J_UNAVAILABLE)
     elif graph_items:
         warnings.append(CAVEAT_POTENTIAL_RELATION)
+        # Check for component recall evidence gap
+        component_recall_items = [
+            item for item in graph_items
+            if item.relation_basis == "potentially_related_by_shared_component"
+        ]
+        if component_recall_items:
+            total_campaigns = sum(len(item.recall_campaigns) for item in component_recall_items)
+            if total_campaigns == 0:
+                warnings.append(CAVEAT_COMPONENT_RECALL_MISSING)
 
     # Confidence
     if sql_row_count > 0 and graph_items:

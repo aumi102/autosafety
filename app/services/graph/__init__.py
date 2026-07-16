@@ -18,6 +18,8 @@ from app.services.graph.graph_service import (
     get_graph_status,
     get_vehicle_neighborhood,
     get_vehicle_recall_paths,
+    get_vehicle_component_evidence,
+    get_vehicle_shared_component_recalls,
 )
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     "get_graph_status",
     "get_vehicle_neighborhood",
     "get_vehicle_recall_paths",
+    "get_vehicle_component_evidence",
+    "get_vehicle_shared_component_recalls",
 ]

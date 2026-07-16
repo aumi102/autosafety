@@ -298,6 +298,141 @@ def get_recall_paths_for_vehicle(
 
 
 # =============================================================================
+# Component-level queries (Phase 5)
+# =============================================================================
+
+COMPONENT_EVIDENCE_CYPHER = """
+MATCH (make:VehicleMake {normalized_name: $make})-[:HAS_MODEL]->(model:VehicleModel {key: $model_key})-[:HAS_YEAR]->(year:ModelYear {key: $year_key})
+OPTIONAL MATCH (year)-[:HAS_COMPLAINT]->(c:Complaint)-[:MENTIONS_COMPONENT]->(comp:Component)
+RETURN
+    make.normalized_name AS make_name,
+    model.normalized_name AS model_name,
+    year.year AS model_year,
+    year.vehicle_id AS vehicle_id,
+    collect(DISTINCT {
+        id: c.odi_number,
+        label: 'Complaint',
+        properties: coalesce({
+            odi_number: c.odi_number,
+            received_date: c.received_date,
+            summary: left(c.summary, 200),
+            crash_flag: c.crash_flag,
+            injury_flag: c.injury_flag,
+            death_flag: c.death_flag
+        }, {})
+    }) AS complaints,
+    collect(DISTINCT {
+        id: comp.normalized_name,
+        label: 'Component',
+        properties: coalesce({
+            name: comp.name,
+            normalized_name: comp.normalized_name,
+            category: comp.category
+        }, {})
+    }) AS components,
+    count(DISTINCT c) AS complaint_count,
+    count(DISTINCT comp) AS component_count
+LIMIT 1
+"""
+
+
+def get_component_evidence_for_vehicle(
+    client: Neo4jClient,
+    make: str,
+    model: str,
+    year: int,
+) -> Optional[dict]:
+    """
+    Retrieve complaint-component evidence for a vehicle from the graph.
+
+    Returns complaints and their MENTIONS_COMPONENT relationships.
+    """
+    make = _validate_identifier(make, "make")
+    model = _validate_identifier(model, "model")
+    year_key = f"{model.upper()}:{year}"
+    model_key = f"{make.upper()}:{model.upper()}"
+
+    params = {
+        "make": make.upper(),
+        "model_key": model_key,
+        "year_key": year_key,
+    }
+
+    result = client.execute_single(COMPONENT_EVIDENCE_CYPHER, params)
+    return result
+
+
+SHARED_COMPONENT_RECALLS_CYPHER = """
+MATCH (make:VehicleMake {normalized_name: $make})-[:HAS_MODEL]->(model:VehicleModel {key: $model_key})-[:HAS_YEAR]->(year:ModelYear {key: $year_key})
+// Find recalls that affect this vehicle
+OPTIONAL MATCH (r:Recall)-[:AFFECTS]->(year)
+// Find component that recalls mention
+OPTIONAL MATCH (r)-[:RELATED_TO_COMPONENT]->(comp:Component)
+// Find complaints on this vehicle that mention the same component
+OPTIONAL MATCH (year)-[:HAS_COMPLAINT]->(c:Complaint)-[:MENTIONS_COMPONENT]->(comp)
+WITH make, model, year, r, comp, count(DISTINCT c) AS shared_complaint_count
+WHERE r IS NOT NULL
+RETURN
+    make.normalized_name AS make_name,
+    model.normalized_name AS model_name,
+    year.year AS model_year,
+    year.vehicle_id AS vehicle_id,
+    collect(DISTINCT {
+        id: r.campaign_number,
+        label: 'Recall',
+        properties: coalesce({
+            campaign_number: r.campaign_number,
+            report_received_date: r.report_received_date,
+            summary: left(r.summary, 200),
+            remedy: left(r.remedy, 200),
+            units_affected: r.units_affected
+        }, {}),
+        related_component: comp.name,
+        shared_complaint_count: shared_complaint_count
+    }) AS recalls,
+    collect(DISTINCT {
+        id: comp.normalized_name,
+        label: 'Component',
+        properties: coalesce({
+            name: comp.name,
+            normalized_name: comp.normalized_name
+        }, {})
+    }) AS shared_components
+LIMIT 1
+"""
+
+
+def get_shared_component_recall_paths(
+    client: Neo4jClient,
+    make: str,
+    model: str,
+    year: int,
+) -> Optional[dict]:
+    """
+    Retrieve recalls linked through shared components with complaints.
+
+    Returns recalls that:
+    1. AFFECT the vehicle
+    2. RELATED_TO_COMPONENT a component that
+    3. MENTIONS_COMPONENT a complaint on this vehicle
+
+    This is NOT official causality — it is potentially_related by shared component.
+    """
+    make = _validate_identifier(make, "make")
+    model = _validate_identifier(model, "model")
+    year_key = f"{model.upper()}:{year}"
+    model_key = f"{make.upper()}:{model.upper()}"
+
+    params = {
+        "make": make.upper(),
+        "model_key": model_key,
+        "year_key": year_key,
+    }
+
+    return client.execute_single(SHARED_COMPONENT_RECALLS_CYPHER, params)
+
+
+# =============================================================================
 # Raw query guard — prevents any path from accepting arbitrary Cypher
 # =============================================================================
 

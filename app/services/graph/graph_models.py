@@ -37,6 +37,14 @@ class GraphBuildStats:
     errors: list[str] = field(default_factory=list)
     duration_ms: int = 0
     dry_run: bool = False
+    # Phase 5: component relationship stats
+    component_nodes_merged: int = 0
+    complaint_component_links_seen: int = 0
+    complaint_component_links_merged: int = 0
+    recall_component_links_seen: int = 0
+    recall_component_links_merged: int = 0
+    component_links_skipped: int = 0
+    component_link_errors: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -53,6 +61,13 @@ class GraphBuildStats:
             "errors": self.errors,
             "duration_ms": self.duration_ms,
             "dry_run": self.dry_run,
+            "component_nodes_merged": self.component_nodes_merged,
+            "complaint_component_links_seen": self.complaint_component_links_seen,
+            "complaint_component_links_merged": self.complaint_component_links_merged,
+            "recall_component_links_seen": self.recall_component_links_seen,
+            "recall_component_links_merged": self.recall_component_links_merged,
+            "component_links_skipped": self.component_links_skipped,
+            "component_link_errors": self.component_link_errors,
         }
 
 
@@ -130,6 +145,35 @@ class RecallNode:
     component: Optional[str] = None
     remedy: Optional[str] = None
     units_affected: Optional[int] = None
+
+
+@dataclass
+class ComponentEvidence:
+    """Component-level evidence from graph retrieval."""
+    make: str
+    model: str
+    year: int
+    vehicle_id: str
+    complaint_components: list[dict]  # complaints linked to components via MENTIONS_COMPONENT
+    components: list[str]  # component names
+    complaint_count: int
+    shared_recalls: list[dict]  # recalls linked via RELATED_TO_COMPONENT
+    recall_count: int
+    path_type: str  # "complaint_mentions_component" | "recall_related_to_component"
+
+    def to_dict(self) -> dict:
+        return {
+            "make": self.make,
+            "model": self.model,
+            "year": self.year,
+            "vehicle_id": self.vehicle_id,
+            "complaint_components": self.complaint_components,
+            "components": self.components,
+            "complaint_count": self.complaint_count,
+            "shared_recalls": self.shared_recalls,
+            "recall_count": self.recall_count,
+            "path_type": self.path_type,
+        }
 
 
 @dataclass

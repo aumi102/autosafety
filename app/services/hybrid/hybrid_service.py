@@ -20,6 +20,8 @@ from app.services.sql_analytics.service import answer_sql_analytics_question
 from app.services.graph import (
     get_vehicle_neighborhood as graph_vehicle_neighborhood,
     get_vehicle_recall_paths as graph_vehicle_recall_paths,
+    get_vehicle_component_evidence as graph_vehicle_component_evidence,
+    get_vehicle_shared_component_recalls as graph_vehicle_shared_component_recalls,
     get_graph_status,
 )
 from app.services.hybrid.hybrid_parser import (
@@ -149,12 +151,12 @@ def _run_graph_retrieval(
 
         evidence: list[GraphEvidenceItem] = []
 
-        # Get recall paths (primary graph evidence for Phase 4)
-        # Look up vehicle_id from PostgreSQL first
+        # Look up vehicle_id from PostgreSQL
         vehicle_id = _find_vehicle_id(make, model, year)
         if not vehicle_id:
             return [], True, None
 
+        # 1. Get recall paths (Phase 4: recalls via AFFECTS)
         recall_result = graph_vehicle_recall_paths(vehicle_id)
         if recall_result:
             item = GraphEvidenceItem(
@@ -162,8 +164,34 @@ def _run_graph_retrieval(
                 nodes=[],
                 relationships=[],
                 recall_campaigns=[r.campaign_number for r in recall_result.recalls],
-                relation_basis="potentially_related_by_shared_component",
+                relation_basis="official_recall_affects_vehicle",
                 summary=_summarize_recall_paths(recall_result),
+            )
+            evidence.append(item)
+
+        # 2. Get component evidence (Phase 5: complaints via MENTIONS_COMPONENT)
+        comp_evidence = graph_vehicle_component_evidence(vehicle_id)
+        if comp_evidence and comp_evidence.complaint_components:
+            item = GraphEvidenceItem(
+                path_type=comp_evidence.path_type,
+                nodes=[],
+                relationships=[],
+                recall_campaigns=[],
+                relation_basis="complaint_mentions_component",
+                summary=_summarize_component_evidence(comp_evidence),
+            )
+            evidence.append(item)
+
+        # 3. Get shared component recall paths (Phase 5: recalls via RELATED_TO_COMPONENT)
+        shared_result = graph_vehicle_shared_component_recalls(vehicle_id)
+        if shared_result and shared_result.shared_recalls:
+            item = GraphEvidenceItem(
+                path_type=shared_result.path_type,
+                nodes=[],
+                relationships=[],
+                recall_campaigns=[r.get("campaign_number", "") for r in shared_result.shared_recalls if r.get("campaign_number")],
+                relation_basis="potentially_related_by_shared_component",
+                summary=_summarize_shared_component_recalls(shared_result),
             )
             evidence.append(item)
 
@@ -203,6 +231,30 @@ def _summarize_recall_paths(recall_result) -> str:
     parts = [f"{count} recall(s) potentially related by vehicle/component."]
     if campaigns:
         parts.append(f"Campaigns: {', '.join(campaigns)}")
+    return " ".join(parts)
+
+
+def _summarize_component_evidence(comp_evidence) -> str:
+    """Build summary text for component evidence."""
+    if not comp_evidence.complaint_components:
+        return "No complaint-component links found in the graph."
+    count = comp_evidence.complaint_count
+    components = comp_evidence.components[:5]
+    parts = [f"{count} complaint(s) linked to components via MENTIONS_COMPONENT."]
+    if components:
+        parts.append(f"Components: {', '.join(components)}")
+    return " ".join(parts)
+
+
+def _summarize_shared_component_recalls(shared_result) -> str:
+    """Build summary text for shared component recalls."""
+    if not shared_result.shared_recalls:
+        return "No recalls linked via shared components in the graph."
+    count = shared_result.recall_count
+    recalls = [r.get("campaign_number", "") for r in shared_result.shared_recalls[:5] if r.get("campaign_number")]
+    parts = [f"{count} recall(s) potentially related by shared component."]
+    if recalls:
+        parts.append(f"Campaigns: {', '.join(recalls)}")
     return " ".join(parts)
 
 

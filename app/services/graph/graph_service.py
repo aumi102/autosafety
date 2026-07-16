@@ -19,6 +19,8 @@ from app.services.graph.graph_builder import build_graph
 from app.services.graph.graph_queries import (
     get_vehicle_neighborhood,
     get_recall_paths_for_vehicle,
+    get_component_evidence_for_vehicle,
+    get_shared_component_recall_paths,
 )
 from app.services.graph.graph_models import (
     GraphBuildStats,
@@ -28,6 +30,7 @@ from app.services.graph.graph_models import (
     GraphRelStats,
     VehicleNeighborhood,
     RecallPathResult,
+    ComponentEvidence,
 )
 from app.db.models.domain import Vehicle, Complaint, Recall, Component
 
@@ -263,4 +266,104 @@ def get_vehicle_recall_paths(vehicle_id: str) -> Optional[RecallPathResult]:
             session.close()
     except Exception as e:
         logger.exception(f"Recall path retrieval failed: {e}")
+        return None
+
+
+def get_vehicle_component_evidence(vehicle_id: str) -> Optional[ComponentEvidence]:
+    """
+    Retrieve component-level evidence for a vehicle from the graph.
+
+    Returns complaints linked via MENTIONS_COMPONENT and shared recalls
+    linked via RELATED_TO_COMPONENT.
+
+    This is NOT causal — shared component links are potential associations only.
+    """
+    try:
+        engine = _pg_engine()
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        try:
+            vehicle = session.get(Vehicle, vehicle_id)
+            if not vehicle:
+                return None
+
+            client = Neo4jClient()
+            try:
+                result = get_component_evidence_for_vehicle(
+                    client,
+                    make=vehicle.normalized_make,
+                    model=vehicle.normalized_model,
+                    year=vehicle.model_year,
+                )
+                if not result:
+                    return None
+                return ComponentEvidence(
+                    make=result.get("make_name", ""),
+                    model=result.get("model_name", ""),
+                    year=result.get("model_year", 0),
+                    vehicle_id=str(vehicle.id),
+                    complaint_components=result.get("complaints", []),
+                    components=[c.get("name", "") for c in result.get("components", [])],
+                    complaint_count=result.get("complaint_count", 0),
+                    shared_recalls=result.get("recalls", []),
+                    recall_count=result.get("recall_count", 0),
+                    path_type="complaint_mentions_component",
+                )
+            finally:
+                client.close()
+        finally:
+            session.close()
+    except Exception as e:
+        logger.exception(f"Component evidence retrieval failed: {e}")
+        return None
+
+
+def get_vehicle_shared_component_recalls(vehicle_id: str) -> Optional[ComponentEvidence]:
+    """
+    Retrieve recalls shared through components for a vehicle.
+
+    Finds recalls that AFFECT the vehicle and are RELATED_TO_COMPONENT
+    components that complaints on this vehicle MENTIONS_COMPONENT.
+
+    This is potentially_related — NOT official causality.
+    """
+    try:
+        engine = _pg_engine()
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        try:
+            vehicle = session.get(Vehicle, vehicle_id)
+            if not vehicle:
+                return None
+
+            client = Neo4jClient()
+            try:
+                result = get_shared_component_recall_paths(
+                    client,
+                    make=vehicle.normalized_make,
+                    model=vehicle.normalized_model,
+                    year=vehicle.model_year,
+                )
+                if not result:
+                    return None
+                shared_recalls = result.get("recalls", []) or []
+                shared_components = result.get("shared_components", []) or []
+                return ComponentEvidence(
+                    make=result.get("make_name", ""),
+                    model=result.get("model_name", ""),
+                    year=result.get("model_year", 0),
+                    vehicle_id=str(vehicle.id),
+                    complaint_components=[],
+                    components=[c.get("name", "") for c in shared_components],
+                    complaint_count=0,
+                    shared_recalls=shared_recalls,
+                    recall_count=len(shared_recalls),
+                    path_type="potentially_related_by_shared_component",
+                )
+            finally:
+                client.close()
+        finally:
+            session.close()
+    except Exception as e:
+        logger.exception(f"Shared component recalls retrieval failed: {e}")
         return None

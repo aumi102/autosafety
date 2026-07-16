@@ -381,7 +381,57 @@ curl -X POST http://localhost:8000/v1/chat/sessions/test-session/messages \
 - **Only Recall → AFFECTS → ModelYear is official** when NHTSA campaign explicitly applies.
 - No causality claims from complaint-recall co-occurrence.
 
-### Intentional gaps (Phase 5+)
+## Phase 5: Component-Level Graph Links
+
+### What was built
+
+- Component nodes MERGE'd into Neo4j before complaint/recall processing
+- `Complaint -[:MENTIONS_COMPONENT]-> Component` when complaint has `original_component`
+- `Recall -[:RELATED_TO_COMPONENT]-> Component` when recall has component data
+- Component evidence queries: `get_component_evidence_for_vehicle()` and `get_shared_component_recall_paths()`
+- Phase 5 stats tracked: `component_nodes_merged`, `complaint_component_links_seen`, `complaint_component_links_merged`, `recall_component_links_seen`, `recall_component_links_merged`, `component_links_skipped`, `component_link_errors`
+- API endpoint: `GET /v1/graph/vehicles/{vehicle_id}/component-evidence`
+- Hybrid service integrates component evidence into SQL+graph answers
+
+### Graph relationship counts (5 vehicles)
+
+| Relationship | Count |
+|---|---|
+| MENTIONS_COMPONENT | 5 |
+| RELATED_TO_COMPONENT | 0 (recall component data missing in source) |
+| Component nodes | 5 |
+
+### Safety caveats
+
+- **Complaint volume alone does not prove a safety defect.**
+- **Graph recall links via shared component are POTENTIAL associations only.**
+- **Only Recall → AFFECTS → ModelYear is official** when NHTSA campaign explicitly applies.
+- **RELATED_TO_COMPONENT may remain zero** because current NHTSA recall records lack component fields — this reflects missing source data, not absence of safety relevance.
+- No causality claims from complaint-recall co-occurrence.
+
+### Setup
+
+Rebuild graph to apply Phase 5 links:
+
+```bash
+python scripts/build_phase3_graph.py --setup-schema
+python scripts/build_phase3_graph.py --build --limit-vehicles 5
+python scripts/build_phase3_graph.py --status
+```
+
+### API endpoints
+
+```bash
+# Component evidence for a vehicle
+curl http://localhost:8000/v1/graph/vehicles/{vehicle_id}/component-evidence
+
+# Hybrid question with component evidence
+curl -X POST http://localhost:8000/v1/hybrid/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Which component has the most complaints for Ford F-150 2020, and are there related recalls?"}'
+```
+
+### Intentional gaps (Phase 6+)
 
 - Vector embeddings and semantic similarity
 - Full GraphRAG with semantic chunk retrieval
