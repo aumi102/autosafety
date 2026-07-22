@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, vehicles, chat, ingestion, sql_analytics, graph, hybrid
+from app.api.v1.endpoints import health, vehicles, chat, ingestion, sql_analytics, graph, hybrid, graphrag
 
 router = APIRouter()
 router.include_router(health.router, prefix="/health", tags=["health"])
@@ -9,3 +9,4 @@ router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
 router.include_router(sql_analytics.router, prefix="/sql-analytics", tags=["sql-analytics"])
 router.include_router(graph.router, prefix="/graph", tags=["graph"])
 router.include_router(hybrid.router, prefix="/hybrid", tags=["hybrid"])
+router.include_router(graphrag.router, prefix="/graphrag", tags=["graphrag"])

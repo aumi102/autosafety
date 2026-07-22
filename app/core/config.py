@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     NEO4J_PASSWORD: str = "neo4j"
     LOG_LEVEL: str = "INFO"
     AUTH_ENABLED: bool = False
+    GRAPHRAG_EMBEDDING_PROVIDER: str = "deterministic"
+    GRAPHRAG_EMBEDDING_MODEL: str = "deterministic-test-v1"
+    GRAPHRAG_EMBEDDING_DIMENSION: int = 384
 
 @lru_cache
 def get_settings() -> Settings:

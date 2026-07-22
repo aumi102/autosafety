@@ -433,10 +433,139 @@ curl -X POST http://localhost:8000/v1/hybrid/query \
 
 ### Intentional gaps (Phase 6+)
 
-- Vector embeddings and semantic similarity
+- LLM answer generation and synthesis (Phase 7)
 - Full GraphRAG with semantic chunk retrieval
-- LLM Text-to-Cypher and LLM Text-to-SQL
 - Embedding-based complaint-recall matching
 - Graph visualization frontend
 - Background job / Celery for large builds
+- JWT auth
+
+---
+
+## Phase 6: GraphRAG Retrieval Foundation
+
+### What was built
+
+- Canonical evidence documents from PostgreSQL complaints and recalls
+- Deterministic text chunking with stable SHA-256 chunk IDs
+- Embedding providers: DeterministicTestProvider (tests/dev) and LocalSentenceTransformerProvider (optional)
+- pgvector-backed vector store with JSONB brute-force fallback
+- Semantic retrieval with citation metadata and deduplication
+- Neo4j graph expansion from retrieved source entities (predefined Cypher only)
+- Safety caveats: similarity ≠ causality, shared component = potential association
+
+### Architecture flow
+
+```
+PostgreSQL complaints/recalls
+  → Document builder (canonical text + metadata)
+    → Chunker (stable IDs, deterministic)
+      → Embedding provider (deterministic or sentence-transformers)
+        → Vector store (pgvector or JSONB fallback)
+          → Semantic retrieval + citation
+            → Neo4j expansion (predefined Cypher)
+              → Response (chunks, citations, graph paths, warnings)
+```
+
+### Setup
+
+```bash
+# Start infra
+docker compose up postgres redis neo4j -d
+
+# Run migrations (creates evidence_documents + evidence_chunks + embedding_vector column)
+alembic upgrade head
+
+# Check index status
+python scripts/index_phase6_graphrag.py --status
+
+# Index documents (force-reembed for fresh vector column after migration 0003)
+python scripts/index_phase6_graphrag.py --source-type all --limit 50 --force-reembed
+
+# Query retrieval
+python scripts/query_phase6_graphrag.py \
+  --question "brake complaints and recalls for Ford F-150 2020" \
+  --top-k 5
+
+# Filtered retrieval
+python scripts/query_phase6_graphrag.py \
+  --question "brake complaints" \
+  --top-k 5 \
+  --source-type complaint \
+  --make Ford \
+  --model F-150 \
+  --model-year 2020
+
+# Evaluation
+python scripts/evaluate_phase6_graphrag.py --verbose
+```
+
+### API endpoints
+
+```bash
+# Health
+curl http://localhost:8000/v1/graphrag/health
+
+# Status
+curl http://localhost:8000/v1/graphrag/status
+
+# Retrieve
+curl -X POST http://localhost:8000/v1/graphrag/retrieve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "brake complaints for Ford F-150 2020",
+    "top_k": 5,
+    "include_graph": true,
+    "make": "Ford",
+    "model": "F-150",
+    "model_year": 2020
+  }'
+
+# Index (admin only)
+curl -X POST http://localhost:8000/v1/graphrag/index \
+  -H "Content-Type: application/json" \
+  -d '{"source_type": "all", "limit": 50}'
+```
+
+### Vector backend
+
+| Backend | Trigger | Search method |
+|---|---|---|
+| pgvector | `embedding_vector` column exists | Native `vector(384)` + HNSW index + cosine distance `<=>` |
+| jsonb_fallback | `embedding_vector` column absent | Brute-force JSONB cosine similarity |
+
+`get_graphrag_status()` reports exactly `"pgvector"` or `"jsonb_fallback"` — no "pgvector-backed" when fallback active.
+
+### Embedding providers
+
+| Provider | Use case | Network | Dimension |
+|---|---|---|---|
+| DeterministicTestProvider (default) | Tests and dev | No | 384 |
+| LocalSentenceTransformerProvider | Production semantic quality | Yes (model download) | configurable |
+
+Set via `GRAPHRAG_EMBEDDING_PROVIDER` env var.
+
+### Evaluation
+
+```
+python scripts/evaluate_phase6_graphrag.py
+```
+
+Metrics: Recall@1, Recall@3, MRR. Computed deterministically from evaluation fixture.
+
+> **WARNING:** Deterministic lexical embeddings reflect token-overlap similarity, not semantic understanding. The 5-query evaluation fixture is statistically insignificant. Do not extrapolate to production quality.
+
+### Safety caveats
+
+- **Semantic similarity does not prove a safety defect or official causality.**
+- **Shared component paths are potential associations, not causality.**
+- **Official recall applicability is Recall → AFFECTS → ModelYear only.**
+- **Retrieved complaint records are public reports and may be noisy.**
+
+### Intentional gaps (Phase 7+)
+
+- LLM answer generation and synthesis
+- Unrestricted LLM Text-to-SQL or Text-to-Cypher
+- Frontend / UI
+- Background job / Celery for large-scale indexing
 - JWT auth

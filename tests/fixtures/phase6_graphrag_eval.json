@@ -1,0 +1,49 @@
+{
+  "description": "Phase 6 GraphRAG evaluation fixture. Deterministic lexical embeddings. Tiny local set.",
+  "provider": "deterministic-test-v1",
+  "dimension": 384,
+  "caveat": "Evaluation uses deterministic lexical embeddings. Scores reflect token overlap, not semantic understanding. Small fixture size — do not extrapolate to production quality.",
+  "queries": [
+    {
+      "query": "brake complaints and recalls",
+      "top_k": 5,
+      "filters": {},
+      "expected_source_keys": ["complaint:*", "recall:*"],
+      "note": "brake-related queries should surface brake complaints and recalls"
+    },
+    {
+      "query": "steering complaints for Ford vehicles",
+      "top_k": 3,
+      "filters": {"make": "Ford"},
+      "expected_source_keys": ["complaint:*"],
+      "note": "vehicle filter should narrow to Ford steering complaints"
+    },
+    {
+      "query": "electrical system failures",
+      "top_k": 5,
+      "filters": {},
+      "expected_source_keys": [],
+      "note": "may return no results if fixture has no electrical data"
+    },
+    {
+      "query": "airbag deployment issues",
+      "top_k": 5,
+      "filters": {},
+      "expected_source_keys": ["complaint:*"],
+      "note": "airbag queries target complaint records mentioning airbags"
+    },
+    {
+      "query": "recall for campaign number 20V123000",
+      "top_k": 3,
+      "filters": {},
+      "expected_source_keys": ["recall:20V123000"],
+      "note": "exact recall campaign query — should find specific recall"
+    }
+  ],
+  "metrics": {
+    "recall_at_1": "fraction of queries where expected source is in top-1",
+    "recall_at_3": "fraction of queries where expected source is in top-3",
+    "mrr": "mean reciprocal rank of first expected-source hit",
+    "note": "metrics are meaningful only for queries with non-empty expected_source_keys"
+  }
+}
