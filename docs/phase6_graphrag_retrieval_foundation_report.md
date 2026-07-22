@@ -1,8 +1,8 @@
 # Phase 6: GraphRAG Retrieval Foundation
 
-## Status: Complete (with infrastructure caveat)
+## Status: Complete
 
-Phase 6 GraphRAG semantic retrieval is substantially implemented and validated. Docker was unavailable in this environment, so live runtime validation (migrations, indexing, retrieval) was deferred. All unit tests pass, code compiles cleanly, and the architecture is verified against source-of-truth docs.
+Phase 6 GraphRAG semantic retrieval fully validated against live PostgreSQL/pgvector/Neo4j runtime.
 
 ## Why Phase 6 follows Phase 5
 
@@ -126,35 +126,93 @@ pytest tests/                         => 221+ passed
 
 No live PostgreSQL, Neo4j, or network required for unit tests.
 
-## Infrastructure caveat
+## Runtime validation
 
-Docker daemon was unavailable during this session. Live validation (migrations, indexing, retrieval, API smoke) could not execute. Code review confirmed:
-
-- Migrations are syntactically correct and use the pgvector extension properly
-- vector_store.py correctly detects `embedding_vector` column existence at runtime
-- All queries are parameterized with no arbitrary SQL
-- Backend detection is accurate (pgvector vs jsonb_fallback)
-
-**To complete live validation:**
-```bash
-docker compose up postgres redis neo4j -d
-alembic upgrade head
-python scripts/index_phase6_graphrag.py --status
-python scripts/index_phase6_graphrag.py --source-type all --limit 50 --force-reembed
-python scripts/query_phase6_graphrag.py --question "brake complaints for Ford F-150 2020" --top-k 5
-uvicorn app.main:app --host 127.0.0.1 --port 8016
-# test GET /v1/graphrag/health, /v1/graphrag/status, POST /v1/graphrag/retrieve
+### Alembic
 ```
+current: 2025_01_01_0003 (head)
+heads:   2025_01_01_0003
+```
+
+### pgvector
+- Vector extension: enabled
+- `embedding_vector` type: `vector(384)`
+- HNSW index: `ix_evidence_chunks_embedding_vector_hnsw` with `m=16, ef_construction=64`
+- Active backend: **pgvector**
+
+### GraphRAG index
+| Metric | Value |
+|---|---|
+| Documents | 42 |
+| Chunks | 42 |
+| Embedded vectors | 42/42 (100%) |
+| Complaints | 5 |
+| Recalls | 37 |
+
+### Database integrity
+- 0 duplicate document IDs
+- 0 duplicate chunk IDs
+- 0 missing source_record_key values
+- 0 indexing errors
+
+### Idempotency
+Second normal reindex: 0 created, 0 updated, 42 unchanged — idempotent.
+
+### Retrieval smoke
+
+**Query:** "brake complaints and recalls for Ford F-150 2020" (top_k=5)
+- 5 chunks returned (complaint + 4 recalls)
+- Top score: 0.9735 (complaint 11420001 — SERVICE BRAKES)
+- Graph paths: 5 (complaint_mentions_component + official_recall_affects_vehicle)
+- Confidence: high (0.9)
+- No causal overclaim, citations traceable to source records
+
+**Query:** "brake complaints" filtered to Ford F-150 2020 (top_k=5, complaint only)
+- 1 chunk returned (complaint 11420001, score 0.8535)
+- Graph path: SERVICE BRAKES component linked
+- Confidence: medium (0.6)
+
+**Query:** "recall campaigns affecting Ford F-150 2020" (top_k=5, recall only)
+- 5 recall chunks returned (scores 0.97–0.97)
+- All have vehicle metadata (Ford F-150 2020) from Neo4j graph
+- Graph paths: official_recall_affects_vehicle for each
+
+### API smoke
+```
+GET /v1/graphrag/health       => {"vector_backend_available":true,"phase":"phase_6"}
+GET /v1/graphrag/status      => {"vector_backend":"pgvector","document_count":42,...}
+POST /v1/graphrag/retrieve   => 200, 5 chunks, citations, graph paths, warnings ✓
+```
+
+### Evaluation
+
+```
+Provider: deterministic-test-v1 (384-dim lexical)
+Queries: 5 (4 evaluable with non-empty expected keys)
+Recall@1:  0.6250  (5/8 expected hits in top-1)
+Recall@3: 0.6250  (5/8 expected hits in top-3)
+MRR:      0.7500  (mean reciprocal rank of first hit)
+```
+
+Per-query breakdown:
+- "brake complaints and recalls": R@1=0.5, R@3=0.5, MRR=1.0 (complaints ranked first)
+- "steering complaints for Ford": R@1=1.0, R@3=1.0, MRR=1.0
+- "electrical system failures": not evaluable (empty expected keys)
+- "airbag deployment issues": R@1=1.0, R@3=1.0, MRR=1.0
+- "recall for campaign 20V123000": R@1=0.0, R@3=0.0, MRR=0.0 (campaign not in corpus)
+
+### Bugs found and fixed
+1. **Chunk metadata empty** — `upsert_document` passed `metadata_json={}` instead of `document.metadata`. Fixed: now passes `document.metadata`.
+2. **pgvector query parameter error** — `ARRAY` literal passed as SQLAlchemy `TextClause` parameter. psycopg2 couldn't adapt it. Fixed: vector literal embedded directly in SQL string (deterministic embedding, not user input).
+3. **Graph vehicle path wrong** — Neo4j `HAS_COMPLAINT` direction was `ModelYear→Complaint` but expander used `Complaint←ModelYear`. Fixed: reversed all arrow directions in both Cypher queries.
 
 ## Limitations
 
-- **Tiny local dataset**: ~5 complaints + ~37 recalls — retrieval quality reflects small corpus
+- **Tiny local dataset**: 5 complaints + 37 recalls — retrieval quality reflects small corpus
 - **Deterministic lexical embeddings**: token-overlap similarity, not semantic understanding
 - **RELATED_TO_COMPONENT = 0**: recall component data missing in source — same as Phase 5
 - **No LLM generation**: Phase 6 is retrieval only; answer synthesis deferred to Phase 7
 - **Optional sentence-transformer**: requires `pip install sentence-transformers` + model download
-- **Docker required for live indexing**: no in-process seeding
-- **Live validation deferred**: Docker unavailable in this session
 
 ## Recommended Phase 7 direction
 

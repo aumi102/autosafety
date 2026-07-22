@@ -548,10 +548,15 @@ Set via `GRAPHRAG_EMBEDDING_PROVIDER` env var.
 ### Evaluation
 
 ```
-python scripts/evaluate_phase6_graphrag.py
+python scripts/evaluate_phase6_graphrag.py --verbose
 ```
 
 Metrics: Recall@1, Recall@3, MRR. Computed deterministically from evaluation fixture.
+
+**Actual results (local fixture, deterministic lexical embeddings):**
+- Recall@1: 0.625 (5/8 expected hits in top-1)
+- Recall@3: 0.625 (5/8 expected hits in top-3)
+- MRR: 0.750
 
 > **WARNING:** Deterministic lexical embeddings reflect token-overlap similarity, not semantic understanding. The 5-query evaluation fixture is statistically insignificant. Do not extrapolate to production quality.
 

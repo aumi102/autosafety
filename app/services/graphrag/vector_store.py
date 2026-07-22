@@ -146,7 +146,7 @@ class VectorStore:
                 embedding_vector_id=None,  # will be set during embedding
                 embedding_model=None,
                 embedding_dimension=None,
-                metadata_json={},
+                metadata_json=document.metadata,
             )
             self.session.add(db_chunk)
             chunks_created += 1
@@ -232,8 +232,8 @@ class VectorStore:
     ) -> list[VectorSearchResult]:
         """Search using pgvector native cosine distance."""
         query_vec_literal = _pg_vector_literal(query_embedding)
+        # Embed vector literal directly in SQL — deterministic, not user-supplied
         params: dict = {
-            "query_vec": text(f"ARRAY{query_vec_literal}"),
             "source_type": source_type,
             "limit": limit,
         }
@@ -253,6 +253,8 @@ class VectorStore:
         where_clause = " AND ".join(filters)
 
         # pgvector cosine distance (<=>) -> similarity = 1 - distance
+        # Vector literal embedded directly (deterministic test embedding, not user input)
+        vec_literal = "[" + ", ".join(str(v) for v in query_embedding) + "]"
         sql = f"""
             SELECT
                 ec.chunk_id,
@@ -264,11 +266,11 @@ class VectorStore:
                 ed.metadata_json AS doc_metadata,
                 ed.title,
                 ed.source_url,
-                (1 - (ec.embedding_vector <=> :query_vec)) AS score
+                (1 - (ec.embedding_vector <=> '{vec_literal}')) AS score
             FROM evidence_chunks ec
             JOIN evidence_documents ed ON ed.id = ec.document_id
             WHERE {where_clause}
-            ORDER BY ec.embedding_vector <=> :query_vec, ec.chunk_id ASC
+            ORDER BY ec.embedding_vector <=> '{vec_literal}', ec.chunk_id ASC
             LIMIT :limit
         """
 

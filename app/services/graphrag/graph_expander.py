@@ -19,7 +19,7 @@ COMPLAINT_NEIGHBORHOOD_CYPHER = """
 MATCH (c:Complaint {odi_number: $odi})
 OPTIONAL MATCH (c)-[:MENTIONS_COMPONENT]->(comp:Component)
 OPTIONAL MATCH (r:Recall)-[:RELATED_TO_COMPONENT]->(comp)
-OPTIONAL MATCH (c)<-[:HAS_COMPLAINT]-(my:ModelYear)-[:HAS_YEAR]->(vm:VehicleModel)-[:HAS_MODEL]->(mk:VehicleMake)
+OPTIONAL MATCH (c)<-[:HAS_COMPLAINT]-(my:ModelYear)<-[:HAS_YEAR]-(vm:VehicleModel)<-[:HAS_MODEL]-(mk:VehicleMake)
 OPTIONAL MATCH (r)-[:AFFECTS]->(my2:ModelYear)
 WHERE my2.year = my.year
 WITH c, comp, r, mk, vm, my
@@ -41,7 +41,7 @@ LIMIT 1
 RECALL_NEIGHBORHOOD_CYPHER = """
 MATCH (r:Recall {campaign_number: $campaign})
 OPTIONAL MATCH (r)-[:RELATED_TO_COMPONENT]->(comp:Component)
-OPTIONAL MATCH (r)-[:AFFECTS]->(my:ModelYear)-[:HAS_YEAR]->(vm:VehicleModel)-[:HAS_MODEL]->(mk:VehicleMake)
+OPTIONAL MATCH (r)-[:AFFECTS]->(my:ModelYear)<-[:HAS_YEAR]-(vm:VehicleModel)<-[:HAS_MODEL]-(mk:VehicleMake)
 OPTIONAL MATCH (comp)<-[:MENTIONS_COMPONENT]-(c:Complaint)
 WITH r, comp, c, mk, vm, my
 RETURN
