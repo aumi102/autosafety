@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
@@ -16,6 +17,21 @@ class Settings(BaseSettings):
     GRAPHRAG_EMBEDDING_PROVIDER: str = "deterministic"
     GRAPHRAG_EMBEDDING_MODEL: str = "deterministic-test-v1"
     GRAPHRAG_EMBEDDING_DIMENSION: int = 384
+
+    # Phase 7C — Answer Synthesis Provider
+    PHASE7_SYNTHESIS_PROVIDER: str = "deterministic"  # deterministic | fake | openai_compatible
+    PHASE7_SYNTHESIS_MODEL: str = ""
+    PHASE7_SYNTHESIS_ALLOW_EXTERNAL: bool = False
+    PHASE7_PROVIDER_TIMEOUT_SECONDS: int = 30
+    PHASE7_MAX_TOOL_ROUNDS: int = 2
+    PHASE7_MAX_TOOL_CALLS: int = 4
+    PHASE7_MAX_EVIDENCE_ITEMS: int = 20
+    PHASE7_MAX_EVIDENCE_CHARS: int = 16000
+    PHASE7_MAX_OUTPUT_CHARS: int = 8000
+    PHASE7_MAX_CLAIMS: int = 8
+    # OpenAI-compatible provider settings (used when provider=openai_compatible)
+    PHASE7_PROVIDER_API_KEY: SecretStr = SecretStr("")
+    PHASE7_PROVIDER_BASE_URL: str = "https://api.openai.com/v1"
 
 @lru_cache
 def get_settings() -> Settings:

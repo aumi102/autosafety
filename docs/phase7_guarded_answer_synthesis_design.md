@@ -31,6 +31,22 @@ Phase 4 established hybrid SQL + graph evidence composition.
 
 **Unresolved provider choice:** No vendor selected in this design. The provider abstraction is vendor-neutral. A later Phase 7C subphase implements at least one real provider adapter. Until then, tests and fallback use DeterministicProvider or FakeProvider.
 
+## Decision D7-002 — OpenAI-Compatible REST Provider (Phase 7C)
+
+**Decision:** Phase 7C implements one real provider adapter — `OpenAICompatibleProvider` — using `httpx` for synchronous REST calls to an OpenAI-compatible chat-completions endpoint. This goes beyond the "stub with `available()=False`" exit gate originally described for Phase 7C below; a real, testable HTTP request/response path was implemented instead, gated behind the same configuration requirements the stub would have needed (`PHASE7_SYNTHESIS_ALLOW_EXTERNAL=true`, API key, model, base URL).
+
+**Exact protocol implemented:**
+- `POST {base_url}/chat/completions` (base URL defaults to `https://api.openai.com/v1`)
+- `Authorization: Bearer <api_key>` header
+- JSON body: `{"model", "messages": [system, user], "temperature": 0.1, "max_tokens": 2000}`
+- Structured output via a JSON object the model is instructed to return as the message content (not the provider's native `response_format`/tool-calling parameter) — parsed defensively, including markdown code-fence stripping.
+
+**Compatibility claim (see Phase 7C report for full detail):** verified against OpenAI's request/response shape only. Self-hosted servers exposing the identical `/chat/completions` + Bearer-auth shape (vLLM, LM Studio, Ollama's `/v1` endpoint, OpenRouter) are potentially compatible but not verified in this phase. Azure OpenAI is **not** compatible as implemented — it uses a different URL pattern (`/openai/deployments/{deployment}/...`), `api-version` query parameter, and `api-key` header instead of `Authorization: Bearer`.
+
+**Rationale:** Building the real adapter now (rather than deferring to a later subphase) let Phase 7C be verified end-to-end with mocked HTTP transport, including error-code mapping, response-size bounding, and the config→provider wiring — surfacing several defects (see Phase 7C report) that a stub would have hidden until a later phase.
+
+**Safety implications:** Unchanged from D7-001. The provider never receives DB/Neo4j clients or credentials, never executes SQL/Cypher, and only reaches the network when `PHASE7_SYNTHESIS_ALLOW_EXTERNAL=true` and full configuration is present; otherwise the provider factory silently falls back to `DeterministicProvider`.
+
 ## Problem Statement
 
 Phase 6 returns raw evidence. A user asking natural-language questions about vehicle safety needs a synthesized answer — not a list of chunks. The system must:
