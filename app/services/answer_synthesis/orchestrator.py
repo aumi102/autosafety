@@ -76,6 +76,16 @@ class SynthesisOrchestrator:
         self._fallback = deterministic_fallback or DeterministicProvider()
         self._config = config or SynthesisConfig()
 
+    @property
+    def primary_provider_name(self) -> str:
+        """Configured primary provider name, independent of any later fallback."""
+        return self._primary.provider_name
+
+    @property
+    def primary_provider_available(self) -> bool:
+        """Whether the configured primary provider reports itself available."""
+        return self._primary.available()
+
     def orchestrate(
         self,
         question: str,
@@ -210,6 +220,7 @@ class SynthesisOrchestrator:
             provider_result=provider_result,
             trace=trace,
             phase="phase_7c",
+            evidence_bundle=bundle,
         )
 
     def _execute_mandatory_base(
@@ -409,6 +420,7 @@ class SynthesisOrchestrator:
             ),
             trace=trace,
             phase="phase_7c",
+            evidence_bundle=EvidenceBundle(),
         )
 
 

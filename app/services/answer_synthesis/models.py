@@ -8,7 +8,10 @@ No credentials, no raw tracebacks, no database clients in serialized output.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.answer_synthesis.tools.base import EvidenceBundle
 
 
 @dataclass
@@ -182,6 +185,10 @@ class OrchestrationResult:
     provider_result: ProviderSynthesisResult
     trace: OrchestrationTrace
     phase: str = "phase_7c"
+    # Internal only — not serialized by to_dict(). Phase 7D consumes this
+    # directly to adapt evidence/citations; it is never exposed as prompt
+    # or provider-facing output.
+    evidence_bundle: Optional["EvidenceBundle"] = None
 
     def to_dict(self) -> dict:
         return {
