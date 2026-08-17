@@ -793,28 +793,28 @@ Request:
 ```json
 {
   "question": "What brake complaints and official recalls exist for Ford F-150 2020?",
-  "top_k": 5,
-  "source_type": null,
-  "make": "Ford",
-  "model": "F-150",
-  "model_year": 2020,
-  "include_graph": true,
-  "include_trace": true,
-  "provider": "deterministic"
+  "include_trace": false
 }
 ```
+
+Phase 7E follows the committed Phase 7D interface exactly:
+`GuardedAnswerService.answer(question: str)`. Retrieval filters and graph controls are
+not accepted because the guarded service does not expose them. Provider selection,
+provider URLs, credentials, tool budgets, raw SQL, and raw Cypher are application-owned
+configuration and cannot be supplied per request. `include_trace` is transport-only;
+when false, the safe Phase 7D trace is suppressed.
 
 Response: Phase 7 answer contract (see Output Answer Contract section).
 
 Errors (4xx):
-- `question_empty`: question cannot be empty
-- `top_k_invalid`: top_k must be 1–50
-- `provider_unsupported`: unknown provider name
+- HTTP 422: missing, blank, or greater-than-1000-character question; unknown fields
 
 Errors (5xx):
 - Provider failure → deterministic fallback with warning
 - Neo4j failure → proceed without graph expansion
 - PostgreSQL failure → abstention with reason
+- HTTP 503 only when the guarded service dependency cannot be constructed
+- HTTP 500 only for an unexpected endpoint/service failure; exception text is not returned
 
 ### GET /v1/graphrag/answer/status
 
@@ -824,14 +824,23 @@ Response:
 ```json
 {
   "synthesis_available": true,
-  "default_provider": "deterministic",
+  "configured_provider": "deterministic",
+  "active_provider": "deterministic",
+  "provider_available": true,
+  "real_llm_enabled": false,
   "real_llm_configured": false,
+  "deterministic_fallback_available": true,
   "tool_calling_enabled": true,
   "max_tool_rounds": 2,
   "max_tool_calls": 4,
+  "graphrag_base_required": true,
+  "guarded_validation_enabled": true,
   "phase": "phase_7"
 }
 ```
+
+Status performs configuration-only provider availability checks. It never sends a
+provider request and never returns credentials or connection strings.
 
 ## CLI Contract
 
@@ -839,21 +848,15 @@ Response:
 # Basic synthesis (uses configured provider)
 python scripts/query_phase7_answer.py --question "brake complaints and recalls for Ford F-150 2020"
 
-# Filtered
-python scripts/query_phase7_answer.py --question "brake complaints" --top-k 5 --source-type complaint --make Ford --model F-150 --model-year 2020
-
 # Include trace
 python scripts/query_phase7_answer.py --question "..." --include-trace
 
-# Provider override
-python scripts/query_phase7_answer.py --question "..." --provider deterministic
-
-# JSON output
-python scripts/query_phase7_answer.py --question "..." --json
-
-# No graph expansion
-python scripts/query_phase7_answer.py --question "..." --no-graph
+# Pretty JSON (default output is compact JSON)
+python scripts/query_phase7_answer.py --question "..." --pretty
 ```
+
+The CLI intentionally has no provider, retrieval-filter, raw-query, tool, or graph
+override flags because those controls are not part of the Phase 7D public interface.
 
 ## Configuration
 

@@ -1,4 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from app.api.v1.router import router as v1_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 
@@ -10,6 +14,16 @@ app = FastAPI(
     description="Hybrid GraphRAG and Text-to-SQL analyst for vehicle safety data",
     version="0.1.0",
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def safe_request_validation_error(_request: Request, exc: RequestValidationError):
+    """Return normal 422 details without reflecting rejected request values."""
+    safe_errors = [
+        {key: value for key, value in error.items() if key not in {"input", "ctx", "url"}}
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": safe_errors})
 
 @app.get("/")
 def root():
@@ -23,5 +37,5 @@ def healthz():
 def readyz():
     return {"status": "ready"}
 
-from app.api.v1.router import router as v1_router
+
 app.include_router(v1_router, prefix="/v1")

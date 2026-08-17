@@ -1262,15 +1262,20 @@ class TestSecurity:
         for c in result.claims:
             assert "DROP TABLE" not in c.text
 
-    def test_no_public_api_route_added(self):
-        import app.api.v1.router as router_mod
+    def test_phase7d_service_remains_transport_agnostic(self):
+        import app.services.answer_synthesis.service as svc_mod
         import inspect
-        src = inspect.getsource(router_mod)
-        assert "answer_synthesis" not in src
-        assert "guarded" not in src.lower()
+        src = inspect.getsource(svc_mod)
+        assert "fastapi" not in src.lower()
+        assert "argparse" not in src.lower()
+        assert "app.api" not in src
 
-    def test_no_phase7e_files_created(self):
-        import pathlib
-        repo_root = pathlib.Path(__file__).resolve().parents[1]
-        assert not (repo_root / "app" / "api" / "v1" / "endpoints" / "answer_synthesis.py").exists()
-        assert not (repo_root / "scripts" / "query_phase7_answer.py").exists()
+    def test_phase7d_contract_has_no_transport_or_credential_controls(self):
+        names = set(GuardedAnswerResult.__dataclass_fields__)
+        assert not names & {
+            "include_trace",
+            "api_key",
+            "provider_base_url",
+            "raw_sql",
+            "raw_cypher",
+        }
