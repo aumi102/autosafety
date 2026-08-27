@@ -119,6 +119,12 @@ def compute_confidence(
 
     score = max(0.0, min(1.0, score))
 
+    # Phase 7 design requires weak evidence to remain low-confidence even when
+    # citation/claim-quality components are otherwise internally consistent.
+    if "weak_evidence" in sufficiency.reasons and score >= MEDIUM_THRESHOLD:
+        score = MEDIUM_THRESHOLD - 0.01
+        reasons.append("weak evidence caps confidence at low")
+
     if score >= HIGH_THRESHOLD:
         level = "high"
     elif score >= MEDIUM_THRESHOLD:

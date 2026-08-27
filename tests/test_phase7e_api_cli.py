@@ -10,7 +10,6 @@ from __future__ import annotations
 import inspect
 import io
 import json
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -642,7 +641,8 @@ class TestSecurityAndCompatibility:
         assert "sk-status-secret" not in serialized
         assert "api_key" not in serialized
 
-    def test_no_phase7f_artifacts_created(self):
-        root = Path(__file__).resolve().parents[1]
-        assert not (root / "tests" / "fixtures" / "phase7_answer_eval.json").exists()
-        assert not (root / "scripts" / "evaluate_phase7_answers.py").exists()
+    def test_phase7e_transport_does_not_embed_phase7f_evaluation(self):
+        endpoint_source = inspect.getsource(api_module)
+        cli_source = inspect.getsource(cli)
+        assert "evaluate_phase7_answers" not in endpoint_source
+        assert "evaluate_phase7_answers" not in cli_source

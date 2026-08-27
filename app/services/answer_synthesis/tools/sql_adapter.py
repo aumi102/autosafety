@@ -124,7 +124,6 @@ def build_sql_analytics_adapter(
             # Build sanitized result dict
             result_data = {
                 "operation": operation,
-                "query": sql_data.query,
                 "columns": columns,
                 "rows": bounded_rows,
                 "row_count": len(bounded_rows),

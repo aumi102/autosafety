@@ -173,7 +173,7 @@ def build_default_tool_registry(
         build_vehicle_resolution_adapter,
         VEHICLE_RESOLUTION_DEFINITION,
     )
-    adapter = build_vehicle_resolution_adapter()
+    adapter = build_vehicle_resolution_adapter(sql_session_factory)
     registry.register(VEHICLE_RESOLUTION_DEFINITION, adapter)
 
     return registry

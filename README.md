@@ -1,6 +1,6 @@
 # AutoSafety GraphSQL Copilot
 
-Production-grade analyst copilot for exploring public vehicle-safety data from NHTSA.
+Evidence-first analyst copilot for exploring public vehicle-safety data from NHTSA.
 
 The product combines:
 
@@ -43,6 +43,9 @@ This forces the system to demonstrate SQL analytics, entity extraction, graph tr
 | `docs/08_security_safety_guardrails.md` | SQL safety, privacy, domain caveats |
 | `docs/09_roadmap_phase0_phase1.md` | First implementation phases |
 | `docs/contracts/answer_contract.md` | Required answer JSON shape |
+| `docs/phase7_final_evaluation_report.md` | Final guarded-answer evaluation and gates |
+| `docs/phase7_runtime_acceptance_report.md` | Live PostgreSQL/pgvector/Neo4j/API/CLI acceptance |
+| `docs/phase7_closeout_report.md` | Phase 7 architecture, security, limitations, handoff |
 | `docs/prompts/phase0_bootstrap_prompt.md` | Prompt for Codex/Claude to start repo implementation |
 | `docs/adr/ADR-0001-architecture-stack.md` | Architecture decision record |
 
@@ -567,10 +570,138 @@ Metrics: Recall@1, Recall@3, MRR. Computed deterministically from evaluation fix
 - **Official recall applicability is Recall → AFFECTS → ModelYear only.**
 - **Retrieved complaint records are public reports and may be noisy.**
 
-### Intentional gaps (Phase 7+)
+### Current Phase 6 limitations
 
-- LLM answer generation and synthesis
-- Unrestricted LLM Text-to-SQL or Text-to-Cypher
-- Frontend / UI
-- Background job / Celery for large-scale indexing
-- JWT auth
+- Deterministic lexical embeddings do not demonstrate production semantic quality.
+- Corpus and evaluation fixture are small.
+- Unrestricted LLM Text-to-SQL or Text-to-Cypher remains intentionally forbidden.
+- Frontend, background indexing jobs, and deployment auth remain outside this phase.
+
+---
+
+## Phase 7: Guarded Answer Synthesis
+
+### What was built
+
+- Real-provider abstraction plus deterministic offline provider/fallback.
+- Mandatory GraphRAG base retrieval and four application-owned, allowlisted,
+  read-only tools: vehicle resolution, SQL analytics, graph evidence, and
+  GraphRAG retrieval.
+- Bounded orchestration: at most 2 tool rounds and 4 total calls by default.
+- Application-owned evidence sufficiency, claim/citation validation, official
+  recall semantics, causality guard, repair, deterministic composition,
+  confidence, warnings, and abstention.
+- Prompt-injection and unsafe-provider-output rejection; public citation text with
+  instruction-like content is redacted.
+- Final guarded-answer API and CLI. Raw Phase 7C orchestration/provider output is
+  not a public answer contract.
+
+### Architecture
+
+```text
+FastAPI / CLI
+  -> GuardedAnswerService
+  -> bounded SynthesisOrchestrator
+  -> mandatory GraphRAG + optional allowlisted tools
+  -> configured provider or deterministic fallback
+  -> evidence/citation adaptation
+  -> sufficiency + claim/citation/recall/causality validation
+  -> repair or deterministic composition
+  -> application-computed confidence + warnings/abstention
+  -> GuardedAnswerResult (phase_7)
+```
+
+Complaint evidence remains observational. Official applicability requires an
+explicit `Recall -[:AFFECTS]-> ModelYear` path. Shared-component evidence is
+potential only and never proves causality.
+
+### API
+
+```bash
+# Safe provider/tool status; performs no external provider request
+curl http://localhost:8000/v1/graphrag/answer/status
+
+# Final Phase 7 guarded answer
+curl -X POST http://localhost:8000/v1/graphrag/answer \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What brake complaints are reported for Ford F-150 2020?"}'
+```
+
+Request fields are only `question` and optional `include_trace`. Credentials,
+provider URLs, arbitrary tools, raw SQL, and raw Cypher are rejected by schema.
+Normal guarded outcomes—including abstention, partial evidence, graph degradation,
+and deterministic fallback—return HTTP 200 with explicit semantics.
+
+Phase 6 retrieval remains separate and compatible at
+`POST /v1/graphrag/retrieve`.
+
+### CLI
+
+```bash
+python scripts/query_phase7_answer.py \
+  --question "What brake complaints are reported for Ford F-150 2020?"
+
+python scripts/query_phase7_answer.py \
+  --question "Are there official recalls affecting Ford F-150 2020?" \
+  --pretty
+```
+
+Default output is valid JSON. A valid guarded abstention exits 0. Configuration or
+irrecoverable internal failure exits non-zero. Trace is omitted unless requested.
+
+### External provider configuration
+
+Deterministic mode is default and requires no network:
+
+```text
+PHASE7_SYNTHESIS_PROVIDER=deterministic
+```
+
+An OpenAI-compatible provider is selected only from trusted application settings:
+
+```text
+PHASE7_SYNTHESIS_PROVIDER=openai_compatible
+PHASE7_SYNTHESIS_MODEL=<configured-model>
+PHASE7_SYNTHESIS_ALLOW_EXTERNAL=true
+PHASE7_PROVIDER_API_KEY=<secret>
+PHASE7_PROVIDER_BASE_URL=https://api.openai.com/v1
+```
+
+Missing/disabled external configuration leaves deterministic operation available.
+Runtime provider failure is visible through `synthesis_mode`, `provider`, warnings,
+and sanitized trace/status fields. The current closeout environment used
+deterministic mode; a real external provider was **not** live-verified.
+
+### Evaluation and validation
+
+```bash
+python scripts/evaluate_phase7_answers.py
+pytest tests/test_phase7_guarded_answer_synthesis.py -v
+pytest tests/ -v
+```
+
+Phase 7F results:
+
+- 20/20 deterministic evaluation cases passed.
+- 15/15 acceptance metric gates passed; citation validity, accepted-claim
+  grounding/coverage, invalid-output rejection, causal guard, prompt-injection
+  resistance, tool rejection, and deterministic stability were all 1.00.
+- 24/24 final Phase 7 integration tests passed.
+- 663/663 repository tests passed with 3 existing deprecation warnings.
+- Live local PostgreSQL/pgvector/Neo4j, all four tools, guarded service, API, CLI,
+  and Phase 6 route compatibility passed.
+
+### Current limitations
+
+- Real external provider has not been live-verified in this environment.
+- Local corpus is only 42 documents: 5 complaints and 37 recalls.
+- Default deterministic embeddings are lexical/token-overlap based.
+- Live graph has 59 nodes/58 relationships; `RELATED_TO_COMPONENT = 0` because
+  current recall source component fields are missing.
+- Evaluation is compact and deterministic, not a production-quality benchmark.
+- No frontend exists.
+- No Phase 8 memory, multi-turn agent workflow, or personalization exists.
+
+See `docs/phase7_final_evaluation_report.md`,
+`docs/phase7_runtime_acceptance_report.md`, and
+`docs/phase7_closeout_report.md` for exact evidence and limitations.

@@ -34,7 +34,18 @@ _UNSAFE_CAUSAL_PATTERNS = [
     r"\bproves\b",
     r"\bconfirms the defect\b",
     r"\bdefinitely unsafe\b",
+    r"\b(?:this|the) vehicle is unsafe\b",
     r"\bresponsible for\b",
+]
+
+# Provider claims containing instruction-following or secret-exfiltration
+# language are never accepted as factual answer text, even when they attach a
+# real complaint citation. Public complaint narratives are untrusted input.
+_UNTRUSTED_INSTRUCTION_PATTERNS = [
+    r"\bignore (?:all |any |the |system |previous |prior )*instructions\b",
+    r"\b(?:reveal|show|print|return) (?:the |your |my )*system prompt\b",
+    r"\b(?:reveal|show|print|return) (?:the |your |my )*(?:database|db) credentials\b",
+    r"\bcite[- ]fake[-\w]*\b",
 ]
 
 # Repairable causal language — safely neutralized to a supported, non-causal phrasing.
@@ -53,6 +64,9 @@ _REPAIRABLE_CAUSAL = [
 def _apply_causal_guard(text: str) -> tuple[bool, str, list[str]]:
     """Returns (ok, possibly-rewritten text, messages). ok=False means reject."""
     messages: list[str] = []
+    for pattern in _UNTRUSTED_INSTRUCTION_PATTERNS:
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            return False, text, [f"untrusted instruction language rejected ('{pattern}')"]
     for pattern in _UNSAFE_CAUSAL_PATTERNS:
         if re.search(pattern, text, flags=re.IGNORECASE):
             return False, text, [f"unsupported causal language rejected ('{pattern}')"]
@@ -235,7 +249,17 @@ def validate_and_build_claims(
             unsupported_claim_ids.append(claim_id)
             continue
         if remapped_type and remapped_type != claim_type:
+            previous_claim_type = claim_type
             claim_type = remapped_type
+            if previous_claim_type == "official_recall_applicability" and claim_type == "official_recall":
+                recall_key = next(
+                    (c.source_record_key for c in cited_citations if c.source_type == "recall"),
+                    "unknown",
+                )
+                text = (
+                    f"Recall record {recall_key} exists in the supplied public evidence; "
+                    "applicability to this vehicle was not verified."
+                )
             repaired_any = True
 
         causal_ok, new_text, causal_messages = _apply_causal_guard(text)

@@ -51,31 +51,32 @@ VEHICLE_RESOLUTION_DEFINITION = ToolDefinition(
 )
 
 
-def build_vehicle_resolution_adapter() -> Callable[..., ToolCallResult]:
+def build_vehicle_resolution_adapter(
+    session_factory: Callable | None = None,
+) -> Callable[..., ToolCallResult]:
     """
     Build a vehicle resolution tool adapter.
 
     Uses PostgreSQL ORM lookup — deterministic, parameterized, no raw SQL.
+    Reuses an application-owned session factory; never creates an engine per
+    request or tool call.
     """
+    if session_factory is None:
+        from sqlalchemy.orm import sessionmaker
+        from app.db.session import get_sync_engine
+
+        session_factory = sessionmaker(bind=get_sync_engine(), expire_on_commit=False)
+
     def adapter(*, call_id: str, arguments: dict[str, Any]) -> ToolCallResult:
         make = arguments.get("make", "").strip()
         model = arguments.get("model", "").strip()
         model_year = arguments.get("model_year")
 
         try:
-            from sqlalchemy import create_engine
-            from sqlalchemy.orm import sessionmaker
-            from app.core.config import get_settings
             from app.db.models.domain import Vehicle
             from app.services.ingestion.normalization import normalize_make, normalize_model
 
-            settings = get_settings()
-            db_url = settings.DATABASE_URL_SYNC
-            if "postgresql+asyncpg" in db_url:
-                db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
-            engine = create_engine(db_url, echo=False)
-            Session = sessionmaker(bind=engine)
-            session = Session()
+            session = session_factory()
 
             try:
                 norm_make = normalize_make(make)

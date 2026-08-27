@@ -193,7 +193,6 @@ class EvidenceBundleBuilder:
                 "operation": operation,
                 "columns": columns,
                 "row_count": len(rows),
-                "query": data.get("query"),
             }),
             relation_basis="sql_analytics",
             score=1.0,

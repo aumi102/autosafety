@@ -29,10 +29,30 @@ silently drop the AFFECTS relation_basis.
 
 from __future__ import annotations
 
+import re
+
 from app.services.answer_synthesis.tools.base import EvidenceBundle, EvidenceItem
 from app.services.answer_synthesis.guarded_models import GuardedCitation
 
 MAX_TEXT_SPAN_CHARS = 500
+
+_UNTRUSTED_INSTRUCTION_PATTERNS = (
+    r"\bignore (?:all |any |the |system |previous |prior )*instructions\b",
+    r"\b(?:reveal|show|print|return) (?:the |your |my )*system prompt\b",
+    r"\b(?:reveal|show|print|return) (?:the |your |my )*(?:database|db) credentials\b",
+    r"\bcite[- ]fake[-\w]*\b",
+)
+
+
+def _public_text_span(text: str) -> str:
+    """Redact instruction-like content from final public citations."""
+    bounded = (text or "")[:MAX_TEXT_SPAN_CHARS]
+    if any(
+        re.search(pattern, bounded, flags=re.IGNORECASE)
+        for pattern in _UNTRUSTED_INSTRUCTION_PATTERNS
+    ):
+        return "[Instruction-like content redacted from untrusted evidence.]"
+    return bounded
 
 
 def _derive_citation_id(item: EvidenceItem) -> str:
@@ -63,7 +83,7 @@ def adapt_evidence(bundle: EvidenceBundle) -> list[GuardedCitation]:
             source_entity_id=item.source_entity_id,
             title=item.citation_label or f"{item.evidence_type} {item.source_record_key}".strip(),
             source_url=None,
-            text_span=(item.text or "")[:MAX_TEXT_SPAN_CHARS],
+            text_span=_public_text_span(item.text),
             retrieval_score=item.score,
             relation_basis=item.relation_basis,
             tool_name=item.tool_name,

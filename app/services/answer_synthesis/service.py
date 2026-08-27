@@ -139,7 +139,10 @@ class GuardedAnswerService:
             final_mode = "fallback" if base_mode == "llm" else base_mode
             fallback_used = fallback_used or base_mode == "llm"
         else:
-            answer_text = provider_result.answer or ""
+            # Public answer text is assembled only from application-validated
+            # claims. Raw provider prose may contain unsupported statements not
+            # represented in its structured claims and is never authoritative.
+            answer_text = "\n".join(claim.text for claim in guarded_claims)
             final_mode = "repaired" if (validation.repaired and base_mode == "llm") else base_mode
 
         claim_types_used = {c.claim_type for c in guarded_claims}

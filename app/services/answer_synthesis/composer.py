@@ -14,12 +14,28 @@ produce identical output. Used when:
 
 from __future__ import annotations
 
+import re
+
 from app.services.answer_synthesis.models import ProviderClaim
 from app.services.answer_synthesis.guarded_models import GuardedCitation, EvidenceSufficiencyResult
 from app.services.answer_synthesis.policy import QuestionIntent
 
 MAX_COMPOSED_CLAIMS = 8
 MAX_SNIPPET_CHARS = 220
+
+_UNTRUSTED_EVIDENCE_PATTERNS = (
+    r"\bignore (?:all |any |the |system |previous |prior )*instructions\b",
+    r"\b(?:reveal|show|print|return) (?:the |your |my )*system prompt\b",
+    r"\b(?:reveal|show|print|return) (?:the |your |my )*(?:database|db) credentials\b",
+    r"\bcite[- ]fake[-\w]*\b",
+)
+
+
+def _contains_untrusted_instruction(text: str) -> bool:
+    return any(
+        re.search(pattern, text or "", flags=re.IGNORECASE)
+        for pattern in _UNTRUSTED_EVIDENCE_PATTERNS
+    )
 
 
 def compose_answer(
@@ -38,9 +54,12 @@ def compose_answer(
     complaint_citations = [c for c in ordered if c.source_type == "complaint"]
     recall_citations = [c for c in ordered if c.source_type == "recall"]
     sql_citations = [c for c in ordered if c.source_type == "sql_result"]
-    official_recall_keys = {
-        c.source_record_key for c in ordered if c.relation_basis == "official_recall_affects_vehicle"
+    official_relations = {
+        c.source_record_key: c
+        for c in ordered
+        if c.relation_basis == "official_recall_affects_vehicle"
     }
+    official_recall_keys = set(official_relations)
     shared_citations = [c for c in recall_citations if c.relation_basis == "potentially_related_by_shared_component"]
 
     claims: list[ProviderClaim] = []
@@ -57,13 +76,21 @@ def compose_answer(
         is_applicable = c.source_record_key in official_recall_keys and c.relation_basis != "potentially_related_by_shared_component"
         if is_applicable:
             text = f"Official recall {c.source_record_key} applies to this vehicle per NHTSA records: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
-            add(ProviderClaim(text=text, claim_type="official_recall_applicability", citation_ids=[c.citation_id]), text)
+            relation_citation = official_relations[c.source_record_key]
+            citation_ids = list(dict.fromkeys([c.citation_id, relation_citation.citation_id]))
+            add(ProviderClaim(text=text, claim_type="official_recall_applicability", citation_ids=citation_ids), text)
         elif c.relation_basis != "potentially_related_by_shared_component":
             text = f"Recall record {c.source_record_key} exists in public NHTSA data: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
             add(ProviderClaim(text=text, claim_type="official_recall", citation_ids=[c.citation_id]), text)
 
     for c in complaint_citations:
-        text = f"A complaint record ({c.source_record_key}) reports: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
+        if _contains_untrusted_instruction(c.text_span):
+            text = (
+                f"A complaint record ({c.source_record_key}) was retrieved, but instruction-like "
+                "text inside the record was treated as untrusted evidence."
+            )
+        else:
+            text = f"A complaint record ({c.source_record_key}) reports: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
         add(ProviderClaim(text=text, claim_type="complaint_observation", citation_ids=[c.citation_id]), text)
 
     for c in sql_citations:

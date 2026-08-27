@@ -17,6 +17,11 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Neo4j notification messages embed full Cypher text. Phase 7 public API/CLI
+# logs must not disclose raw queries; application-level graph warnings remain
+# available in bounded tool and answer results.
+logging.getLogger("neo4j.notifications").setLevel(logging.ERROR)
+
 _driver: Optional[Driver] = None
 
 
