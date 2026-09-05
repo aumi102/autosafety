@@ -13,11 +13,10 @@ module.
 Some Phase 7B tool adapters do not assign a citation_id to every
 EvidenceItem (only GraphRAG chunks and official graph_evidence_tool
 recalls do). SQL results, shared-component recalls, graph paths, and
-vehicle resolution items reach this adapter with citation_id=None. To
-keep every evidence item citation-capable without modifying Phase 7B/7C
-files, this module derives a stable citation_id from the item's own
-`evidence_type` and `source_record_key` (`cite-{evidence_type}-{key}`)
-when one is missing.
+vehicle resolution items can reach this adapter with citation_id=None.
+`EvidenceItem.resolved_citation_id()` supplies the same stable ID to the
+Phase 7C provider prompt and this final adapter, so a provider can cite every
+piece of evidence that Phase 7D is able to validate.
 
 Note: this is derived from `evidence_type` (the EvidenceItem field), not
 from the pre-existing `evidence_id` string — graph-path evidence items
@@ -31,8 +30,8 @@ from __future__ import annotations
 
 import re
 
-from app.services.answer_synthesis.tools.base import EvidenceBundle, EvidenceItem
 from app.services.answer_synthesis.guarded_models import GuardedCitation
+from app.services.answer_synthesis.tools.base import EvidenceBundle
 
 MAX_TEXT_SPAN_CHARS = 500
 
@@ -55,14 +54,6 @@ def _public_text_span(text: str) -> str:
     return bounded
 
 
-def _derive_citation_id(item: EvidenceItem) -> str:
-    if item.citation_id:
-        return item.citation_id
-    if item.relation_basis:
-        return f"cite-{item.evidence_type}-{item.relation_basis}-{item.source_record_key}"
-    return f"cite-{item.evidence_type}-{item.source_record_key}"
-
-
 def adapt_evidence(bundle: EvidenceBundle) -> list[GuardedCitation]:
     """
     Adapt bundle evidence items into GuardedCitation objects.
@@ -73,7 +64,7 @@ def adapt_evidence(bundle: EvidenceBundle) -> list[GuardedCitation]:
     """
     seen: dict[str, GuardedCitation] = {}
     for item in bundle.items:
-        citation_id = _derive_citation_id(item)
+        citation_id = item.resolved_citation_id()
         if citation_id in seen:
             continue
         seen[citation_id] = GuardedCitation(

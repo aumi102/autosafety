@@ -217,6 +217,17 @@ class EvidenceItem:
         """Deterministic citation ID."""
         return f"cite-{source_type}-{source_key}"
 
+    def resolved_citation_id(self) -> str:
+        """Return the application-owned citation ID used across Phases 7C/7D."""
+        if self.citation_id:
+            return self.citation_id
+        if self.relation_basis:
+            return (
+                f"cite-{self.evidence_type}-{self.relation_basis}-"
+                f"{self.source_record_key}"
+            )
+        return self.make_citation_id(self.evidence_type, self.source_record_key)
+
 
 @dataclass
 class EvidenceBundle:

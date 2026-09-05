@@ -67,7 +67,8 @@ denominators, first-run failures, and fixes.
 
 - Initial Phase 7F baseline: 639 passed, 3 warnings.
 - Final Phase 7 integration suite: 24 passed, 3 warnings in 1.04s.
-- Final full suite: 663 passed, 0 failed, 0 skipped, 3 warnings in 2.50s.
+- Phase 7F full suite: 663 passed; post-closeout external-provider checkpoint:
+  666 passed, 0 failed, 0 skipped, 3 existing warnings in 2.30s.
 - Warnings are existing Starlette TestClient/httpx and two Pydantic v2 class
   configuration deprecations; no new functional warning was introduced.
 
@@ -92,12 +93,16 @@ observations.
 
 ## External Provider
 
-**REAL PROVIDER LIVE SMOKE NOT RUN — CREDENTIALS/ENABLEMENT UNAVAILABLE**
+**REAL PROVIDER LIVE SMOKE PASSED WITH LIMITATIONS — 2026-09-05**
 
-Current provider is deterministic; external access is disabled and no real
-provider is configured. Phase 7 remains operable offline and exposes fallback
-state. External-provider runtime behavior is covered by fake/provider contract
-tests, but those tests do not count as live verification.
+The configured OpenAI-compatible `gpt-5.6-luna` path was exercised with four
+bounded HTTP-200 responses: one synthetic provider contract call and complaint,
+recall, and causal questions through the real local `GuardedAnswerService`.
+Complaint synthesis was accepted with complete citation coverage; the causal
+response activated the application validator and visible deterministic rescue.
+The recall call abstained safely and exposed a provider-citation serialization
+defect that was fixed and regression-tested without exceeding the request cap.
+See `docs/phase7_external_llm_acceptance_report.md` for exact evidence.
 
 ## Security Posture
 
@@ -132,13 +137,21 @@ mutation route. Deployment authentication/RBAC hardening was outside this phase.
 6. SQL tool metadata retained application-generated query text.
 7. Neo4j notifications exposed predefined Cypher on CLI stderr.
 8. Phase 7E's temporary “no Phase 7F artifacts” test became obsolete.
+9. Reasoning-model Chat Completions payload used incompatible sampling/output
+   parameters.
+10. Graph AFFECTS paths without adapter-supplied IDs were absent from provider
+    citation tables, and the provider recall taxonomy lagged Phase 7D.
+11. Phase 7E status tests inherited operator `.env` instead of an explicit
+    deterministic fixture.
 
 Each fix has an offline regression test and passed live acceptance where
 applicable. No gate was lowered.
 
 ## Remaining Limitations and Technical Debt
 
-- Real external provider has not been live-verified in this environment.
+- External-provider verification is intentionally bounded: model-driven planning
+  remains offline, and the positive recall-applicability path was not re-sent
+  after its citation-table fix because the live request cap was reached.
 - Local evidence corpus is tiny: 5 complaints and 37 recalls.
 - Deterministic embeddings are lexical and do not demonstrate production semantic
   retrieval quality.
@@ -164,8 +177,8 @@ Recommended entry conditions:
 2. Obtain a larger, provenance-reviewed corpus and improve semantic embeddings.
 3. Populate/validate recall component data before relying on shared-component
    paths.
-4. Live-verify one explicitly configured external provider without exposing
-   secrets; retain deterministic fallback.
+4. Retain deterministic fallback and periodically repeat a bounded external
+   smoke without exposing secrets; include one positive post-fix recall case.
 5. Define memory retention, privacy, deletion, prompt-injection, and cross-turn
    citation rules before storing conversation state.
 6. Separate and protect maintenance/mutation routes before broader deployment.

@@ -589,6 +589,24 @@ class TestOpenAICompatibleRealRequest:
         assert body["messages"][0]["role"] == "system"
         assert body["messages"][1]["role"] == "user"
 
+    def test_reasoning_model_uses_compatible_completion_parameters(self, monkeypatch):
+        captured = _patch_client(monkeypatch, response=_openai_response(_valid_llm_payload()))
+        p = OpenAICompatibleProvider(api_key="sk-x", model="gpt-5.6-luna")
+        p.synthesize(_make_request())
+        body = captured["json"]
+        assert body["max_completion_tokens"] == 2000
+        assert "temperature" not in body
+        assert "max_tokens" not in body
+
+    def test_system_prompt_exposes_guarded_recall_claim_taxonomy(self, monkeypatch):
+        captured = _patch_client(monkeypatch, response=_openai_response(_valid_llm_payload()))
+        p = OpenAICompatibleProvider(api_key="sk-x", model="gpt-5.6-luna")
+        p.synthesize(_make_request())
+        system_prompt = captured["json"]["messages"][0]["content"]
+        assert "official_recall: official recall campaign existence" in system_prompt
+        assert "official_recall_applicability" in system_prompt
+        assert "requires matching AFFECTS path" in system_prompt
+
     def test_structured_tool_call_parsed(self, monkeypatch):
         payload = _valid_llm_payload(
             content_overrides={"requested_tool_calls": [{"tool_name": "sql_analytics_tool", "arguments": {"operation": "x"}}]}
@@ -805,6 +823,30 @@ class TestPromptBuilder:
         rules = _default_safety_rules()
         assert "OFFICIAL RECALL RULE" in rules
         assert "AFFECTS" in rules
+
+    def test_missing_graph_path_citation_id_is_resolved_consistently(self):
+        item = EvidenceItem(
+            evidence_id="ev-recall-20V123000",
+            tool_name="graphrag_retrieval_tool",
+            evidence_type="graph_path",
+            source_record_key="20V123000",
+            text="Recall 20V123000 AFFECTS the resolved ModelYear.",
+            relation_basis="official_recall_affects_vehicle",
+            citation_id=None,
+        )
+        bundle = EvidenceBundle(items=[item])
+        request = build_synthesis_prompt(
+            question="Does the recall affect this vehicle?",
+            evidence_bundle=bundle,
+            available_tools=[],
+            safety_rules="",
+            config={},
+        )
+        expected = (
+            "cite-graph_path-official_recall_affects_vehicle-20V123000"
+        )
+        assert request.citation_table[0]["citation_id"] == expected
+        assert f"[{expected}]" in request.evidence_bundle_text
 
     def test_causality_prohibition_present(self):
         rules = _default_safety_rules()

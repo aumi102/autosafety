@@ -2,222 +2,295 @@
 
 ## 1. Initial State
 
-- Date: 2026-09-04.
+- Date: 2026-09-05.
 - Branch: `master`.
-- Initial HEAD: `fd4c1e11e836f2dca2f07bf8271b99f0dbad1ae4`.
-- Working tree: clean; no partial post-Phase-7 work existed.
-- High-value baseline: 92 provider, 108 guarded-synthesis, 63 API/CLI,
-  and 24 final integration tests passed (287 total).
+- Initial HEAD: `a927730da659ecee3de8d0b43d2c53321624b11d`.
+- Working tree: clean; the only prior checkpoint artifact was this report in its
+  earlier blocked state.
+- Committed repository baseline: 663 passing tests and 3 existing deprecation
+  warnings.
 
 ## 2. Docs and Contracts Followed
 
-The audit followed the Phase 7 design, Phase 7C/7D/7E reports, final
-evaluation, runtime acceptance and closeout reports, API contract, security
-guardrails, answer contract, and README. Actual committed constructors and
-serialization contracts remained authoritative.
+The checkpoint followed the Phase 7 design and Phase 7C/7D/7E reports, final
+evaluation/runtime/closeout reports, API contract, security guardrails, answer
+contract, and README. The current provider, orchestrator, guarded-service,
+factory, API, and CLI contracts were treated as authoritative.
 
-## 3. Actual External Configuration Status
+Current OpenAI compatibility was checked against the official
+[`gpt-5.6-luna` model page](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
+and [Chat Completions create reference](https://developers.openai.com/api/reference/cli/resources/chat/subresources/completions/methods/create).
 
-Configuration was loaded through `Settings`, including its `.env` loading
-behavior. Only safe metadata was inspected:
+## 3. External Configuration
+
+Settings were loaded through the normal `Settings`/`.env` path. Only safe
+metadata was observed:
 
 | Setting | Resolved state |
 |---|---|
-| `PHASE7_SYNTHESIS_PROVIDER` | `deterministic` |
-| `PHASE7_SYNTHESIS_ALLOW_EXTERNAL` | `false` |
-| `PHASE7_SYNTHESIS_MODEL` | not configured |
-| `PHASE7_PROVIDER_BASE_URL` | configured |
-| `PHASE7_PROVIDER_API_KEY` | not configured |
+| `PHASE7_SYNTHESIS_PROVIDER` | `openai_compatible` |
+| `PHASE7_SYNTHESIS_ALLOW_EXTERNAL` | `true` |
+| `PHASE7_SYNTHESIS_MODEL` | `gpt-5.6-luna` |
+| Base URL | configured; HTTPS host `api.openai.com`, path `/v1` |
+| API key | configured (`true`; value never read out or printed) |
 | Provider timeout | 30 seconds |
 | Tool rounds/calls | 2 / 4 |
-| Evidence/output/claim bounds | 20 items / 16,000 chars / 8,000 chars / 8 claims |
 
-The factory therefore resolved `DeterministicProvider`; status reported
-configured and active provider `deterministic`, provider available `true`, real
-LLM enabled/configured `false/false`, and deterministic fallback available.
-No key value, prefix, suffix, authorization header, or `.env` contents were
-printed or stored.
+The application factory selected `OpenAICompatibleProvider` rather than
+silently selecting the deterministic provider. The status endpoint later
+confirmed configured/active provider `openai_compatible`, enabled/configured
+flags `true/true`, and provider availability `true`.
 
 ## 4. Provider and Protocol
 
-The implemented real adapter is `OpenAICompatibleProvider`. Its protocol is:
+The live path used synchronous HTTPS through `httpx`:
 
-- synchronous HTTPS via `httpx`;
-- `POST https://api.openai.com/v1/chat/completions` under the current safe base
-  URL configuration;
-- Bearer authorization from operator-only configuration;
-- OpenAI-compatible chat-completions request shape;
-- structured JSON returned as assistant message content, then parsed into
-  `ProviderSynthesisResult`.
+`POST https://api.openai.com/v1/chat/completions`
 
-No native `response_format` or provider-native tool-calling API is used. The
-configured model is empty, so no model was eligible for a live request.
+The request used operator-owned configuration, system/user messages, model
+`gpt-5.6-luna`, a bounded completion budget, and JSON text parsed into
+`ProviderSynthesisResult`. No DB/Neo4j client, key, header, raw provider body, or
+request prompt was logged or committed.
 
-## 5. Live Smoke Prerequisites
+## 5. Live Request Budget
 
-The required conjunction was not satisfied: real provider selection, explicit
-external enablement, model, and API key were absent. The base URL alone is not
-sufficient. Repository policy therefore prohibited a real request, including
-the synthetic smoke. Zero external LLM requests were issued and no cost was
-incurred.
+Six bounded external attempts were made, exactly within the checkpoint budget:
+
+- two diagnostic requests returned HTTP 400 before the compatibility fix;
+- four requests returned HTTP 200 after the fix: one synthetic provider call
+  and three full guarded-service calls;
+- no authentication or rate-limit failure was manufactured and no fifth
+  successful request was sent for API/CLI transport duplication.
 
 ## 6. Synthetic Provider Smoke
 
-Not run. A mocked provider response is not reported as live verification.
-Consequently there is no live request ID, finish reason, token usage, response
-parse, or citation result to record.
+**Protocol and structured-parse smoke passed.** OpenAI returned HTTP 200 from
+`gpt-5.6-luna`; request ID
+`chatcmpl-EKavCdFL0mlR6CntMEUnbrQfBZqnB` was captured safely. The assistant JSON
+parsed into one claim using only `cite-test-001`; no invented citation appeared.
+The model conservatively set `abstain=true` for the deliberately synthetic
+entity, so this proves live transport/model/parsing/citation-ID behavior, not a
+positive domain assertion.
+
+Usage returned by the provider:
+
+- input: 649 tokens;
+- output: 429 tokens;
+- total: 1,078 tokens.
+
+No dollar cost was estimated.
 
 ## 7. Tool-Planning Status
 
 **Network-based `plan_tool_calls()`: NO.**
 
-`OpenAICompatibleProvider.plan_tool_calls()` returns an empty list without an
-external planning request. This is an explicit Phase 7C documented limitation,
-not newly invented behavior. Deterministic/fake planning tests verify the
-application boundary:
+`OpenAICompatibleProvider.plan_tool_calls()` deterministically returns an empty
+list. The normal orchestrator still executes mandatory GraphRAG base retrieval.
+Existing offline integration tests prove that calls from planning-capable test
+providers cross `ProviderToolCall -> ToolCallRequest -> ToolRegistry` and are
+allowlisted, schema-validated, bounded, and executed only by the application.
+The provider receives neither PostgreSQL nor Neo4j clients. Live model-driven
+planning remains a documented architectural limitation, not a hidden claim.
 
-`ProviderToolCall -> application-owned call ID and argument sanitization ->
-ToolCallRequest -> ToolRegistry allowlist/schema validation -> bounded adapter`.
+## 8. GuardedAnswerService Live Smoke
 
-Providers receive tool definitions and bounded evidence only; no PostgreSQL or
-Neo4j client reaches a provider. Terminal `requested_tool_calls` parsed from
-`synthesize()` are not executed because planning has already ended.
+The normal `build_guarded_answer_service()` dependency used healthy local
+PostgreSQL/pgvector and Neo4j services with the real provider.
 
-## 8. GuardedAnswerService Coverage
+### Complaint
 
-A real-provider guarded call could not run. A local deterministic sanity call
-used the normal application factory with the healthy local PostgreSQL/pgvector
-and Neo4j services:
+Question: `What brake complaints are reported for Ford F-150 2020?`
 
-- question: brake complaints for Ford F-150 2020;
-- result: `phase_7`, `synthesis_mode=deterministic`, provider `deterministic`;
-- 3 claims, 11 citations, validation `true`;
-- no external fallback was claimed.
+- `phase=phase_7`, `synthesis_mode=llm`, provider `openai_compatible`;
+- 2 accepted complaint claims, 10 final citations;
+- every claim citation known; validation valid; citation coverage 1.00;
+- application confidence 0.8446/high;
+- complaint-data and missing recall-component warnings preserved;
+- `fallback_used=false`; elapsed 4,319.3 ms.
 
-This confirms current local wiring only; it does not satisfy real-provider
-acceptance. Real-provider complaint, recall-applicability, and causal-guard
-smokes remain unexecuted.
+This is the positive end-to-end real-provider acceptance case.
 
-## 9. Recall and Causal Semantics
+### Recall applicability
 
-Existing offline suites still enforce that official applicability requires a
-matching `official_recall_affects_vehicle`/`AFFECTS` citation, invented or
-wrong-type citations are rejected, and unsupported causality is removed or
-abstained. These tests passed, but no new real-model output was available to
-exercise these guards live.
+Question: `Are there official recalls affecting Ford F-150 2020?`
+
+- the provider returned a structured abstention rather than inventing
+  applicability;
+- final result remained safe (`phase_7`, provider `openai_compatible`, no
+  fallback, no unsupported claim); elapsed 14,267.9 ms;
+- investigation proved that five live `official_recall_affects_vehicle` graph
+  paths existed, but their `EvidenceItem.citation_id` values were absent and
+  Phase 7C omitted them from the provider citation table.
+
+The serialization defect was fixed after this bounded call. Post-fix local
+prompt construction contains 11 citation rows, including all 5 AFFECTS paths,
+and every row has a stable citation ID. The positive recall answer was not sent
+again because four HTTP-200 requests had already consumed the live budget.
+
+### Causality
+
+Question: `Did the brake complaints cause the recall?`
+
+- the real provider response reached Phase 7D, which rejected one unsupported
+  claim and invoked deterministic rescue;
+- final mode `fallback`, provider `deterministic`, 7 safe claims/10 citations;
+- validation valid, citation coverage 1.00, confidence 0.7416/medium;
+- mandatory `Available evidence cannot establish causality` and visible
+  fallback warnings present;
+- no unsupported causal or “definitely unsafe” conclusion survived; elapsed
+  10,473.1 ms.
+
+This is expected guard activation, not silent provider fallback.
+
+## 9. Recall and Citation Contract Fix
+
+`EvidenceItem.resolved_citation_id()` is now the shared Phase 7C/7D source for
+explicit or derived citation IDs. Provider evidence text, provider citation
+tables, and the Phase 7D adapter therefore use identical IDs for graph paths,
+SQL facts, shared-component evidence, and other items lacking an adapter-supplied
+ID. The older Phase 7B `EvidenceBundle.citation_table()` explicit-ID contract is
+unchanged.
+
+The provider prompt taxonomy now distinguishes:
+
+- `official_recall`: evidence-backed recall existence;
+- `official_recall_applicability`: recall plus a matching citable AFFECTS path;
+- `potential_shared_component_association`: explicitly tentative association.
+
+Phase 7D remains the final authority and still independently validates matching
+record keys and relation semantics.
 
 ## 10. API Coverage
 
-The actual FastAPI dependency path was exercised against current configuration:
+The normal FastAPI application returned HTTP 200 from
+`GET /v1/graphrag/answer/status` with `phase_7`, configured/active provider
+`openai_compatible`, provider available, real LLM enabled/configured, and
+deterministic fallback available. The serialized response contained no secret
+field.
 
-- `GET /v1/graphrag/answer/status`: HTTP 200, `phase_7`, configured/active
-  provider `deterministic`, real LLM disabled and unconfigured.
-- `POST /v1/graphrag/answer`: HTTP 200, final guarded contract, deterministic
-  mode, 3 claims, 11 citations, validation true, trace suppressed by default.
-
-The API resolves `GuardedAnswerService` through the cached application factory;
-it cannot select providers, credentials, URLs, tools, SQL, or Cypher per request.
-This is transport/configuration coverage, not a real-provider API call.
+The answer endpoint resolves the same cached application factory and
+`GuardedAnswerService` exercised live above. A further paid POST was deliberately
+not sent after the four-success cap; existing network-free API tests verify final
+Phase 7 schema, guarded semantics, safe failures, and absence of raw Phase 7C
+output.
 
 ## 11. CLI Coverage
 
-The actual CLI process used the same application factory and exited 0 with
-valid JSON: `phase_7`, deterministic provider/mode, 3 claims, 11 citations,
-validation true, and no default trace. Source inspection confirms no separate
-CLI provider path. This is transport/configuration coverage, not a
-real-provider CLI call.
+`scripts/query_phase7_answer.py` imports the same
+`build_guarded_answer_service()` factory and cannot select a provider, URL,
+credential, tool, SQL, or Cypher from arguments. Existing process/format tests
+cover JSON, pretty output, abstention exit 0, safe non-zero failures, and secret
+absence. A fifth paid request solely through the CLI wrapper was not made; its
+external-provider coverage is therefore wiring/transport coverage backed by the
+live service call, not an additional live CLI model call.
 
-## 12. Token and Cost Observation
+## 12. Usage and Performance
 
-No external call occurred, so input, output, and total token counts are
-unavailable. No price or dollar cost was estimated.
+The isolated provider call exposed usage and is recorded above. Usage is not a
+field on `GuardedAnswerResult`, so per-call tokens for the three guarded-service
+requests were not retained beyond the provider boundary. Measured local
+end-to-end times were 4.32 s (complaint), 14.27 s (safe recall abstention), and
+10.47 s (causal guard/fallback). These are observations, not SLA claims.
 
 ## 13. Fallback and Error Coverage
 
-The existing network-free suites passed coverage for provider timeout, 401/403
-authentication errors, 429 rate limiting, transport error, malformed/empty/
-oversized output, unavailable provider, invented citations, deterministic
-fallback visibility, safe abstention, sanitized exceptions, and correct
-`synthesis_mode`. Real credentials were not damaged to manufacture failures.
+Network-free suites cover timeout, 401/403 authentication mapping, 429 rate
+limit mapping, transport failure, malformed/empty/oversized responses,
+unavailable providers, invented citations, visible deterministic fallback, safe
+abstention, and sanitized errors. Real credentials were never altered to induce
+failure.
 
-## 14. Defects Found or Fixed
+## 14. Defects Found and Fixed
 
-No new reproducible production defect was found within the configuration and
-offline paths available in this checkpoint. No implementation code or test was
-changed. The lack of live model-driven planning remains documented technical
-debt; Phase 7C explicitly accepted it, so this checkpoint did not add an
-autonomous planning loop.
+1. **HTTP 400 with the configured reasoning model.** The adapter sent
+   `temperature=0.1` and legacy `max_tokens`. Current reasoning-model requests
+   now omit sampling parameters and use `max_completion_tokens`; legacy chat
+   models retain their prior compatible payload. The identical bounded live
+   smoke changed from HTTP 400 to HTTP 200, and a regression test asserts the
+   request shape.
+2. **AFFECTS paths not citable by the provider.** Missing adapter-level citation
+   IDs caused Phase 7C prompt construction to skip graph paths even though Phase
+   7D later derived IDs for them. Citation-ID resolution is now shared and the
+   actual local recall prompt includes all five AFFECTS paths. Regression tests
+   assert ID/table/text consistency.
+3. **Provider recall taxonomy lagged Phase 7D.** The prompt described only one
+   recall claim type. It now exposes existence and applicability separately and
+   states the matching-AFFECTS requirement; a regression test locks the contract.
+4. **API status test depended on operator `.env`.** Enabling the real provider
+   made a test that hard-coded deterministic configuration fail. The API fixture
+   now supplies an explicit network-free status object; production status
+   behavior remains unchanged.
+
+No safety gate was lowered.
+
+An initial full-regression attempt also caught an over-broad change to the
+Phase 7B `EvidenceBundle.citation_table()` behavior. That change was reverted;
+the external-provider fix remains isolated to the shared ID resolver and the
+Phase 7C/7D consumers that require derived IDs.
 
 ## 15. Security Review
 
-- Provider owns no DB session, PostgreSQL engine, Neo4j driver, or graph client.
-- Base URL and API key are operator configuration, never request fields.
-- Provider tools are an application-owned allowlist with strict arguments and
-  call budgets.
-- No unrestricted SQL/Cypher or user-controlled HTTP endpoint exists.
-- No API key, bearer header, raw provider response, raw prompt, `.env`, DB URL,
-  or traceback was emitted or committed.
-- No public raw Phase 7C or tool-execution endpoint exists.
-- No unbounded provider loop or Phase 8 behavior was added.
-
-The only `Authorization` construction found is the expected private outbound
-provider header. The only DB/credential terms in tool code are forbidden-key
-filters and application configuration wiring.
+- Provider owns no DB/Neo4j client and cannot execute SQL/Cypher.
+- Base URL/model/key are operator configuration, never request or CLI fields.
+- No credential, authorization header, `.env`, prompt, raw response, traceback,
+  database URL, or graph credential was emitted or committed.
+- No user-configurable registry, public tool endpoint, raw Phase 7C endpoint,
+  unbounded loop, database/graph mutation, or Phase 8 functionality was added.
+- Final public prose is reconstructed from application-validated claims; the
+  causal live result demonstrated this boundary.
 
 ## 16. Tests
 
-Final targeted Phase 7 results:
+New coverage targets reasoning-model request compatibility, shared citation-ID
+resolution, the current guarded recall claim taxonomy, and environment-isolated
+status tests. All regular tests remain offline.
 
-- `test_phase7c_providers.py`: 92 passed.
-- `test_phase7c_orchestration.py`: 47 passed.
-- `test_phase7d_guarded_synthesis.py`: 108 passed.
-- `test_phase7e_api_cli.py`: 63 passed, 3 existing warnings.
-- `test_phase7_guarded_answer_synthesis.py`: 24 passed, 3 existing warnings.
-- Targeted total: 334 passed.
+Final targeted Phase 7 run:
 
-Final repository suite: **663 passed, 0 failed, 0 skipped, 3 existing
-deprecation warnings in 2.44 seconds**.
+- providers: 95 passed;
+- orchestration: 47 passed;
+- guarded synthesis: 108 passed;
+- API/CLI: 63 passed;
+- final integration: 24 passed;
+- total: **337 passed, 0 failed, 3 existing warnings in 1.53 seconds**.
 
-## 17. Local Infrastructure
+Phase 7B plus provider regression after restoring the Phase 7B contract:
+**174 passed in 0.68 seconds**.
 
-Existing Docker services were already healthy: PostgreSQL/pgvector, Redis, and
-Neo4j. No image pull, rebuild, reset, volume deletion, migration, or re-ingestion
-was performed. Infrastructure readiness does not replace missing provider
-authorization.
+Final repository suite: **666 passed, 0 failed, 0 skipped, 3 existing
+deprecation warnings in 2.30 seconds**. Compile checks passed for every modified
+Python module.
 
-## 18. Documentation Updates
+## 17. Documentation Updates
 
-This checkpoint report is the only required documentation change. README and
-`docs/phase7_closeout_report.md` already state that the external provider is not
-live-verified, so they were intentionally left unchanged rather than rewriting
-history with the same fact.
+This report replaces the earlier blocked checkpoint. README and the Phase 7
+closeout report were updated only where external-verification facts changed.
 
-## 19. Remaining Limitations
+## 18. Remaining Limitations
 
-- No live external request, structured response, usage, request ID, or model
-  validation occurred.
-- Real-provider GuardedAnswerService/API/CLI behavior remains unaccepted.
-- Real provider tool planning does not make a planning-round network call.
-- The prior corpus, deterministic retrieval, graph coverage, and
-  `RELATED_TO_COMPONENT = 0` limitations remain unchanged.
-- No Phase 8 behavior exists.
+- Live model-driven `plan_tool_calls()` is not implemented.
+- Positive recall applicability was fixed and verified against live local
+  evidence serialization, but not re-sent to OpenAI after the request cap.
+- API/CLI wrappers were not each charged an additional live model request; their
+  shared factory/wiring and offline transport behavior were verified.
+- Guarded results intentionally do not expose provider token usage.
+- The tiny corpus, lexical deterministic embeddings, limited graph coverage,
+  and `RELATED_TO_COMPONENT = 0` remain unchanged.
+- No frontend or Phase 8 memory/multi-turn behavior exists.
 
-## 20. Final Verdict
+## 19. Final Verdict
 
-**EXTERNAL LLM ACCEPTANCE BLOCKED — OPERATOR CONFIGURATION REQUIRED**
+**EXTERNAL LLM ACCEPTANCE PASSED WITH LIMITATIONS**
 
-## 21. Minimum Operator Action
+The real configured provider, response parser, local retrieval, orchestration,
+Phase 7D validation, citation coverage, confidence, warnings, and fallback path
+were exercised end to end. Remaining limitations are bounded and explicit; none
+permits unvalidated provider output to bypass the guarded contract.
 
-In the operator-controlled environment, configure a valid bounded provider:
+## 20. Phase 8 Entry
 
-```text
-PHASE7_SYNTHESIS_PROVIDER=openai_compatible
-PHASE7_SYNTHESIS_ALLOW_EXTERNAL=true
-PHASE7_SYNTHESIS_MODEL=<supported model>
-PHASE7_PROVIDER_API_KEY=<valid secret>
-```
-
-Keep the existing `PHASE7_PROVIDER_BASE_URL=https://api.openai.com/v1`, or set
-it to the intended OpenAI-compatible endpoint. Then restart the application (or
-start a fresh process so cached settings/service objects reload) and rerun this
-checkpoint. Do not commit the credential.
+From the external-provider perspective, Phase 8 may begin only while preserving
+the Phase 7 guarded-service boundary and offline fallback. Recommended follow-up
+is one bounded positive recall request using the fixed citation table, plus a
+separate product decision on whether network-based model planning is required.
+Neither is implemented as Phase 8 work in this checkpoint.

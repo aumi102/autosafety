@@ -83,7 +83,7 @@ def _build_evidence_text(bundle: EvidenceBundle, max_chars: int) -> str:
     total = 0
 
     for item in bundle.items:
-        line = f"[{item.citation_id or item.evidence_id}] {item.evidence_type.upper()}: {item.text}"
+        line = f"[{item.resolved_citation_id()}] {item.evidence_type.upper()}: {item.text}"
         if len(line) > 500:
             line = line[:500] + "..."
         line += f"\n  Relation: {item.relation_basis or 'none'}"
@@ -118,12 +118,13 @@ def _build_citation_table(bundle: EvidenceBundle) -> list[dict[str, Any]]:
     seen: set[str] = set()
 
     for item in bundle.items:
-        if not item.citation_id or item.citation_id in seen:
+        citation_id = item.resolved_citation_id()
+        if citation_id in seen:
             continue
-        seen.add(item.citation_id)
+        seen.add(citation_id)
 
         row = {
-            "citation_id": item.citation_id,
+            "citation_id": citation_id,
             "source_type": item.evidence_type,
             "label": item.citation_label or f"{item.evidence_type} {item.source_record_key}",
             "relation_basis": item.relation_basis or "unknown",

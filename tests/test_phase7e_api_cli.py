@@ -152,8 +152,23 @@ class _FakeGuardedService:
 
 
 @pytest.fixture
-def api_client():
+def api_client(monkeypatch):
     service = _FakeGuardedService()
+    status = AnswerSynthesisStatus(
+        synthesis_available=True,
+        configured_provider="deterministic",
+        active_provider="deterministic",
+        provider_available=True,
+        real_llm_enabled=False,
+        real_llm_configured=False,
+        deterministic_fallback_available=True,
+        tool_calling_enabled=True,
+        max_tool_rounds=2,
+        max_tool_calls=4,
+        graphrag_base_required=True,
+        guarded_validation_enabled=True,
+    )
+    monkeypatch.setattr(api_module, "get_answer_synthesis_status", lambda: status)
     app.dependency_overrides[get_guarded_answer_service_dependency] = lambda: service
     with TestClient(app, raise_server_exceptions=False) as client:
         yield client, service

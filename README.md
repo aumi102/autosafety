@@ -669,8 +669,10 @@ PHASE7_PROVIDER_BASE_URL=https://api.openai.com/v1
 
 Missing/disabled external configuration leaves deterministic operation available.
 Runtime provider failure is visible through `synthesis_mode`, `provider`, warnings,
-and sanitized trace/status fields. The current closeout environment used
-deterministic mode; a real external provider was **not** live-verified.
+and sanitized trace/status fields. On 2026-09-05, the configured OpenAI-compatible
+`gpt-5.6-luna` path was live-verified through provider parsing and the local
+guarded service. The bounded run also confirmed application rejection/rescue of
+an unsupported causal claim; see the external acceptance report for limitations.
 
 ### Evaluation and validation
 
@@ -687,13 +689,16 @@ Phase 7F results:
   grounding/coverage, invalid-output rejection, causal guard, prompt-injection
   resistance, tool rejection, and deterministic stability were all 1.00.
 - 24/24 final Phase 7 integration tests passed.
-- 663/663 repository tests passed with 3 existing deprecation warnings.
+- 663/663 repository tests passed at Phase 7F; the external-provider checkpoint
+  subsequently passed 666/666 with the same 3 existing deprecation warnings.
 - Live local PostgreSQL/pgvector/Neo4j, all four tools, guarded service, API, CLI,
   and Phase 6 route compatibility passed.
 
 ### Current limitations
 
-- Real external provider has not been live-verified in this environment.
+- Real external-provider acceptance was bounded; live model-driven tool planning
+  is not implemented, and the fixed positive recall-applicability path still
+  needs one future bounded recheck.
 - Local corpus is only 42 documents: 5 complaints and 37 recalls.
 - Default deterministic embeddings are lexical/token-overlap based.
 - Live graph has 59 nodes/58 relationships; `RELATED_TO_COMPONENT = 0` because
@@ -704,4 +709,6 @@ Phase 7F results:
 
 See `docs/phase7_final_evaluation_report.md`,
 `docs/phase7_runtime_acceptance_report.md`, and
-`docs/phase7_closeout_report.md` for exact evidence and limitations.
+`docs/phase7_closeout_report.md` for Phase 7 evidence. See
+`docs/phase7_external_llm_acceptance_report.md` for the bounded real-provider
+checkpoint.
