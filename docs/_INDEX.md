@@ -18,3 +18,12 @@ Phase 4: Hybrid agent
 Phase 5: frontend
 Phase 6: eval + production hardening
 ```
+
+Phase reports:
+
+```text
+Phase 7: guarded answer synthesis   phase7_*.md
+Phase 8: multi-turn conversation    phase8_design.md,
+                                    phase8_implementation_report.md,
+                                    phase8_runtime_acceptance_report.md
+```

@@ -131,7 +131,8 @@ curl http://localhost:8000/v1/health
 All endpoints return stub responses. Real implementation in Phase 1.
 
 - `GET /v1/vehicles/search` — returns empty list, notes Phase 0 stub
-- `POST /v1/chat/sessions` — creates session stub
+- `POST /v1/chat/sessions` — creates session stub (legacy Phase 2/4 surface;
+  the guarded multi-turn surface is `POST /v1/conversations`, see Phase 8)
 - `POST /v1/chat/sessions/{id}/messages` — returns safety response, notes Phase 0
 - `POST /v1/ingestion/nhtsa/probe` — returns deferred status
 
@@ -705,10 +706,123 @@ Phase 7F results:
   current recall source component fields are missing.
 - Evaluation is compact and deterministic, not a production-quality benchmark.
 - No frontend exists.
-- No Phase 8 memory, multi-turn agent workflow, or personalization exists.
 
 See `docs/phase7_final_evaluation_report.md`,
 `docs/phase7_runtime_acceptance_report.md`, and
 `docs/phase7_closeout_report.md` for Phase 7 evidence. See
 `docs/phase7_external_llm_acceptance_report.md` for the bounded real-provider
 checkpoint.
+
+## Phase 8: Bounded Multi-Turn Guarded Conversation
+
+Phase 8 adds session-scoped multi-turn conversation **on top of** the Phase 7
+guarded contract. `GuardedAnswerService` remains the sole authority on claims,
+citations, warnings, confidence, and abstention; no Phase 7 boundary was
+weakened.
+
+### What it does
+
+```text
+Conversation
+-> bounded prior-turn entity state (last 5 turns)
+-> deterministic context resolution (make / model / model_year / component only)
+-> GuardedAnswerService            <- unchanged Phase 7 path
+-> cross-turn provenance gate      <- Phase 8 defense in depth
+-> bounded persisted turn + citation lineage
+```
+
+A follow-up like `"What about recalls?"` inherits vehicle context from an
+earlier turn and is resolved to
+`"What about recalls? (for Ford F-150 2020; component SERVICE BRAKES)"`, then
+answered from **newly retrieved, newly validated** evidence.
+
+### Safety properties
+
+- **Prior assistant text is never evidence.** Only four allowlisted entity slots
+  cross a turn boundary; no prior conversation text is ever forwarded to
+  retrieval or a provider.
+- **Prompt injection cannot persist.** An instruction planted in turn 1 has no
+  channel into turn 2.
+- **Every accepted factual claim in every turn** still validates against the
+  citations that turn itself retrieved; a violation becomes an abstention with
+  reason `cross_turn_provenance_violation`.
+- **Conversation isolation.** All reads and writes are scoped by `session_id`.
+- **Hard deletion.** `DELETE` removes turns, messages, citations, and the
+  session row, leaving zero residue.
+
+### Endpoints
+
+```http
+POST   /v1/conversations
+GET    /v1/conversations/{conversation_id}
+GET    /v1/conversations/{conversation_id}/turns
+POST   /v1/conversations/{conversation_id}/messages
+DELETE /v1/conversations/{conversation_id}
+GET    /v1/conversations/status/config
+```
+
+The legacy `/v1/chat/*` Phase 2/4 single-turn surface is unchanged.
+
+### Commands
+
+```bash
+# Apply the Phase 8 migration (additive; single head)
+alembic upgrade head
+
+# Multi-turn conversation from the CLI
+python scripts/query_phase8_conversation.py     -q "What brake complaints are reported for Ford F-150 2020?"     -q "What about recalls?" --pretty
+
+# Safe conversation bounds and policy posture; no credentials, no network
+curl http://localhost:8000/v1/conversations/status/config
+
+# Offline multi-turn evaluation (10 cases, 20 turns, 11 gates)
+python scripts/evaluate_phase8_conversations.py
+```
+
+### Maintenance route protection
+
+Setting `PHASE8_ADMIN_TOKEN` requires a matching `X-Admin-Token` header on
+`POST /v1/ingestion/nhtsa/phase1/run`,
+`POST /v1/ingestion/nhtsa/phase1-5/complaints-flat-file/run`,
+`POST /v1/graph/schema/setup`, `POST /v1/graph/build`, and
+`POST /v1/graphrag/index`. When it is unset those routes stay open — that is the
+pre-existing exposure, documented rather than disguised. Full JWT auth and roles
+remain deferred.
+
+### Phase 8 results
+
+- 830/830 repository tests pass (666 baseline + 164 new), with the same 3
+  pre-existing deprecation warnings.
+- 10-case / 20-turn multi-turn evaluation passes all 11 gates: citation validity
+  and coverage 1.00, conversation isolation 1.00, prompt-injection resistance
+  1.00, prior-text and prior-citation leak rates 0.00, causality guard 1.00,
+  context bounds 1.00, deterministic stability 1.00.
+- Live PostgreSQL/pgvector/Neo4j runtime acceptance passed; the migration
+  applied with a single head and no data loss.
+- A live follow-up turn produced `official_recall_applicability` claims from
+  real Neo4j `AFFECTS` paths, verifying the positive recall path Phase 7 left
+  unrechecked.
+- 4 bounded real-provider requests (`openai_compatible` / `gpt-5.6-luna`); one
+  live model claim was rejected by Phase 7 and deterministically rescued at 100%
+  citation coverage.
+
+### Current limitations
+
+- Context resolution is slot-based, not general anaphora resolution.
+- No conversation summarization, long-term memory, or personalization exists
+  (deliberately deferred).
+- Live model-driven `plan_tool_calls()` network planning is still not
+  implemented.
+- Redis is running but intentionally unused by Phase 8; PostgreSQL is the single
+  source of truth for conversation state.
+- `agent_runs` and `tool_calls` remain unpopulated Phase 0 scaffolding.
+- Maintenance protection is a shared-secret header, not real authentication.
+- Migration files are not tracked by Git (`.gitignore` excludes
+  `migrations/versions/*.py` for every migration in this repository), so
+  `alembic upgrade head` must be run against an environment that already has
+  the migration files present.
+- The small corpus, lexical deterministic embeddings, and
+  `RELATED_TO_COMPONENT = 0` limitations are unchanged from Phase 6/7.
+
+See `docs/phase8_design.md`, `docs/phase8_implementation_report.md`, and
+`docs/phase8_runtime_acceptance_report.md` for Phase 8 evidence.
