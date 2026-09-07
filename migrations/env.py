@@ -9,7 +9,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.config import get_settings
 from app.db.base import Base
-from app.db.models.app import User, ChatSession, ChatMessage, AgentRun, ToolCall
+from app.db.models.app import (
+    User, ChatSession, ChatMessage, AgentRun, ToolCall, ChatTurn, ChatTurnCitation,
+)
 from app.db.models.domain import Citation
 from app.db.models.domain import (
     SourceRun, RawSourceRow, Vehicle, Component, Complaint, Recall,

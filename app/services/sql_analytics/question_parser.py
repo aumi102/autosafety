@@ -275,3 +275,17 @@ def build_clarification_response(question: ParsedQuestion) -> str:
     elif not question.vehicle.model_year:
         parts.append("Please include the model year")
     return ". ".join(parts) if parts else "I need more information to answer this question."
+
+
+def extract_vehicle_slots(text: str) -> dict:
+    """Public deterministic vehicle-slot extraction.
+
+    Thin, additive accessor over the existing Phase 2 extractors so later
+    phases can reuse entity recognition without duplicating patterns or
+    changing Phase 2 parsing semantics.
+    """
+    return {
+        "make": _extract_make(text or ""),
+        "model": _extract_model(text or ""),
+        "model_year": _extract_year(text or ""),
+    }

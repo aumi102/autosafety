@@ -33,6 +33,18 @@ class Settings(BaseSettings):
     PHASE7_PROVIDER_API_KEY: SecretStr = SecretStr("")
     PHASE7_PROVIDER_BASE_URL: str = "https://api.openai.com/v1"
 
+    # Phase 8 — Conversation state and bounded multi-turn context
+    PHASE8_MAX_CONTEXT_TURNS: int = 5
+    PHASE8_MAX_TURNS_PER_CONVERSATION: int = 100
+    PHASE8_MAX_CONTEXT_CHARS: int = 300
+    PHASE8_MAX_STORED_ANSWER_CHARS: int = 8000
+    PHASE8_MAX_STORED_CITATIONS_PER_TURN: int = 20
+    PHASE8_CONVERSATION_RETENTION_DAYS: int = 30
+    # Phase 8 — Maintenance/admin route protection.
+    # When unset, maintenance routes stay open and the exposure is documented.
+    # When set, mutation routes require a matching X-Admin-Token header.
+    PHASE8_ADMIN_TOKEN: SecretStr = SecretStr("")
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
