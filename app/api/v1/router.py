@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     answer_synthesis,
     chat,
+    conversations,
     graph,
     graphrag,
     health,
@@ -22,3 +23,4 @@ router.include_router(graph.router, prefix="/graph", tags=["graph"])
 router.include_router(hybrid.router, prefix="/hybrid", tags=["hybrid"])
 router.include_router(graphrag.router, prefix="/graphrag", tags=["graphrag"])
 router.include_router(answer_synthesis.router, prefix="/graphrag", tags=["graphrag-answer"])
+router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])

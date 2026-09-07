@@ -1,9 +1,10 @@
 """Graph API endpoints — Phase 3."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
+from app.core.security import verify_admin_token
 from app.services.graph import (
     setup_graph_schema,
     build_graph_from_postgres,
@@ -105,7 +106,11 @@ def graph_health():
     return GraphHealthResponse(neo4j_connected=connected)
 
 
-@router.post("/schema/setup", response_model=GraphSchemaResponse)
+@router.post(
+    "/schema/setup",
+    response_model=GraphSchemaResponse,
+    dependencies=[Depends(verify_admin_token)],
+)
 def graph_schema_setup():
     """
     Create Neo4j schema constraints and indexes.
@@ -124,7 +129,11 @@ def graph_schema_setup():
     )
 
 
-@router.post("/build", response_model=GraphBuildResponse)
+@router.post(
+    "/build",
+    response_model=GraphBuildResponse,
+    dependencies=[Depends(verify_admin_token)],
+)
 def graph_build(data: GraphBuildRequest):
     """
     Build graph projection from PostgreSQL into Neo4j.

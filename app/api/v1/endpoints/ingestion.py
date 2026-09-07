@@ -1,6 +1,8 @@
 """Ingestion API endpoints."""
 
 from fastapi import APIRouter, HTTPException, Depends
+
+from app.core.security import verify_admin_token
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
@@ -43,7 +45,11 @@ def _get_sync_session():
     return SessionLocal()
 
 
-@router.post("/nhtsa/phase1/run", response_model=Phase1RunResponse)
+@router.post(
+    "/nhtsa/phase1/run",
+    response_model=Phase1RunResponse,
+    dependencies=[Depends(verify_admin_token)],
+)
 def run_phase1_ingestion(data: Phase1RunRequest):
     """
     Run Phase 1 NHTSA ingestion.
@@ -141,7 +147,11 @@ def get_source_run(source_run_id: str):
         session.close()
 
 
-@router.post("/nhtsa/phase1-5/complaints-flat-file/run", response_model=Phase15RunResponse)
+@router.post(
+    "/nhtsa/phase1-5/complaints-flat-file/run",
+    response_model=Phase15RunResponse,
+    dependencies=[Depends(verify_admin_token)],
+)
 def run_phase15_complaints_flat_file(data: Phase15RunRequest):
     """
     Run Phase 1.5 flat-file complaint ingestion.

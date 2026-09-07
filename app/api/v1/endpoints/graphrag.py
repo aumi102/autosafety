@@ -6,9 +6,10 @@ import time
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from app.core.security import verify_admin_token
 from app.services.graphrag import (
     index_graphrag_documents,
     retrieve_graphrag_evidence,
@@ -111,7 +112,11 @@ def graphrag_status():
     )
 
 
-@router.post("/index", response_model=GraphRAGIndexResponse)
+@router.post(
+    "/index",
+    response_model=GraphRAGIndexResponse,
+    dependencies=[Depends(verify_admin_token)],
+)
 def graphrag_index(data: GraphRAGIndexRequest):
     """
     Index complaints and recalls as canonical evidence documents with embeddings.
