@@ -14,15 +14,13 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
+from app.core.config import Settings
 from app.api.v1.endpoints import conversations as api_module
 from app.api.v1.endpoints.conversations import (
     ConversationMessageRequest,
     get_conversation_service_dependency,
 )
-from app.core.config import Settings
-from app.core.security import admin_protection_enabled, verify_admin_token
 from app.main import app
 from app.services.answer_synthesis.guarded_models import (
     CitationValidationResult,
@@ -549,89 +547,8 @@ class TestConversationCli:
 # =============================================================================
 
 
-class TestMaintenanceRouteProtection:
-    MUTATION_ROUTES = (
-        "/v1/ingestion/nhtsa/phase1/run",
-        "/v1/ingestion/nhtsa/phase1-5/complaints-flat-file/run",
-        "/v1/graph/schema/setup",
-        "/v1/graph/build",
-        "/v1/graphrag/index",
-    )
-
-    def test_admin_protection_reports_disabled_without_a_token(self):
-        settings = Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr(""))
-        assert admin_protection_enabled(settings) is False
-
-    def test_admin_protection_reports_enabled_with_a_token(self):
-        settings = Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("s3cret"))
-        assert admin_protection_enabled(settings) is True
-
-    def test_token_absent_allows_the_route(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.core.security.get_settings",
-            lambda: Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("")),
-        )
-        assert verify_admin_token(None) is None
-
-    def test_wrong_token_is_rejected(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.core.security.get_settings",
-            lambda: Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("s3cret")),
-        )
-        with pytest.raises(Exception) as exc:
-            verify_admin_token("wrong")
-        assert exc.value.status_code == 401
-        assert exc.value.detail["error"]["code"] == "ADMIN_TOKEN_REQUIRED"
-
-    def test_missing_token_is_rejected_when_configured(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.core.security.get_settings",
-            lambda: Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("s3cret")),
-        )
-        with pytest.raises(Exception) as exc:
-            verify_admin_token(None)
-        assert exc.value.status_code == 401
-
-    def test_correct_token_is_accepted(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.core.security.get_settings",
-            lambda: Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("s3cret")),
-        )
-        assert verify_admin_token("s3cret") is None
-
-    def test_rejection_never_reveals_the_expected_token(self, monkeypatch):
-        monkeypatch.setattr(
-            "app.core.security.get_settings",
-            lambda: Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("s3cret")),
-        )
-        with pytest.raises(Exception) as exc:
-            verify_admin_token("wrong")
-        assert "s3cret" not in json.dumps(exc.value.detail)
-
-    @pytest.mark.parametrize("route", MUTATION_ROUTES)
-    def test_mutation_routes_require_the_token_when_configured(self, route, monkeypatch):
-        monkeypatch.setattr(
-            "app.core.security.get_settings",
-            lambda: Settings(_env_file=None, PHASE8_ADMIN_TOKEN=SecretStr("s3cret")),
-        )
-        with TestClient(app) as client:
-            assert client.post(route, json={}).status_code == 401
-
-    @pytest.mark.parametrize("route", MUTATION_ROUTES)
-    def test_mutation_routes_declare_the_admin_dependency(self, route):
-        schema = app.openapi()["paths"][route]["post"]
-        parameters = schema.get("parameters", [])
-        assert any(p.get("name") == "X-Admin-Token" for p in parameters), route
-
-    def test_read_only_routes_are_not_gated(self):
-        schema = app.openapi()["paths"]["/v1/ingestion/source-runs"]["get"]
-        parameters = schema.get("parameters", [])
-        assert not any(p.get("name") == "X-Admin-Token" for p in parameters)
-
-    def test_conversation_routes_are_not_admin_gated(self):
-        schema = app.openapi()["paths"]["/v1/conversations"]["post"]
-        parameters = schema.get("parameters", [])
-        assert not any(p.get("name") == "X-Admin-Token" for p in parameters)
+# Maintenance/admin route protection moved to tests/test_phase9_admin_security.py
+# when Phase 9 changed the guard from fail-open to fail-closed.
 
 
 # =============================================================================
@@ -650,7 +567,12 @@ class TestFactoryWiring:
 
     def test_factory_never_reads_request_input(self):
         signature = inspect.signature(build_conversation_service)
-        assert set(signature.parameters) == {"settings", "session_factory", "guarded_service"}
+        assert set(signature.parameters) == {
+            "settings",
+            "session_factory",
+            "guarded_service",
+            "audit_recorder",
+        }
 
     def test_factory_does_not_construct_its_own_engine_inline(self):
         source = inspect.getsource(build_conversation_service)

@@ -40,10 +40,17 @@ class Settings(BaseSettings):
     PHASE8_MAX_STORED_ANSWER_CHARS: int = 8000
     PHASE8_MAX_STORED_CITATIONS_PER_TURN: int = 20
     PHASE8_CONVERSATION_RETENTION_DAYS: int = 30
-    # Phase 8 — Maintenance/admin route protection.
-    # When unset, maintenance routes stay open and the exposure is documented.
-    # When set, mutation routes require a matching X-Admin-Token header.
+    # Phase 9 — Maintenance/admin route protection (fail-closed).
+    # Mutation routes require a matching X-Admin-Token header. When no usable
+    # token is configured they return 503 rather than becoming public.
+    # Must be at least 16 characters and not a placeholder value.
+    ADMIN_API_TOKEN: SecretStr = SecretStr("")
+    # Deprecated Phase 8 alias, still honoured so existing deployments keep working.
     PHASE8_ADMIN_TOKEN: SecretStr = SecretStr("")
+
+    # Phase 9 — execution audit (agent_runs / tool_calls).
+    # Observability only. Audit failures never fail a user request.
+    PHASE9_AUDIT_ENABLED: bool = True
 
 @lru_cache
 def get_settings() -> Settings:
