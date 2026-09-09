@@ -43,9 +43,54 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# First-party code only. `migrations/versions/` is linted too (see per-file-ignores
+# below) but is never reformatted: applied revisions are historical records.
+src = ["app", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+
+# `make lint` is the enforced gate and must stay green. E501 is excluded from it
+# and reported separately by `make lint-all`, which is advisory.
+#
+# Rationale (Phase 10): after the safe autofix, 400 of the 492 remaining findings
+# were E501 alone, essentially all of them in stable Phase 0-9 code. Line length
+# is cosmetic; reflowing 400 lines across the guarded answer path, the tool
+# registry, and the conversation services would be a large diff through
+# security-sensitive code to fix nothing that can fail at runtime. The count is
+# baselined in docs/phase10_design.md and stays visible via `make lint-all`.
+#
+# This is the only rule excluded globally. Correctness (F), import hygiene (I),
+# naming (N), and modernization (UP) are all enforced everywhere.
+ignore = [
+    "E501",
+    # N806 fires on `Session = sessionmaker(...)` / `SessionLocal = sessionmaker(...)`.
+    # These bind a *class*, and PascalCase is SQLAlchemy's own documented convention;
+    # renaming them to satisfy a variable-naming rule would make the code less
+    # conventional, not more. All 17 occurrences are this pattern.
+    "N806",
+    # UP042 wants `class X(str, Enum)` rewritten as `StrEnum`. The two are not
+    # interchangeable: `StrEnum` changes what `str()` and f-string formatting
+    # produce for a member, and these enums are serialized into tool names,
+    # template ids, and source types on the guarded answer path. Deferred as a
+    # behavior change, not adopted as a style fix.
+    "UP042",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Alembic revisions are immutable history. Their unused-import and import-order
+# findings come from the `script.py.mako` template, not from hand-written code,
+# and rewriting an applied revision to satisfy a style rule risks the one thing
+# Phase 9 fixed: a chain a fresh clone can replay. Correctness rules (F8xx, E7xx)
+# stay active here.
+"migrations/versions/*.py" = ["F401", "I001", "UP007", "UP035"]
+# `env.py` imports every model so that Alembic autogenerate can see them on
+# `Base.metadata`. Those imports are load-bearing precisely because nothing
+# references them, and the `sys.path` bootstrap must run before them.
+"migrations/env.py" = ["F401", "E402", "I001"]
+# Star-imports every model so `Base.metadata.create_all()` sees all tables; the
+# names then read as "possibly undefined" (F405) at each use site.
+"tests/test_phase2_sql_analytics.py" = ["F405"]
 
 [tool.mypy]
 python_version = "3.11"

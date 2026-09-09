@@ -8,14 +8,17 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Optional
 
 from app.services.answer_contract import (
-    AnswerResponse, Answer, AnswerSection,
-    SqlResult, Evidence, GraphPath, Confidence,
+    Answer,
+    AnswerResponse,
+    AnswerSection,
+    Confidence,
+    Evidence,
+    GraphPath,
+    SqlResult,
 )
-from app.services.hybrid.hybrid_models import HybridAnswerResult, GraphEvidenceItem
-
+from app.services.hybrid.hybrid_models import GraphEvidenceItem, HybridAnswerResult
 
 CAVEAT_COMPLAINT_VOLUME = (
     "Complaint volume alone does not prove a safety defect. "
@@ -42,7 +45,7 @@ def compose_hybrid_answer(
     result: HybridAnswerResult,
     question: str,
     tool_calls: int = 0,
-    start_time: Optional[float] = None,
+    start_time: float | None = None,
 ) -> AnswerResponse:
     """
     Compose a full AnswerResponse from SQL + graph evidence.
@@ -68,8 +71,6 @@ def compose_hybrid_answer(
     sql_columns = sql_resp.get("sql", {}).get("columns") or []
     sql_execution_ms = sql_resp.get("sql", {}).get("execution_ms") or 0
     sql_validated = sql_resp.get("sql", {}).get("validated", True)
-    sql_summary = sql_resp.get("answer", {}).get("summary", "")
-    sql_intent = sql_resp.get("intent", "sql")
 
     warnings: list[str] = []
 

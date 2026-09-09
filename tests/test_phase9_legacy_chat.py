@@ -18,8 +18,6 @@ import inspect
 import json
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.api.v1.endpoints import chat as chat_module
 from app.api.v1.endpoints.chat import (
     DEPRECATION_WARNING,
@@ -44,6 +42,7 @@ from app.services.conversation.models import (
     ResolvedContext,
     TurnCitationProvenance,
 )
+from fastapi.testclient import TestClient
 
 SESSION_ID = "11111111-2222-3333-4444-555555555555"
 ABSTENTION_TEXT = (

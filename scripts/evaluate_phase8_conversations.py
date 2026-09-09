@@ -24,9 +24,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from app.core.config import Settings
 from app.db.base import Base
 from app.services.answer_synthesis.guarded_models import GuardedAnswerResult
@@ -39,6 +36,9 @@ from app.services.conversation.service import (
     PROVENANCE_VIOLATION_REASON,
     ConversationService,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from scripts.evaluate_phase7_answers import (
     NONFACTUAL_CLAIM_TYPES,
     WARNING_BY_CODE,

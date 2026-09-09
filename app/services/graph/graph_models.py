@@ -5,8 +5,6 @@ Pydantic/dataclass models for graph nodes, relationships, and build stats.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
-from datetime import date
 
 
 @dataclass
@@ -83,8 +81,8 @@ class GraphStatus:
     postgres_complaint_count: int
     postgres_recall_count: int
     postgres_component_count: int
-    last_build: Optional[dict] = None
-    error: Optional[str] = None
+    last_build: dict | None = None
+    error: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -124,14 +122,14 @@ class ModelYearNode:
 class ComponentNode:
     normalized_name: str
     name: str
-    category: Optional[str] = None
+    category: str | None = None
 
 
 @dataclass
 class ComplaintNode:
-    odi_number: Optional[str]
-    received_date: Optional[str]
-    summary: Optional[str] = None
+    odi_number: str | None
+    received_date: str | None
+    summary: str | None = None
     crash_flag: bool = False
     injury_flag: bool = False
     death_flag: bool = False
@@ -140,11 +138,11 @@ class ComplaintNode:
 @dataclass
 class RecallNode:
     campaign_number: str
-    report_received_date: Optional[str] = None
-    summary: Optional[str] = None
-    component: Optional[str] = None
-    remedy: Optional[str] = None
-    units_affected: Optional[int] = None
+    report_received_date: str | None = None
+    summary: str | None = None
+    component: str | None = None
+    remedy: str | None = None
+    units_affected: int | None = None
 
 
 @dataclass

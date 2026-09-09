@@ -16,7 +16,6 @@ import logging
 
 import httpx
 import pytest
-
 from app.services.answer_synthesis.models import (
     OrchestrationResult,
     OrchestrationTrace,
@@ -26,17 +25,17 @@ from app.services.answer_synthesis.models import (
     ProviderToolCall,
     SynthesisConfig,
 )
+from app.services.answer_synthesis.prompt_builder import (
+    _default_safety_rules,
+    build_synthesis_prompt,
+)
 from app.services.answer_synthesis.providers import (
+    MAX_RAW_RESPONSE_CHARS,
     DeterministicProvider,
     FakeProvider,
-    MAX_RAW_RESPONSE_CHARS,
     OpenAICompatibleProvider,
     SynthesisProvider,
     build_synthesis_provider,
-)
-from app.services.answer_synthesis.prompt_builder import (
-    build_synthesis_prompt,
-    _default_safety_rules,
 )
 from app.services.answer_synthesis.tools.base import (
     EvidenceBundle,
@@ -45,7 +44,6 @@ from app.services.answer_synthesis.tools.base import (
     ToolInputField,
     ToolInputSchema,
 )
-
 
 # =============================================================================
 # Test helpers
@@ -611,7 +609,7 @@ class TestOpenAICompatibleRealRequest:
         payload = _valid_llm_payload(
             content_overrides={"requested_tool_calls": [{"tool_name": "sql_analytics_tool", "arguments": {"operation": "x"}}]}
         )
-        captured = _patch_client(monkeypatch, response=_openai_response(payload))
+        _patch_client(monkeypatch, response=_openai_response(payload))
         p = OpenAICompatibleProvider(api_key="sk-x", model="gpt-4o")
         result = p.synthesize(_make_request())
         assert len(result.requested_tool_calls) == 1

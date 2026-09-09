@@ -8,32 +8,36 @@ No LLM calls.
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Optional
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
-from app.services.sql_analytics.service import answer_sql_analytics_question
 from app.services.graph import (
-    get_vehicle_neighborhood as graph_vehicle_neighborhood,
-    get_vehicle_recall_paths as graph_vehicle_recall_paths,
-    get_vehicle_component_evidence as graph_vehicle_component_evidence,
-    get_vehicle_shared_component_recalls as graph_vehicle_shared_component_recalls,
     get_graph_status,
 )
-from app.services.hybrid.hybrid_parser import (
-    parse_hybrid_question,
-    is_hybrid_question,
+from app.services.graph import (
+    get_vehicle_component_evidence as graph_vehicle_component_evidence,
 )
-from app.services.hybrid.hybrid_models import (
-    HybridAnswerResult,
-    GraphEvidenceItem,
-    HYBRID_INTENTS,
+from app.services.graph import (
+    get_vehicle_recall_paths as graph_vehicle_recall_paths,
+)
+from app.services.graph import (
+    get_vehicle_shared_component_recalls as graph_vehicle_shared_component_recalls,
 )
 from app.services.hybrid.answer_composer import compose_hybrid_answer
+from app.services.hybrid.hybrid_models import (
+    HYBRID_INTENTS,
+    GraphEvidenceItem,
+    HybridAnswerResult,
+)
+from app.services.hybrid.hybrid_parser import (
+    is_hybrid_question,
+    parse_hybrid_question,
+)
+from app.services.sql_analytics.service import answer_sql_analytics_question
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +68,7 @@ def answer_hybrid_question(question: str) -> dict:
     # Step 3: run graph retrieval if applicable
     graph_evidence: list[GraphEvidenceItem] = []
     neo4j_available = False
-    neo4j_error: Optional[str] = None
+    neo4j_error: str | None = None
 
     if intent.hybrid_type in HYBRID_INTENTS and intent.vehicle_extracted:
         tool_calls += 1
@@ -125,7 +129,7 @@ def _run_sql_analytics(question: str) -> dict:
 
 def _run_graph_retrieval(
     intent,
-) -> tuple[list[GraphEvidenceItem], bool, Optional[str]]:
+) -> tuple[list[GraphEvidenceItem], bool, str | None]:
     """
     Retrieve graph evidence using make/model/year from parsed intent.
 
@@ -202,7 +206,7 @@ def _run_graph_retrieval(
         return [], False, str(e)
 
 
-def _find_vehicle_id(make: str, model: str, year: int) -> Optional[str]:
+def _find_vehicle_id(make: str, model: str, year: int) -> str | None:
     """Look up a vehicle's PostgreSQL UUID from make/model/year."""
     try:
         session = _get_pg_session()

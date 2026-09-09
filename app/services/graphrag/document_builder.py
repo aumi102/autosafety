@@ -5,9 +5,8 @@ Document builder — canonical evidence documents from PostgreSQL domain entitie
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
-from app.db.models.domain import Vehicle, Complaint, Recall
+from app.db.models.domain import Complaint, Recall, Vehicle
 
 
 @dataclass
@@ -38,18 +37,18 @@ class EvidenceDocument:
     source_record_key: str
     title: str
     full_text: str
-    make: Optional[str]
-    model: Optional[str]
-    model_year: Optional[int]
-    component: Optional[str]
-    source_url: Optional[str]
-    received_date: Optional[str]
-    report_received_date: Optional[str]
+    make: str | None
+    model: str | None
+    model_year: int | None
+    component: str | None
+    source_url: str | None
+    received_date: str | None
+    report_received_date: str | None
     metadata: dict
     content_hash: str
 
 
-def _date_str(d) -> Optional[str]:
+def _date_str(d) -> str | None:
     """Convert a date/datetime to ISO string or None."""
     if d is None:
         return None
@@ -58,7 +57,7 @@ def _date_str(d) -> Optional[str]:
     return str(d)
 
 
-def _skip_empty(label: str, value: Optional[str]) -> str:
+def _skip_empty(label: str, value: str | None) -> str:
     """Return 'label: value' only when value is non-empty."""
     if value and value.strip():
         return f"{label}: {value.strip()}"
@@ -70,10 +69,10 @@ def _build_complaint_text(
     model: str,
     model_year: int,
     odi_number: str,
-    component: Optional[str],
-    received_date: Optional[str],
-    incident_date: Optional[str],
-    summary: Optional[str],
+    component: str | None,
+    received_date: str | None,
+    incident_date: str | None,
+    summary: str | None,
     crash_flag: bool,
     fire_flag: bool,
     injury_flag: bool,
@@ -82,7 +81,7 @@ def _build_complaint_text(
     """Build canonical complaint text deterministically."""
     lines = [
         f"Vehicle: {make} {model} {model_year}",
-        f"Record type: Consumer complaint",
+        "Record type: Consumer complaint",
     ]
 
     if component and component.strip():
@@ -122,17 +121,17 @@ def _build_recall_text(
     model: str,
     model_year: int,
     campaign_number: str,
-    component: Optional[str],
-    report_received_date: Optional[str],
-    consequence: Optional[str],
-    remedy: Optional[str],
-    units_affected: Optional[int],
-    summary: Optional[str],
+    component: str | None,
+    report_received_date: str | None,
+    consequence: str | None,
+    remedy: str | None,
+    units_affected: int | None,
+    summary: str | None,
 ) -> str:
     """Build canonical recall text deterministically."""
     lines = [
         f"Vehicle: {make} {model} {model_year}",
-        f"Record type: Recall",
+        "Record type: Recall",
         f"Campaign: {campaign_number}",
     ]
 

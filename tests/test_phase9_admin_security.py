@@ -19,9 +19,6 @@ import inspect
 import json
 
 import pytest
-from fastapi.testclient import TestClient
-from pydantic import SecretStr
-
 from app.core import security as security_module
 from app.core.config import Settings
 from app.core.security import (
@@ -31,6 +28,8 @@ from app.core.security import (
     verify_admin_token,
 )
 from app.main import app
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 VALID_TOKEN = "phase9-admin-token-value-32chars"
 MUTATION_ROUTES = (

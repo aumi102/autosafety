@@ -11,11 +11,10 @@ import logging
 from typing import Any
 
 from app.services.answer_synthesis.tools.base import (
-    EvidenceItem,
     EvidenceBundle,
+    EvidenceItem,
     ToolCallResult,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 _FORBIDDEN_KEYS: set[str] = {
     "password",
     "api_key",
-    "api_key",
+    "apikey",
     "secret",
     "token",
     "credential",
@@ -127,8 +126,6 @@ class EvidenceBundleBuilder:
                 continue
             self._seen_keys.add(dedup_key)
 
-            citation_key = f"{source_type}:{source_key}"
-            citation = citation_map.get(citation_key, {})
             citation_id = EvidenceItem.make_citation_id(source_type, source_key)
             item = EvidenceItem(
                 evidence_id=EvidenceItem.make_id(source_type, source_key),

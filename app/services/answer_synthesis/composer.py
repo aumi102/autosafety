@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import re
 
+from app.services.answer_synthesis.guarded_models import EvidenceSufficiencyResult, GuardedCitation
 from app.services.answer_synthesis.models import ProviderClaim
-from app.services.answer_synthesis.guarded_models import GuardedCitation, EvidenceSufficiencyResult
 from app.services.answer_synthesis.policy import QuestionIntent
 
 MAX_COMPOSED_CLAIMS = 8

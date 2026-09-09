@@ -13,9 +13,9 @@ Components:
 """
 
 from app.services.graphrag.service import (
+    get_graphrag_status,
     index_graphrag_documents,
     retrieve_graphrag_evidence,
-    get_graphrag_status,
 )
 
 __all__ = [

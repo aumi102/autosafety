@@ -7,15 +7,15 @@ Uses predefined Cypher. No raw Cypher. No mutation. Max 20 paths.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from app.services.answer_synthesis.tools.base import (
+    ToolCallResult,
     ToolDefinition,
     ToolInputField,
     ToolInputSchema,
-    ToolCallResult,
 )
-
 
 SUPPORTED_OPERATIONS = [
     "vehicle_neighborhood",
@@ -74,15 +74,10 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
 
         try:
             from app.services.graph import (
+                get_vehicle_component_evidence,
                 get_vehicle_neighborhood,
                 get_vehicle_recall_paths,
-                get_vehicle_component_evidence,
                 get_vehicle_shared_component_recalls,
-            )
-            from app.services.graph.graph_models import (
-                VehicleNeighborhood,
-                RecallPathResult,
-                ComponentEvidence,
             )
 
             warnings: list[str] = []

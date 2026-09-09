@@ -15,11 +15,9 @@ Verifies:
 """
 
 import uuid
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-import pytest
-
-from app.services.graph.graph_models import GraphBuildStats, ComponentEvidence
+from app.services.graph.graph_models import ComponentEvidence, GraphBuildStats
 
 
 class TestPhase5StatsModel:
@@ -70,7 +68,7 @@ class TestPhase5GraphBuilder:
 
     def test_component_nodes_upserted_before_mentions_component(self):
         """Component MERGE runs before MENTIONS_COMPONENT in build_graph."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         vid = uuid.uuid4()
         cid = uuid.uuid4()
@@ -282,7 +280,8 @@ class TestPhase5GraphBuilder:
 
     def test_dry_run_counts_components_without_writing(self):
         """Dry-run counts component candidates without writing to Neo4j."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
+
         from app.services.graph.graph_builder import build_graph
 
         vid = uuid.uuid4()
@@ -324,8 +323,8 @@ class TestPhase5Queries:
     def test_component_evidence_query_uses_predefined_cypher(self):
         """get_component_evidence_for_vehicle uses fixed COMPONENT_EVIDENCE_CYPHER."""
         from app.services.graph.graph_queries import (
-            get_component_evidence_for_vehicle,
             COMPONENT_EVIDENCE_CYPHER,
+            get_component_evidence_for_vehicle,
         )
 
         # Cypher template is a module-level constant (fixed pattern)
@@ -344,8 +343,8 @@ class TestPhase5Queries:
     def test_shared_component_recall_query_uses_predefined_cypher(self):
         """get_shared_component_recall_paths uses fixed SHARED_COMPONENT_RECALLS_CYPHER."""
         from app.services.graph.graph_queries import (
-            get_shared_component_recall_paths,
             SHARED_COMPONENT_RECALLS_CYPHER,
+            get_shared_component_recall_paths,
         )
 
         assert isinstance(SHARED_COMPONENT_RECALLS_CYPHER, str)

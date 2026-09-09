@@ -6,34 +6,40 @@ Idempotent: safe to re-run without duplicating records.
 """
 
 from __future__ import annotations
+
 import csv
-import uuid
 import logging
 import re
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
-from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.models.domain import (
-    SourceRun, RawSourceRow, Vehicle, Component,
-    Complaint, Recall, RecallVehicleLink,
+    Complaint,
+    Component,
+    RawSourceRow,
+    Recall,
+    RecallVehicleLink,
+    SourceRun,
+    Vehicle,
 )
 from app.services.nhtsa_client import (
-    NhtsaVehicle, NhtsaComplaintRecord, NhtsaRecallRecord,
-    fetch_complaints_by_vehicle, fetch_recalls_by_vehicle,
-    NhtsaApiError, NHTSA_API_BASE,
+    NHTSA_API_BASE,
+    NhtsaApiError,
+    NhtsaComplaintRecord,
+    NhtsaRecallRecord,
+    NhtsaVehicle,
+    fetch_complaints_by_vehicle,
+    fetch_recalls_by_vehicle,
 )
-from app.services.ingestion.normalization import normalize_component_name
 
 logger = logging.getLogger(__name__)
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class IngestionStats:
@@ -63,7 +69,7 @@ class IngestionStats:
         }
 
 
-def _normalize_text(text: Optional[str]) -> str:
+def _normalize_text(text: str | None) -> str:
     """Normalize text: upper, strip, collapse whitespace."""
     if not text:
         return ""
@@ -96,7 +102,7 @@ def _upsert_vehicle(session: Session, make: str, model: str, model_year: int) ->
     return vehicle
 
 
-def _upsert_component(session: Session, component_name: str) -> Optional[Component]:
+def _upsert_component(session: Session, component_name: str) -> Component | None:
     """Get or create component, return canonical component."""
     if not component_name:
         return None
@@ -248,7 +254,7 @@ def _upsert_recall(
     stats.recalls_inserted += 1
 
 
-def _parse_date(date_str: Optional[str]) -> Optional[datetime]:
+def _parse_date(date_str: str | None) -> datetime | None:
     """Parse NHTSA date string (YYYYMMDD) to date."""
     if not date_str:
         return None
@@ -264,10 +270,10 @@ def run_nhtsa_phase1_ingestion(
     session: Session,
     seed_csv_path: str,
     dry_run: bool = False,
-    limit_vehicles: Optional[int] = None,
+    limit_vehicles: int | None = None,
     complaints_only: bool = False,
     recalls_only: bool = False,
-) -> tuple[Optional[uuid.UUID], IngestionStats]:
+) -> tuple[uuid.UUID | None, IngestionStats]:
     """
     Run Phase 1 NHTSA ingestion.
 

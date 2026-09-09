@@ -9,23 +9,23 @@ Supports dry-run and limit_vehicles.
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Optional, Iterator
+import time
+from collections.abc import Iterator
 
-from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.db.models.domain import Vehicle, Component, Complaint, Recall, RecallVehicleLink
-from app.services.graph.neo4j_client import Neo4jClient
+from app.db.models.domain import Complaint, Component, Recall, RecallVehicleLink, Vehicle
 from app.services.graph.graph_models import GraphBuildStats
+from app.services.graph.neo4j_client import Neo4jClient
 
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 50
 
 
-def _date_str(d) -> Optional[str]:
+def _date_str(d) -> str | None:
     """Convert a date/datetime to ISO string or None."""
     if d is None:
         return None
@@ -39,7 +39,7 @@ def build_graph(
     neo4j_client: Neo4jClient,
     *,
     dry_run: bool = False,
-    limit_vehicles: Optional[int] = None,
+    limit_vehicles: int | None = None,
 ) -> GraphBuildStats:
     """
     Project PostgreSQL domain data into Neo4j.
@@ -78,8 +78,6 @@ def build_graph(
                 stats.component_nodes_merged += 1
             for vehicle in _fetch_vehicles(pg_session, limit_vehicles):
                 # Count vehicle model/year stats
-                model_key = f"{vehicle.normalized_make}:{vehicle.normalized_model}"
-                year_key = f"{model_key}:{vehicle.year}"
                 stats.vehicle_makes_seen += 1
                 stats.vehicle_models_seen += 1
                 stats.model_years_seen += 1
@@ -199,7 +197,7 @@ def _build_recall_map(session: Session, errors: list[str]) -> dict[str, dict]:
     return recall_map
 
 
-def _fetch_vehicles(session: Session, limit: Optional[int]) -> Iterator[Vehicle]:
+def _fetch_vehicles(session: Session, limit: int | None) -> Iterator[Vehicle]:
     """Fetch vehicles ordered by make/model/year."""
     stmt = (
         select(Vehicle)

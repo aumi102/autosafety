@@ -12,6 +12,6 @@ Components:
 - service: orchestration layer
 """
 
-from app.services.sql_analytics.service import answer_sql_analytics_question, SqlAnalyticsService
+from app.services.sql_analytics.service import SqlAnalyticsService, answer_sql_analytics_question
 
 __all__ = ["answer_sql_analytics_question", "SqlAnalyticsService"]

@@ -15,9 +15,6 @@ import inspect
 import uuid
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from app.core.config import Settings
 from app.db.base import Base
 from app.db.models.app import AgentRun, ToolCall
@@ -44,6 +41,8 @@ from app.services.observability import (
     ExecutionAuditRecorder,
     audit_run,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 ABSTENTION_TEXT = (
     "I cannot provide a reliable answer to this question based on available evidence."

@@ -16,27 +16,30 @@ from __future__ import annotations
 
 import logging
 
-from app.services.answer_synthesis.orchestrator import SynthesisOrchestrator
-from app.services.answer_synthesis.models import OrchestrationResult
+from app.services.answer_synthesis.citation_validator import (
+    MAX_INPUT_CLAIMS,
+    validate_and_build_claims,
+)
+from app.services.answer_synthesis.composer import compose_answer
+from app.services.answer_synthesis.confidence import compute_confidence
 from app.services.answer_synthesis.evidence_adapter import (
     adapt_evidence,
     graph_availability,
     has_only_failed_tool_evidence,
     tool_call_stats,
 )
-from app.services.answer_synthesis.policy import (
-    classify_question_intent,
-    evaluate_sufficiency,
-    build_mandatory_warnings,
-)
-from app.services.answer_synthesis.citation_validator import validate_and_build_claims, MAX_INPUT_CLAIMS
-from app.services.answer_synthesis.confidence import compute_confidence
-from app.services.answer_synthesis.composer import compose_answer
 from app.services.answer_synthesis.guarded_models import (
+    ConfidenceResult,
     GuardedAnswerResult,
     GuardedTrace,
     RetrievalSummary,
-    ConfidenceResult,
+)
+from app.services.answer_synthesis.models import OrchestrationResult
+from app.services.answer_synthesis.orchestrator import SynthesisOrchestrator
+from app.services.answer_synthesis.policy import (
+    build_mandatory_warnings,
+    classify_question_intent,
+    evaluate_sufficiency,
 )
 
 logger = logging.getLogger(__name__)

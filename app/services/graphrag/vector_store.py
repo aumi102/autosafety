@@ -8,24 +8,22 @@ All queries are parameterized. Cosine similarity = 1 - cosine_distance.
 
 from __future__ import annotations
 
-import uuid
 import logging
-from typing import Optional
+import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import text, JSON, func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.services.graphrag.models import (
-    EvidenceDocument,
     EvidenceChunk,
-    GraphRAGIndexStats,
+    EvidenceDocument,
 )
 
 logger = logging.getLogger(__name__)
 
 # Module-level flag set after first connectivity check
-_pgvector_available: Optional[bool] = None
+_pgvector_available: bool | None = None
 
 
 def _pg_vector_literal(vector: list[float]) -> str:
@@ -200,10 +198,10 @@ class VectorStore:
         self,
         query_embedding: list[float],
         top_k: int = 5,
-        source_type: Optional[str] = None,
-        make: Optional[str] = None,
-        model: Optional[str] = None,
-        model_year: Optional[int] = None,
+        source_type: str | None = None,
+        make: str | None = None,
+        model: str | None = None,
+        model_year: int | None = None,
         min_score: float = 0.0,
     ) -> list[VectorSearchResult]:
         """
@@ -225,14 +223,12 @@ class VectorStore:
         self,
         query_embedding: list[float],
         limit: int,
-        source_type: Optional[str],
-        make: Optional[str],
-        model: Optional[str],
-        model_year: Optional[int],
+        source_type: str | None,
+        make: str | None,
+        model: str | None,
+        model_year: int | None,
     ) -> list[VectorSearchResult]:
         """Search using pgvector native cosine distance."""
-        query_vec_literal = _pg_vector_literal(query_embedding)
-        # Embed vector literal directly in SQL — deterministic, not user-supplied
         params: dict = {
             "source_type": source_type,
             "limit": limit,
@@ -308,10 +304,10 @@ class VectorStore:
         self,
         query_embedding: list[float],
         limit: int,
-        source_type: Optional[str],
-        make: Optional[str],
-        model: Optional[str],
-        model_year: Optional[int],
+        source_type: str | None,
+        make: str | None,
+        model: str | None,
+        model_year: int | None,
         min_score: float = 0.0,
     ) -> list[VectorSearchResult]:
         """JSONB brute-force fallback for environments without pgvector column."""

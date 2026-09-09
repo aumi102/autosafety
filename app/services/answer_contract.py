@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional, Literal
+from typing import Literal
 
 
 @dataclass
@@ -19,9 +19,9 @@ class CitationItem:
     """A single citation from source data."""
     source_type: str  # "complaint" | "recall" | "investigation" | "manufacturer_communication"
     source_id: str
-    source_key: Optional[str] = None
-    field_name: Optional[str] = None
-    text_span: Optional[str] = None
+    source_key: str | None = None
+    field_name: str | None = None
+    text_span: str | None = None
     confidence: float = 1.0
 
     def to_dict(self) -> dict:
@@ -82,11 +82,11 @@ class Answer:
 class SqlResult:
     """SQL query execution result."""
     used: bool = False
-    query: Optional[str] = None
-    columns: Optional[list[str]] = None
-    rows: Optional[list[dict]] = None
-    row_count: Optional[int] = None
-    execution_ms: Optional[int] = None
+    query: str | None = None
+    columns: list[str] | None = None
+    rows: list[dict] | None = None
+    row_count: int | None = None
+    execution_ms: int | None = None
     validated: bool = False
 
     def to_dict(self) -> dict:
@@ -223,8 +223,8 @@ class AnswerResponse:
 
 def make_safety_response(
     summary: str,
-    warnings: Optional[list[str]] = None,
-    run_id: Optional[str] = None,
+    warnings: list[str] | None = None,
+    run_id: str | None = None,
 ) -> AnswerResponse:
     """Create a safety refusal response."""
     return AnswerResponse(
@@ -243,7 +243,7 @@ def make_safety_response(
 
 def make_stub_response(
     phase_note: str = "Phase 0: no agent yet",
-    run_id: Optional[str] = None,
+    run_id: str | None = None,
 ) -> AnswerResponse:
     """Create a Phase 0 stub response."""
     return AnswerResponse(

@@ -2,8 +2,7 @@
 Tests for SQL safety validator.
 """
 
-import pytest
-from app.services.sql_safety import validate_sql, enforce_limit, ValidationResult
+from app.services.sql_safety import ValidationResult, enforce_limit, validate_sql
 
 
 class TestValidateSqlAllowed:

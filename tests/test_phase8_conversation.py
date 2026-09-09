@@ -16,9 +16,6 @@ import inspect
 from datetime import UTC
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from app.core.config import Settings
 from app.db.base import Base
 from app.services.answer_synthesis.guarded_models import (
@@ -45,6 +42,8 @@ from app.services.conversation.service import (
     PROVENANCE_VIOLATION_REASON,
     ConversationService,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # =============================================================================
 # Fixtures and stubs

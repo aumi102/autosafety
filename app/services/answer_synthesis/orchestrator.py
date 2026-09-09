@@ -16,10 +16,10 @@ Phase = phase_7c. Semantic claim safety is Phase 7D.
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
-import logging
-from typing import Any, Callable, Optional
+from typing import Any
 
 from app.services.answer_synthesis.models import (
     OrchestrationResult,
@@ -28,6 +28,12 @@ from app.services.answer_synthesis.models import (
     ProviderToolCall,
     SynthesisConfig,
 )
+from app.services.answer_synthesis.prompt_builder import build_synthesis_prompt
+from app.services.answer_synthesis.providers import (
+    DeterministicProvider,
+    SynthesisProvider,
+    build_synthesis_provider,
+)
 from app.services.answer_synthesis.tools.base import (
     EvidenceBundle,
     ToolCallRequest,
@@ -35,13 +41,6 @@ from app.services.answer_synthesis.tools.base import (
 )
 from app.services.answer_synthesis.tools.bundle_builder import EvidenceBundleBuilder
 from app.services.answer_synthesis.tools.registry import ToolRegistry
-from app.services.answer_synthesis.providers import (
-    SynthesisProvider,
-    DeterministicProvider,
-    build_synthesis_provider,
-)
-from app.services.answer_synthesis.prompt_builder import build_synthesis_prompt
-
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +67,8 @@ class SynthesisOrchestrator:
         *,
         registry: ToolRegistry,
         primary_provider: SynthesisProvider,
-        deterministic_fallback: Optional[SynthesisProvider] = None,
-        config: Optional[SynthesisConfig] = None,
+        deterministic_fallback: SynthesisProvider | None = None,
+        config: SynthesisConfig | None = None,
     ):
         self._registry = registry
         self._primary = primary_provider
@@ -227,7 +226,7 @@ class SynthesisOrchestrator:
         self,
         question: str,
         trace: OrchestrationTrace,
-    ) -> Optional[ToolCallResult]:
+    ) -> ToolCallResult | None:
         """Execute mandatory GraphRAG base retrieval."""
         # Map question to operation
         q = question.lower()
@@ -280,7 +279,7 @@ class SynthesisOrchestrator:
         self,
         call: ProviderToolCall,
         trace: OrchestrationTrace,
-    ) -> Optional[ToolCallResult]:
+    ) -> ToolCallResult | None:
         """Validate and execute a provider-requested tool call."""
         tool_name = call.tool_name
 
@@ -456,7 +455,6 @@ def _orchestrate_with_config(
     config: SynthesisConfig,
 ) -> OrchestrationResult:
     """Convenience function: build orchestrator and run."""
-    from app.services.answer_synthesis.providers import build_synthesis_provider
 
     provider_config = {
         "provider": config.provider,

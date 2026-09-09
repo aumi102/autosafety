@@ -1,35 +1,32 @@
 """Ingestion API endpoints."""
 
-from fastapi import APIRouter, HTTPException, Depends
-
-from app.core.security import verify_admin_token
-from sqlalchemy.orm import Session
-from typing import Optional
 import uuid
 
-from app.api.v1.endpoints.ingestion_schemas import (
-    SourceRunResponse,
-    SourceRunListResponse,
-    Phase1RunRequest,
-    Phase1RunResponse,
-    IngestionStatsResponse,
-    DataQualitySummaryResponse,
-    Phase15RunRequest,
-    Phase15RunResponse,
-    ComplaintsFlatFileStatsResponse,
-)
-from app.services.ingestion.nhtsa_ingestion import run_nhtsa_phase1_ingestion, IngestionStats
-from app.services.ingestion.data_quality import get_data_quality_summary
-from app.services.ingestion.complaints_flat_file import (
-    run_complaints_flat_file_ingestion, ComplaintsFlatFileStats,
-)
-from app.db.models.domain import SourceRun
-from app.db.session import get_async_session
-from app.core.config import get_settings
+from fastapi import APIRouter, Depends, HTTPException
 
 # Use sync engine for CLI-style ingestion in sync FastAPI context
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from app.api.v1.endpoints.ingestion_schemas import (
+    ComplaintsFlatFileStatsResponse,
+    DataQualitySummaryResponse,
+    IngestionStatsResponse,
+    Phase1RunRequest,
+    Phase1RunResponse,
+    Phase15RunRequest,
+    Phase15RunResponse,
+    SourceRunListResponse,
+    SourceRunResponse,
+)
+from app.core.config import get_settings
+from app.core.security import verify_admin_token
+from app.db.models.domain import SourceRun
+from app.services.ingestion.complaints_flat_file import (
+    run_complaints_flat_file_ingestion,
+)
+from app.services.ingestion.data_quality import get_data_quality_summary
+from app.services.ingestion.nhtsa_ingestion import run_nhtsa_phase1_ingestion
 
 router = APIRouter(tags=["ingestion"])
 

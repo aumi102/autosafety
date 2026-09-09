@@ -8,7 +8,6 @@ Enforces query constraints for analytics safety.
 
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 # Unsafe SQL keywords that should never appear in user-generated queries
 BLOCKED_KEYWORDS = {
@@ -39,8 +38,8 @@ ALLOWED_PREFIXES = {"SELECT", "WITH", "EXPLAIN", "DESCRIBE", "SHOW"}
 class ValidationResult:
     valid: bool
     query: str
-    reason: Optional[str] = None
-    warning: Optional[str] = None
+    reason: str | None = None
+    warning: str | None = None
 
     def __bool__(self) -> bool:
         return self.valid
@@ -52,7 +51,7 @@ def validate_sql(query: str) -> ValidationResult:
 
     Returns ValidationResult with:
     - valid: True if query is safe
-    - query: the normalized query
+    - query: the query as supplied (never rewritten by this validator)
     - reason: explanation if invalid
     - warning: caution if valid but needs attention
     """
@@ -62,9 +61,6 @@ def validate_sql(query: str) -> ValidationResult:
             query=query or "",
             reason="Empty query"
         )
-
-    # Normalize whitespace for analysis
-    normalized = re.sub(r"\s+", " ", query.strip())
 
     # Check for blocked patterns first
     for pattern in BLOCKED_PATTERNS:

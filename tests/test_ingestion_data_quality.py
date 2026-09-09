@@ -1,8 +1,6 @@
 """Tests for data quality reporting — mock-based."""
 
-import pytest
-from unittest.mock import MagicMock
-from app.services.ingestion.data_quality import DataQualitySummary, get_data_quality_summary
+from app.services.ingestion.data_quality import DataQualitySummary
 
 
 def test_data_quality_summary_to_dict():

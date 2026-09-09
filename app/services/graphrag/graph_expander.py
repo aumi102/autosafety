@@ -7,7 +7,6 @@ Uses predefined parameterized Cypher only. Bounded depth. Tolerates Neo4j unavai
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from app.services.graph.neo4j_client import Neo4jClient
 from app.services.graphrag.models import GraphRAGGraphPath
@@ -83,8 +82,7 @@ def expand_complaint_neighborhood(
 
         # Path: complaint -> component
         paths.append(GraphRAGGraphPath(
-            path_text="{m} {mo} {y} complaint {odi} mentions component {c}".format(
-                m=make, mo=model, y=year, odi=odi_number, c=comp),
+            path_text=f"{make} {model} {year} complaint {odi_number} mentions component {comp}",
             relation_source="complaint_mentions_component",
             source_type="complaint",
             source_key=odi_number,
@@ -97,8 +95,7 @@ def expand_complaint_neighborhood(
                 continue
             campaign = recall["recall_campaign"]
             paths.append(GraphRAGGraphPath(
-                path_text="{m} {mo} {y} recall {cam} related to component {c} (potential association)".format(
-                    m=make, mo=model, y=year, cam=campaign, c=comp),
+                path_text=f"{make} {model} {year} recall {campaign} related to component {comp} (potential association)",
                 relation_source="potentially_related_by_shared_component",
                 source_type="recall",
                 source_key=campaign,
@@ -106,7 +103,7 @@ def expand_complaint_neighborhood(
             ))
 
     except Exception as e:
-        logger.warning("Complaint graph expansion failed for {n}: {e}".format(n=odi_number, e=e))
+        logger.warning(f"Complaint graph expansion failed for {odi_number}: {e}")
 
     return paths
 
@@ -137,8 +134,7 @@ def expand_recall_neighborhood(
 
         # Path: recall -> affects vehicle (official)
         paths.append(GraphRAGGraphPath(
-            path_text="{m} {mo} {y} recall {cam} affects vehicle (official)".format(
-                m=make, mo=model, y=year, cam=campaign_number),
+            path_text=f"{make} {model} {year} recall {campaign_number} affects vehicle (official)",
             relation_source="official_recall_affects_vehicle",
             source_type="recall",
             source_key=campaign_number,
@@ -148,8 +144,7 @@ def expand_recall_neighborhood(
         # Path: recall -> related component
         if comp != "Unknown Component":
             paths.append(GraphRAGGraphPath(
-                path_text="{m} {mo} {y} recall {cam} related to component {c}".format(
-                    m=make, mo=model, y=year, cam=campaign_number, c=comp),
+                path_text=f"{make} {model} {year} recall {campaign_number} related to component {comp}",
                 relation_source="recall_related_to_component",
                 source_type="recall",
                 source_key=campaign_number,
@@ -162,8 +157,7 @@ def expand_recall_neighborhood(
                 continue
             odi = complaint["complaint_odi"]
             paths.append(GraphRAGGraphPath(
-                path_text="{m} {mo} {y} recall {cam} potentially related to complaint {odi} via component {c}".format(
-                    m=make, mo=model, y=year, cam=campaign_number, odi=odi, c=comp),
+                path_text=f"{make} {model} {year} recall {campaign_number} potentially related to complaint {odi} via component {comp}",
                 relation_source="potentially_related_by_shared_component",
                 source_type="complaint",
                 source_key=odi,
@@ -171,7 +165,7 @@ def expand_recall_neighborhood(
             ))
 
     except Exception as e:
-        logger.warning("Recall graph expansion failed for {n}: {e}".format(n=campaign_number, e=e))
+        logger.warning(f"Recall graph expansion failed for {campaign_number}: {e}")
 
     return paths
 

@@ -10,8 +10,8 @@ outcomes; never trusts provider self-reported confidence.
 from __future__ import annotations
 
 from app.services.answer_synthesis.guarded_models import (
-    ConfidenceResult,
     CitationValidationResult,
+    ConfidenceResult,
     EvidenceSufficiencyResult,
     GuardedCitation,
 )

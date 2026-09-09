@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Literal
 
-from app.services.ingestion.normalization import normalize_make, normalize_model, models_equivalent
+from app.services.ingestion.normalization import normalize_make, normalize_model
 
 
 @dataclass
@@ -29,7 +29,7 @@ class VehicleEntity:
     model: str         # Original as written in question
     normalized_make: str
     normalized_model: str
-    model_year: Optional[int] = None
+    model_year: int | None = None
 
     def __post_init__(self):
         self.normalized_make = normalize_make(self.make)
@@ -48,10 +48,10 @@ class ParsedQuestion:
         "unknown",
         "clarification_needed",
     ]
-    vehicle: Optional[VehicleEntity] = None
-    limit: Optional[int] = None
-    component: Optional[str] = None  # Only for component-specific questions
-    make_filter: Optional[str] = None  # For vehicles_by_complaint_count
+    vehicle: VehicleEntity | None = None
+    limit: int | None = None
+    component: str | None = None  # Only for component-specific questions
+    make_filter: str | None = None  # For vehicles_by_complaint_count
     raw: str = ""
     confidence: float = 0.5  # 0.0-1.0
 
@@ -74,19 +74,17 @@ MAKE_ALIASES = {
 
 # Known model normalization targets (raw → canonical model for display)
 # The normalized_model is always stored uppercase/trimmed
-KNOWN_F150_VARIANTS = {"f-150", "f150", "f 150", "f 150", "f-150"}
+KNOWN_F150_VARIANTS = {"f-150", "f150", "f 150"}
 MODEL_CANONICAL = {
     "f-150": "F-150",
     "f150": "F-150",
     "f 150": "F-150",
-    "f 150": "F-150",
-    "f-150": "F-150",
     "accord": "Accord",
     "camry": "Camry",
 }
 
 
-def _extract_make(text: str) -> Optional[str]:
+def _extract_make(text: str) -> str | None:
     """Extract and normalize make from text."""
     text_lower = text.lower()
     for alias, canonical in MAKE_ALIASES.items():
@@ -96,7 +94,7 @@ def _extract_make(text: str) -> Optional[str]:
     return None
 
 
-def _extract_model(text: str) -> Optional[str]:
+def _extract_model(text: str) -> str | None:
     """Extract model name from text."""
     text_lower = text.lower()
 
@@ -125,7 +123,7 @@ def _extract_model(text: str) -> Optional[str]:
     return None
 
 
-def _extract_year(text: str) -> Optional[int]:
+def _extract_year(text: str) -> int | None:
     """Extract model year (4-digit year 1990-2030)."""
     # Look for 4-digit year in context near vehicle info
     for match in re.finditer(r'\b(19[9]\d|20[0-2]\d|2030)\b', text):
@@ -139,7 +137,7 @@ def _extract_year(text: str) -> Optional[int]:
     return None
 
 
-def _extract_limit(text: str) -> Optional[int]:
+def _extract_limit(text: str) -> int | None:
     """Extract LIMIT hint from question."""
     # "top 5", "top 10", "list top 3"
     match = re.search(r'\btop\s+(\d+)\b', text, re.IGNORECASE)
@@ -157,7 +155,7 @@ def _extract_limit(text: str) -> Optional[int]:
     return None
 
 
-def _classify_intent(text: str, vehicle: Optional[VehicleEntity]) -> str:
+def _classify_intent(text: str, vehicle: VehicleEntity | None) -> str:
     """Classify question intent from keywords."""
     text_lower = text.lower()
 
@@ -206,7 +204,6 @@ def parse_question(text: str) -> ParsedQuestion:
     No LLM calls.
     """
     raw = text.strip()
-    raw_lower = raw.lower()
 
     # Extract entities
     make = _extract_make(raw)

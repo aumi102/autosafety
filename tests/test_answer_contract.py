@@ -2,16 +2,15 @@
 Tests for answer contract model.
 """
 
-import pytest
 from app.services.answer_contract import (
-    AnswerResponse,
     Answer,
+    AnswerResponse,
     AnswerSection,
-    SqlResult,
-    Evidence,
     CitationItem,
-    GraphPath,
     Confidence,
+    Evidence,
+    GraphPath,
+    SqlResult,
     make_safety_response,
     make_stub_response,
 )

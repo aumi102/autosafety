@@ -6,7 +6,6 @@ This registry is used by the template system to build safe SQL queries.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -24,8 +23,8 @@ class TableDef:
     name: str
     description: str
     columns: list[ColumnDef]
-    join_hint: Optional[str] = None
-    key_column: Optional[str] = None
+    join_hint: str | None = None
+    key_column: str | None = None
 
 
 # Allowed tables for Phase 2 SQL analytics

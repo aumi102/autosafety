@@ -8,10 +8,9 @@ No secrets, no callable objects, no tracebacks.
 from __future__ import annotations
 
 import uuid
-import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
 from enum import Enum
+from typing import Any
 
 
 class ToolName(str, Enum):
@@ -28,10 +27,10 @@ class ToolInputField:
     description: str
     required: bool = True
     default: Any = None
-    max_length: Optional[int] = None  # for strings
-    min_value: Optional[int] = None   # for integers
-    max_value: Optional[int] = None    # for integers
-    enum_values: Optional[list[str]] = None  # for enum type
+    max_length: int | None = None  # for strings
+    min_value: int | None = None   # for integers
+    max_value: int | None = None    # for integers
+    enum_values: list[str] | None = None  # for enum type
 
 
 @dataclass
@@ -110,10 +109,10 @@ class ToolCallResult:
     call_id: str
     tool_name: str
     success: bool
-    data: Optional[dict[str, Any]] = None
+    data: dict[str, Any] | None = None
     warnings: list[str] = field(default_factory=list)
-    error_code: Optional[str] = None
-    error_message: Optional[str] = None
+    error_code: str | None = None
+    error_message: str | None = None
     duration_ms: int = 0
     truncated: bool = False
 
@@ -182,13 +181,13 @@ class EvidenceItem:
     tool_name: str
     evidence_type: str  # "complaint" | "recall" | "sql_result" | "graph_path" | "graph_neighborhood"
     source_record_key: str
-    source_entity_id: Optional[str] = None
+    source_entity_id: str | None = None
     text: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
-    relation_basis: Optional[str] = None  # e.g. "official_recall_affects_vehicle"
+    relation_basis: str | None = None  # e.g. "official_recall_affects_vehicle"
     score: float = 1.0
-    citation_label: Optional[str] = None
-    citation_id: Optional[str] = None  # stable: cite-{source_type}-{source_key}
+    citation_label: str | None = None
+    citation_id: str | None = None  # stable: cite-{source_type}-{source_key}
     truncated: bool = False
 
     def to_dict(self) -> dict:

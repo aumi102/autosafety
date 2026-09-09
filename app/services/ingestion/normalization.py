@@ -5,10 +5,9 @@ Keeps original strings for traceability, creates normalized versions for analyti
 """
 
 import re
-from typing import Optional
 
 
-def normalize_component_name(name: Optional[str]) -> Optional[str]:
+def normalize_component_name(name: str | None) -> str | None:
     """
     Normalize NHTSA component names to canonical form.
 
@@ -48,14 +47,14 @@ def normalize_component_name(name: Optional[str]) -> Optional[str]:
     return normalized if normalized else None
 
 
-def normalize_make(make: Optional[str]) -> str:
+def normalize_make(make: str | None) -> str:
     """Normalize vehicle make name."""
     if not make:
         return ""
     return re.sub(r"\s+", " ", make.strip().upper())
 
 
-def normalize_model(model: Optional[str]) -> str:
+def normalize_model(model: str | None) -> str:
     """Normalize vehicle model name."""
     if not model:
         return ""

@@ -16,8 +16,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.api.v1.endpoints.answer_synthesis import get_guarded_answer_service_dependency
 from app.main import app
 from app.services.answer_synthesis.citation_validator import validate_and_build_claims
@@ -34,6 +32,7 @@ from app.services.answer_synthesis.policy import (
     classify_question_intent,
 )
 from app.services.answer_synthesis.tools.vehicle_adapter import build_vehicle_resolution_adapter
+from fastapi.testclient import TestClient
 from scripts import evaluate_phase7_answers as evaluation
 from scripts import query_phase7_answer as cli
 

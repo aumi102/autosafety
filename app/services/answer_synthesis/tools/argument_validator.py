@@ -11,10 +11,7 @@ from typing import Any
 
 from app.services.answer_synthesis.tools.base import (
     ToolDefinition,
-    ToolInputSchema,
-    ToolInputField,
 )
-
 
 # Forbidden keys that must never appear in tool arguments
 FORBIDDEN_KEYS: set[str] = {
@@ -137,7 +134,7 @@ def validate_tool_arguments(
         elif field_def.type == "integer":
             # Reject booleans explicitly (True/False are instances of int in Python)
             if isinstance(value, bool):
-                result.add(name, f"Expected integer, got boolean")
+                result.add(name, "Expected integer, got boolean")
             elif not isinstance(value, int):
                 result.add(name, f"Expected integer, got {type(value).__name__}")
             else:

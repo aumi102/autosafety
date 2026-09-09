@@ -13,14 +13,12 @@ import json
 import uuid
 
 import pytest
-from fastapi.testclient import TestClient
-
-from app.core.config import Settings
 from app.api.v1.endpoints import conversations as api_module
 from app.api.v1.endpoints.conversations import (
     ConversationMessageRequest,
     get_conversation_service_dependency,
 )
+from app.core.config import Settings
 from app.main import app
 from app.services.answer_synthesis.guarded_models import (
     CitationValidationResult,
@@ -42,6 +40,7 @@ from app.services.conversation.models import (
     ResolvedContext,
     TurnCitationProvenance,
 )
+from fastapi.testclient import TestClient
 from scripts import query_phase8_conversation as cli
 
 CONVERSATION_ID = "11111111-2222-3333-4444-555555555555"

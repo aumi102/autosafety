@@ -7,8 +7,6 @@ Defines hybrid intent classification, query plan, and result structures.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # Hybrid intents that require both SQL + graph
 HYBRID_INTENTS = {
@@ -33,7 +31,7 @@ class HybridIntent:
     vehicle_extracted: bool = False
     confidence: float = 0.5
     # Vehicle entity from Phase 2 parser (for graph lookup)
-    vehicle: Optional[object] = None
+    vehicle: object | None = None
 
 
 @dataclass
@@ -63,8 +61,8 @@ class HybridAnswerResult:
     sql_response: dict  # from Phase 2 answer_sql_analytics_question
     graph_evidence: list[GraphEvidenceItem] = field(default_factory=list)
     neo4j_available: bool = True
-    neo4j_error: Optional[str] = None
-    sql_error: Optional[str] = None
+    neo4j_error: str | None = None
+    sql_error: str | None = None
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:

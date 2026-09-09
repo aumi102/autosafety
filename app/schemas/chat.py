@@ -1,12 +1,14 @@
+from typing import Literal
+
 from pydantic import BaseModel
-from typing import Optional, Literal
+
 
 class ChatSessionCreate(BaseModel):
-    title: Optional[str] = None
+    title: str | None = None
 
 class ChatSessionResponse(BaseModel):
     id: str
-    title: Optional[str]
+    title: str | None
     created_at: str
 
     class Config:
@@ -14,7 +16,7 @@ class ChatSessionResponse(BaseModel):
 
 class ChatMessageCreate(BaseModel):
     content: str
-    options: Optional[dict] = {}
+    options: dict | None = {}
 
 class ConfidenceResponse(BaseModel):
     label: Literal["low", "medium", "high"]
@@ -32,19 +34,19 @@ class AnswerResponse(BaseModel):
 
 class SqlResponse(BaseModel):
     used: bool
-    query: Optional[str] = None
-    columns: Optional[list[str]] = None
-    rows: Optional[list[dict]] = None
-    row_count: Optional[int] = None
-    execution_ms: Optional[int] = None
+    query: str | None = None
+    columns: list[str] | None = None
+    rows: list[dict] | None = None
+    row_count: int | None = None
+    execution_ms: int | None = None
     validated: bool = True
 
 class CitationItem(BaseModel):
     source_type: str
     source_id: str
-    source_key: Optional[str] = None
-    field_name: Optional[str] = None
-    text_span: Optional[str] = None
+    source_key: str | None = None
+    field_name: str | None = None
+    text_span: str | None = None
     confidence: float
 
 class GraphPath(BaseModel):

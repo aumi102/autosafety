@@ -1,26 +1,21 @@
 """Tests for Phase 4 hybrid SQL + graph answers."""
 
-import pytest
-from unittest.mock import MagicMock, patch
 
-from app.services.hybrid.hybrid_parser import (
-    parse_hybrid_question,
-    is_hybrid_question,
-    _detect_graph_request,
-    _classify_hybrid_type,
-)
-from app.services.hybrid.hybrid_models import (
-    HybridIntent,
-    HybridAnswerResult,
-    GraphEvidenceItem,
-    HYBRID_INTENTS,
-)
 from app.services.hybrid.answer_composer import (
-    compose_hybrid_answer,
     CAVEAT_COMPLAINT_VOLUME,
     CAVEAT_POTENTIAL_RELATION,
+    compose_hybrid_answer,
 )
-
+from app.services.hybrid.hybrid_models import (
+    HYBRID_INTENTS,
+    GraphEvidenceItem,
+    HybridAnswerResult,
+)
+from app.services.hybrid.hybrid_parser import (
+    _detect_graph_request,
+    is_hybrid_question,
+    parse_hybrid_question,
+)
 
 # =============================================================================
 # Hybrid parser tests
@@ -261,9 +256,7 @@ class TestHybridServiceRouting:
 class TestImports:
     def test_hybrid_package_imports_clean(self):
         from app.services.hybrid import answer_hybrid_question
-        from app.services.hybrid.hybrid_parser import parse_hybrid_question, is_hybrid_question
-        from app.services.hybrid.hybrid_models import HybridIntent, HybridAnswerResult, GraphEvidenceItem
-        from app.services.hybrid.answer_composer import compose_hybrid_answer
+        from app.services.hybrid.hybrid_parser import parse_hybrid_question
         assert callable(answer_hybrid_question)
         assert callable(parse_hybrid_question)
 

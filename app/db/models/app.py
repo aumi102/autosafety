@@ -1,12 +1,25 @@
 import uuid
-from datetime import datetime, timezone
-from sqlalchemy import String, Text, Boolean, Integer, ForeignKey, DateTime, CheckConstraint, JSON, UniqueConstraint
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.db.base import Base
 
+
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 class User(Base):
     __tablename__ = "users"

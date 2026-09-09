@@ -1,29 +1,28 @@
 """Tests for Phase 2 SQL analytics — no live network or LLM calls."""
 
-import pytest
 import uuid
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
+import pytest
 from app.db.base import Base
 from app.db.models.app import *  # noqa: F401, F403
 from app.db.models.domain import *  # noqa: F401, F403
-
-from app.services.sql_analytics.question_parser import (
-    parse_question, VehicleEntity, _extract_make, _extract_model,
-    _extract_year, _extract_limit, build_clarification_response,
-)
-from app.services.sql_analytics.templates import (
-    TemplateId, get_template, get_all_templates, TEMPLATES,
-)
 from app.services.sql_analytics.executor import execute_readonly_sql, validate_template_sql
+from app.services.sql_analytics.question_parser import (
+    _extract_limit,
+    _extract_make,
+    _extract_model,
+    _extract_year,
+    parse_question,
+)
 from app.services.sql_analytics.service import SqlAnalyticsService, answer_sql_analytics_question
+from app.services.sql_analytics.templates import (
+    TEMPLATES,
+    TemplateId,
+    get_template,
+)
 from app.services.sql_safety import validate_sql
-
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # =============================================================================
 # Question parser tests

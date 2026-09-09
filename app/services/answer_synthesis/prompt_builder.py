@@ -46,7 +46,6 @@ def build_synthesis_prompt(
     - Question bounded
     """
     max_chars = config.get("max_evidence_chars", 16000)
-    max_output = config.get("max_output_chars", 8000)
 
     # Build evidence text
     evidence_text = _build_evidence_text(evidence_bundle, max_chars)

@@ -7,11 +7,10 @@ Combines embedding generation, vector search, and citation metadata construction
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
-from app.services.graphrag.embedding_provider import get_embedding_provider, EmbeddingProvider
-from app.services.graphrag.vector_store import VectorStore, VectorSearchResult
-from app.services.graphrag.models import RetrievedChunk, GraphRAGCitation
+from app.services.graphrag.embedding_provider import EmbeddingProvider, get_embedding_provider
+from app.services.graphrag.models import GraphRAGCitation, RetrievedChunk
+from app.services.graphrag.vector_store import VectorSearchResult, VectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ class GraphRAGRetriever:
     def __init__(
         self,
         vector_store: VectorStore,
-        embedding_provider: Optional[EmbeddingProvider] = None,
+        embedding_provider: EmbeddingProvider | None = None,
     ):
         self.vector_store = vector_store
         self.provider = embedding_provider or get_embedding_provider()
@@ -39,10 +38,10 @@ class GraphRAGRetriever:
         self,
         question: str,
         top_k: int = 5,
-        source_type: Optional[str] = None,
-        make: Optional[str] = None,
-        model: Optional[str] = None,
-        model_year: Optional[int] = None,
+        source_type: str | None = None,
+        make: str | None = None,
+        model: str | None = None,
+        model_year: int | None = None,
     ) -> tuple[list[RetrievedChunk], list[GraphRAGCitation]]:
         """
         Retrieve relevant chunks and citations for a question.
@@ -135,8 +134,8 @@ class GraphRAGRetriever:
         self,
         source_type: str,
         source_key: str,
-        make: Optional[str],
-        model: Optional[str],
+        make: str | None,
+        model: str | None,
     ) -> str:
         """Build a human-readable citation label."""
         vehicle = f"{make or '?'} {model or '?'}".strip()

@@ -13,13 +13,13 @@ Phase 3 is NOT full GraphRAG. No embeddings, vector search, or LLM reasoning.
 """
 
 from app.services.graph.graph_service import (
-    setup_graph_schema,
     build_graph_from_postgres,
     get_graph_status,
+    get_vehicle_component_evidence,
     get_vehicle_neighborhood,
     get_vehicle_recall_paths,
-    get_vehicle_component_evidence,
     get_vehicle_shared_component_recalls,
+    setup_graph_schema,
 )
 
 __all__ = [

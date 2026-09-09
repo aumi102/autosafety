@@ -8,18 +8,15 @@ Each function is parameterized and validated before execution.
 from __future__ import annotations
 
 import re
-from typing import Optional
-from dataclasses import dataclass
 
-from app.services.graph.neo4j_client import Neo4jClient
 from app.services.graph.graph_models import (
-    VehicleNeighborhood,
-    RecallPathResult,
-    RecallNode,
-    NeighborhoodNode,
     NeighborhoodEdge,
+    NeighborhoodNode,
+    RecallNode,
+    RecallPathResult,
+    VehicleNeighborhood,
 )
-
+from app.services.graph.neo4j_client import Neo4jClient
 
 # Maximum result limits enforced server-side
 MAX_NEIGHBORHOOD_NODES = 500
@@ -95,8 +92,8 @@ def get_vehicle_neighborhood(
     make: str,
     model: str,
     year: int,
-    vehicle_id: Optional[str] = None,
-) -> Optional[VehicleNeighborhood]:
+    vehicle_id: str | None = None,
+) -> VehicleNeighborhood | None:
     """
     Retrieve vehicle neighborhood from graph.
 
@@ -250,8 +247,8 @@ def get_recall_paths_for_vehicle(
     make: str,
     model: str,
     year: int,
-    vehicle_id: Optional[str] = None,
-) -> Optional[RecallPathResult]:
+    vehicle_id: str | None = None,
+) -> RecallPathResult | None:
     """
     Retrieve recall paths for a vehicle from the graph.
 
@@ -341,7 +338,7 @@ def get_component_evidence_for_vehicle(
     make: str,
     model: str,
     year: int,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Retrieve complaint-component evidence for a vehicle from the graph.
 
@@ -407,7 +404,7 @@ def get_shared_component_recall_paths(
     make: str,
     model: str,
     year: int,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Retrieve recalls linked through shared components with complaints.
 

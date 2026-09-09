@@ -3,17 +3,15 @@
 from __future__ import annotations
 
 import time
-import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.core.security import verify_admin_token
 from app.services.graphrag import (
+    get_graphrag_status,
     index_graphrag_documents,
     retrieve_graphrag_evidence,
-    get_graphrag_status,
 )
 
 router = APIRouter(tags=["graphrag"])
@@ -21,8 +19,8 @@ router = APIRouter(tags=["graphrag"])
 
 class GraphRAGIndexRequest(BaseModel):
     dry_run: bool = False
-    source_type: Optional[str] = None  # "complaint" | "recall" | None
-    limit: Optional[int] = None
+    source_type: str | None = None  # "complaint" | "recall" | None
+    limit: int | None = None
     force_reembed: bool = False
 
 
@@ -36,10 +34,10 @@ class GraphRAGRetrieveRequest(BaseModel):
     question: str
     top_k: int = 5
     include_graph: bool = True
-    source_type: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    model_year: Optional[int] = None
+    source_type: str | None = None
+    make: str | None = None
+    model: str | None = None
+    model_year: int | None = None
 
 
 class GraphRAGRetrieveResponse(BaseModel):
@@ -53,7 +51,7 @@ class GraphRAGRetrieveResponse(BaseModel):
     total_chunks_returned: int
     execution_ms: int
     neo4j_available: bool
-    neo4j_error: Optional[str]
+    neo4j_error: str | None
     phase: str = "phase_6"
 
 
@@ -66,7 +64,7 @@ class GraphRAGStatusResponse(BaseModel):
     chunk_count: int
     complaints_indexed: int
     recalls_indexed: int
-    error: Optional[str]
+    error: str | None
     phase: str = "phase_6"
 
 

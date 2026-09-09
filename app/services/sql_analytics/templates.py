@@ -6,7 +6,6 @@ Templates use bind-safe parameter notation (Python %s is NOT used — we use nam
 """
 
 from dataclasses import dataclass
-from typing import Optional, Literal
 from enum import Enum
 
 

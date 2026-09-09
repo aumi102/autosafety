@@ -12,20 +12,18 @@ No provider receives database clients, Neo4j clients, or raw credentials.
 from __future__ import annotations
 
 import json
-import time
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
 from app.services.answer_synthesis.models import (
+    ProviderClaim,
     ProviderSynthesisRequest,
     ProviderSynthesisResult,
     ProviderToolCall,
-    ProviderClaim,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +123,7 @@ class DeterministicProvider(SynthesisProvider):
     - Otherwise → simple template synthesis with existing evidence
     """
 
-    def __init__(self, config: Optional[dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self._config = config or {}
 
     @property
@@ -208,7 +206,6 @@ class DeterministicProvider(SynthesisProvider):
         question = request.question
         evidence = request.evidence_bundle_text
         citations = request.citation_table
-        budget = request.remaining_tool_budget
 
         # Count chunks/evidence
         has_evidence = len(evidence.strip()) > 50
@@ -232,7 +229,7 @@ class DeterministicProvider(SynthesisProvider):
             )
 
         # Template answer
-        lines = [f"Based on the retrieved evidence, here is what I found for your question about vehicle safety:"]
+        lines = ["Based on the retrieved evidence, here is what I found for your question about vehicle safety:"]
         lines.append("")
         lines.append("Evidence Summary:")
         lines.append(f"- Evidence items retrieved: {len(citations)}")
@@ -287,7 +284,7 @@ class DeterministicProvider(SynthesisProvider):
         text = request.evidence_bundle_text.lower()
         return "sql_analytics_tool" in text or "sql_result" in text
 
-    def _get_vehicle_id(self, request: ProviderSynthesisRequest) -> Optional[str]:
+    def _get_vehicle_id(self, request: ProviderSynthesisRequest) -> str | None:
         """Extract vehicle_id from evidence text if present."""
         import re
         match = re.search(r"vehicle_id['\"]?:\s*['\"]?([a-f0-9-]{36})", request.evidence_bundle_text)
@@ -295,20 +292,30 @@ class DeterministicProvider(SynthesisProvider):
 
     def _extract_make(self, question: str) -> str:
         q = question.lower()
-        if "ford" in q: return "Ford"
-        if "honda" in q: return "Honda"
-        if "toyota" in q: return "Toyota"
-        if "chevy" in q or "chevrolet" in q: return "Chevrolet"
-        if "nissan" in q: return "Nissan"
+        if "ford" in q:
+            return "Ford"
+        if "honda" in q:
+            return "Honda"
+        if "toyota" in q:
+            return "Toyota"
+        if "chevy" in q or "chevrolet" in q:
+            return "Chevrolet"
+        if "nissan" in q:
+            return "Nissan"
         return "Ford"
 
     def _extract_model(self, question: str) -> str:
         q = question.lower()
-        if "f-150" in q or "f150" in q: return "F-150"
-        if "accord" in q: return "Accord"
-        if "camry" in q: return "Camry"
-        if "tacoma" in q: return "Tacoma"
-        if "silverado" in q: return "Silverado"
+        if "f-150" in q or "f150" in q:
+            return "F-150"
+        if "accord" in q:
+            return "Accord"
+        if "camry" in q:
+            return "Camry"
+        if "tacoma" in q:
+            return "Tacoma"
+        if "silverado" in q:
+            return "Silverado"
         return "F-150"
 
     def _extract_year(self, question: str) -> int:
@@ -338,11 +345,11 @@ class FakeProvider(SynthesisProvider):
     NEVER used in production.
     """
 
-    def __init__(self, config: Optional[dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self._config = config or {}
         self._queue: list[ProviderSynthesisResult] = []
         self._queue_tool_calls: list[list[ProviderToolCall]] = []
-        self._available_override: Optional[bool] = None
+        self._available_override: bool | None = None
         self._model_override: str = "fake-model"
         self._call_count = 0
 
@@ -476,7 +483,7 @@ class OpenAICompatibleProvider(SynthesisProvider):
         model: str,
         base_url: str = "https://api.openai.com/v1",
         timeout_seconds: int = 30,
-        config: Optional[dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ):
         self._api_key = api_key
         self._model = model
@@ -827,7 +834,7 @@ Answer the question using only the evidence and citation table. Cite every factu
 def build_synthesis_provider(
     config: dict[str, Any],
     *,
-    test_provider: Optional[SynthesisProvider] = None,
+    test_provider: SynthesisProvider | None = None,
 ) -> SynthesisProvider:
     """
     Build a synthesis provider based on configuration.

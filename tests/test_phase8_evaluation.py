@@ -12,7 +12,6 @@ import os
 import tempfile
 
 import pytest
-
 from scripts import evaluate_phase8_conversations as evaluation
 
 

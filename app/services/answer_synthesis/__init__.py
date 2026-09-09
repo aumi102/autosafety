@@ -16,53 +16,48 @@ Subpackages:
 - service.py — GuardedAnswerService, the final Phase 7D entry point (Phase 7D)
 """
 
-from app.services.answer_synthesis.tools import (
-    build_default_tool_registry,
-    ToolRegistry,
-    ToolDefinition,
-    ToolCallRequest,
-    ToolCallResult,
-    EvidenceBundle,
-    EvidenceItem,
-    ToolExecutionPolicy,
+from app.services.answer_synthesis.guarded_models import (
+    CitationValidationResult,
+    ConfidenceResult,
+    EvidenceSufficiencyResult,
+    GuardedAnswerResult,
+    GuardedCitation,
+    GuardedClaim,
+    GuardedTrace,
+    RetrievalSummary,
 )
-
 from app.services.answer_synthesis.models import (
-    SynthesisConfig,
-    ProviderToolCall,
+    OrchestrationResult,
+    OrchestrationTrace,
     ProviderClaim,
     ProviderSynthesisRequest,
     ProviderSynthesisResult,
-    OrchestrationTrace,
-    OrchestrationResult,
+    ProviderToolCall,
+    SynthesisConfig,
 )
-
+from app.services.answer_synthesis.orchestrator import (
+    SynthesisOrchestrator,
+    _orchestrate_with_config,
+    build_config_from_settings,
+)
 from app.services.answer_synthesis.providers import (
-    SynthesisProvider,
     DeterministicProvider,
     FakeProvider,
     OpenAICompatibleProvider,
+    SynthesisProvider,
     build_synthesis_provider,
 )
-
-from app.services.answer_synthesis.orchestrator import (
-    SynthesisOrchestrator,
-    build_config_from_settings,
-    _orchestrate_with_config,
-)
-
-from app.services.answer_synthesis.guarded_models import (
-    GuardedClaim,
-    GuardedCitation,
-    CitationValidationResult,
-    EvidenceSufficiencyResult,
-    ConfidenceResult,
-    RetrievalSummary,
-    GuardedTrace,
-    GuardedAnswerResult,
-)
-
 from app.services.answer_synthesis.service import GuardedAnswerService
+from app.services.answer_synthesis.tools import (
+    EvidenceBundle,
+    EvidenceItem,
+    ToolCallRequest,
+    ToolCallResult,
+    ToolDefinition,
+    ToolExecutionPolicy,
+    ToolRegistry,
+    build_default_tool_registry,
+)
 
 __all__ = [
     # Phase 7B

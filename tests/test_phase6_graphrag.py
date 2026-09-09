@@ -3,12 +3,10 @@ Phase 6 GraphRAG tests — document building, chunking, embedding, retrieval, se
 """
 
 import hashlib
-import pytest
 
+import pytest
 from app.services.graphrag.chunker import TextChunker, chunk_document, chunk_id
 from app.services.graphrag.embedding_provider import DeterministicTestProvider
-from app.services.graphrag.document_builder import EvidenceDocument, _build_complaint_text, _build_recall_text
-
 
 # ─── Chunker tests ─────────────────────────────────────────────────────────────
 
@@ -151,7 +149,6 @@ class TestDeterministicProvider:
 
         sim_ab = cosine_sim(vec_a, vec_b)
         sim_ac = cosine_sim(vec_a, vec_c)
-        sim_bc = cosine_sim(vec_b, vec_c)
 
         # brake-related texts should share more token bits
         assert sim_ab >= sim_ac, "Shared 'brake' token should increase overlap"
@@ -162,9 +159,10 @@ class TestDeterministicProvider:
 class TestDocumentBuilder:
     def test_complaint_document_deterministic(self):
         """Same complaint always produces same document."""
-        from app.db.models.domain import Vehicle, Complaint
-        from app.services.graphrag.document_builder import build_complaint_document
         from datetime import date
+
+        from app.db.models.domain import Complaint, Vehicle
+        from app.services.graphrag.document_builder import build_complaint_document
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
@@ -195,9 +193,9 @@ class TestDocumentBuilder:
 
     def test_complaint_metadata_includes_vehicle(self):
         """Complaint metadata includes make/model/year/component."""
-        from app.db.models.domain import Vehicle, Complaint
+
+        from app.db.models.domain import Complaint, Vehicle
         from app.services.graphrag.document_builder import build_complaint_document
-        from datetime import date
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
@@ -226,9 +224,9 @@ class TestDocumentBuilder:
 
     def test_recall_metadata_includes_vehicle(self):
         """Recall metadata includes make/model/year/component when available."""
-        from app.db.models.domain import Vehicle, Recall
+
+        from app.db.models.domain import Recall, Vehicle
         from app.services.graphrag.document_builder import build_recall_document
-        from datetime import date
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
@@ -258,7 +256,7 @@ class TestDocumentBuilder:
 
     def test_missing_optional_fields_omitted(self):
         """Optional fields that are None do not appear as 'None' in text."""
-        from app.db.models.domain import Vehicle, Complaint
+        from app.db.models.domain import Complaint, Vehicle
         from app.services.graphrag.document_builder import build_complaint_document
 
         vehicle = Vehicle(
@@ -286,7 +284,7 @@ class TestDocumentBuilder:
 
     def test_stable_content_hash(self):
         """Content hash is stable SHA-256 of full_text."""
-        from app.db.models.domain import Vehicle, Complaint
+        from app.db.models.domain import Complaint, Vehicle
         from app.services.graphrag.document_builder import build_complaint_document
 
         vehicle = Vehicle(
@@ -308,8 +306,11 @@ class TestDocumentBuilder:
 
     def test_correct_source_record_key(self):
         """source_record_key is ODI for complaints, campaign for recalls."""
-        from app.db.models.domain import Vehicle, Complaint, Recall
-        from app.services.graphrag.document_builder import build_complaint_document, build_recall_document
+        from app.db.models.domain import Complaint, Recall, Vehicle
+        from app.services.graphrag.document_builder import (
+            build_complaint_document,
+            build_recall_document,
+        )
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
@@ -421,7 +422,9 @@ class TestSafetyCaveats:
     def test_no_causality_claim(self):
         """GraphRAG response has no causal language about recalls causing complaints."""
         from app.services.graphrag.service import (
-            CAVEAT_SIMILARITY, CAVEAT_SHARED_COMPONENT, CAVEAT_OFFICIAL_RECALL,
+            CAVEAT_OFFICIAL_RECALL,
+            CAVEAT_SHARED_COMPONENT,
+            CAVEAT_SIMILARITY,
         )
 
         # Verify all caveats are present and descriptive, not causal
@@ -435,8 +438,9 @@ class TestSafetyCaveats:
 class TestNoArbitraryMutation:
     def test_no_arbitrary_sql_or_cypher(self):
         """Verify no endpoints accept arbitrary SQL or Cypher."""
-        import app.api.v1.endpoints.graphrag as ep
         import inspect
+
+        import app.api.v1.endpoints.graphrag as ep
 
         for name, obj in inspect.getmembers(ep):
             if inspect.isfunction(obj) and hasattr(obj, "__wrapped__"):

@@ -7,15 +7,15 @@ Reuses predefined templates. No raw SQL. No mutation.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from app.services.answer_synthesis.tools.base import (
+    ToolCallResult,
     ToolDefinition,
     ToolInputField,
     ToolInputSchema,
-    ToolCallResult,
 )
-
 
 # Supported operations mapped to actual Phase 2 template intents
 SUPPORTED_OPERATIONS = [
@@ -156,10 +156,10 @@ def build_sql_analytics_adapter(
 
 def _build_question(
     operation: str,
-    make: Optional[str],
-    model: Optional[str],
-    model_year: Optional[int],
-    component: Optional[str],
+    make: str | None,
+    model: str | None,
+    model_year: int | None,
+    component: str | None,
     limit: int,
 ) -> str:
     """Build a natural-language question from structured arguments, reusing Phase 2 parser."""
@@ -185,6 +185,6 @@ def _build_question(
         return f"Top complaint components for {make or 'any'} {model or 'vehicle'}"
 
 
-def _vehicle_str(make: Optional[str], model: Optional[str], year: Optional[int]) -> str:
+def _vehicle_str(make: str | None, model: str | None, year: int | None) -> str:
     parts = [p for p in [make, model, str(year) if year else None] if p]
     return " ".join(parts) if parts else "unknown vehicle"

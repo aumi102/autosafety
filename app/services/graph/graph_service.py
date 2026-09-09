@@ -7,32 +7,38 @@ Exposes: schema setup, graph build, status, and retrieval.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
-from app.services.graph.neo4j_client import Neo4jClient, verify_connectivity
-from app.services.graph.graph_schema import setup_schema
+from app.db.models.domain import Complaint, Component, Recall, Vehicle
 from app.services.graph.graph_builder import build_graph
-from app.services.graph.graph_queries import (
-    get_vehicle_neighborhood,
-    get_recall_paths_for_vehicle,
-    get_component_evidence_for_vehicle,
-    get_shared_component_recall_paths,
-)
 from app.services.graph.graph_models import (
+    ComponentEvidence,
     GraphBuildStats,
-    GraphStatus,
-    GraphSchemaSetupResult,
     GraphNodeStats,
     GraphRelStats,
-    VehicleNeighborhood,
+    GraphSchemaSetupResult,
+    GraphStatus,
     RecallPathResult,
-    ComponentEvidence,
+    VehicleNeighborhood,
 )
-from app.db.models.domain import Vehicle, Complaint, Recall, Component
+from app.services.graph.graph_queries import (
+    get_component_evidence_for_vehicle,
+    get_recall_paths_for_vehicle,
+    get_shared_component_recall_paths,
+)
+from app.services.graph.graph_queries import (
+    # Aliased: this module defines its own public `get_vehicle_neighborhood`
+    # (UUID -> PostgreSQL lookup -> graph). Importing the query-layer function
+    # under its own name shadowed that definition, so the call below invoked
+    # itself with the wrong signature and every lookup returned None. The
+    # sibling functions avoid this by already having distinct names.
+    get_vehicle_neighborhood as get_neighborhood_for_vehicle,
+)
+from app.services.graph.graph_schema import setup_schema
+from app.services.graph.neo4j_client import Neo4jClient
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +99,7 @@ def setup_graph_schema() -> GraphSchemaSetupResult:
 def build_graph_from_postgres(
     *,
     dry_run: bool = False,
-    limit_vehicles: Optional[int] = None,
+    limit_vehicles: int | None = None,
 ) -> GraphBuildStats:
     """
     Project PostgreSQL data into Neo4j.
@@ -141,7 +147,7 @@ def get_graph_status() -> GraphStatus:
     relationship_count = 0
     node_label_rows: list[dict] = []
     rel_type_rows: list[dict] = []
-    error: Optional[str] = None
+    error: str | None = None
 
     try:
         client = Neo4jClient()
@@ -201,7 +207,7 @@ def get_graph_status() -> GraphStatus:
     )
 
 
-def get_vehicle_neighborhood(vehicle_id: str) -> Optional[VehicleNeighborhood]:
+def get_vehicle_neighborhood(vehicle_id: str) -> VehicleNeighborhood | None:
     """
     Retrieve graph neighborhood for a vehicle by its UUID.
 
@@ -219,7 +225,7 @@ def get_vehicle_neighborhood(vehicle_id: str) -> Optional[VehicleNeighborhood]:
 
             client = Neo4jClient()
             try:
-                return get_vehicle_neighborhood(
+                return get_neighborhood_for_vehicle(
                     client,
                     make=vehicle.normalized_make,
                     model=vehicle.normalized_model,
@@ -235,7 +241,7 @@ def get_vehicle_neighborhood(vehicle_id: str) -> Optional[VehicleNeighborhood]:
         return None
 
 
-def get_vehicle_recall_paths(vehicle_id: str) -> Optional[RecallPathResult]:
+def get_vehicle_recall_paths(vehicle_id: str) -> RecallPathResult | None:
     """
     Retrieve recall paths for a vehicle from the graph.
 
@@ -269,7 +275,7 @@ def get_vehicle_recall_paths(vehicle_id: str) -> Optional[RecallPathResult]:
         return None
 
 
-def get_vehicle_component_evidence(vehicle_id: str) -> Optional[ComponentEvidence]:
+def get_vehicle_component_evidence(vehicle_id: str) -> ComponentEvidence | None:
     """
     Retrieve component-level evidence for a vehicle from the graph.
 
@@ -318,7 +324,7 @@ def get_vehicle_component_evidence(vehicle_id: str) -> Optional[ComponentEvidenc
         return None
 
 
-def get_vehicle_shared_component_recalls(vehicle_id: str) -> Optional[ComponentEvidence]:
+def get_vehicle_shared_component_recalls(vehicle_id: str) -> ComponentEvidence | None:
     """
     Retrieve recalls shared through components for a vehicle.
 

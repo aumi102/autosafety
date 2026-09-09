@@ -1,32 +1,28 @@
 """Tests for Phase 1.5 flat-file complaint ingestion — no live network."""
 
-import pytest
-import csv
-import uuid
 import tempfile
-from pathlib import Path
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
+import pytest
 from app.db.base import Base
+
 # Import ALL models so SQLite resolves all FK references
 from app.db.models.app import *  # noqa: F401, F403
 from app.db.models.domain import *  # noqa: F401, F403
-from app.db.models.domain import Vehicle, Component, Complaint, SourceRun, RawSourceRow
-from app.services.ingestion.normalization import (
-    normalize_make, normalize_model, models_equivalent,
-)
+from app.db.models.domain import Complaint, RawSourceRow, SourceRun, Vehicle
 from app.services.ingestion.complaints_flat_file import (
-    run_complaints_flat_file_ingestion,
     ComplaintsFlatFileStats,
     _build_source_record_key,
     _strip_model_for_matching,
+    run_complaints_flat_file_ingestion,
 )
-from app.services.ingestion.data_quality import DataQualitySummary, get_data_quality_summary
-
+from app.services.ingestion.data_quality import get_data_quality_summary
+from app.services.ingestion.normalization import (
+    models_equivalent,
+    normalize_make,
+    normalize_model,
+)
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # =============================================================================
 # Test fixtures

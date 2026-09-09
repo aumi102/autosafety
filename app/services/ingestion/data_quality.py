@@ -2,15 +2,17 @@
 Data quality reporting for ingestion.
 """
 
-import uuid
-from typing import Optional
 from dataclasses import dataclass, field
+
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.db.models.domain import (
-    Vehicle, Component, Complaint, Recall, RecallVehicleLink,
-    Investigation, ManufacturerCommunication, SourceRun,
+    Complaint,
+    Component,
+    Recall,
+    RecallVehicleLink,
+    SourceRun,
+    Vehicle,
 )
 
 

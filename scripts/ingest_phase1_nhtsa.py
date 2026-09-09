@@ -24,21 +24,20 @@ Usage:
 import argparse
 import logging
 import sys
-import os
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.core.config import get_settings
+from app.services.ingestion.complaints_flat_file import (
+    ComplaintsFlatFileStats,
+    run_complaints_flat_file_ingestion,
+)
+from app.services.ingestion.nhtsa_ingestion import IngestionStats, run_nhtsa_phase1_ingestion
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.core.config import get_settings
-from app.services.ingestion.nhtsa_ingestion import run_nhtsa_phase1_ingestion, IngestionStats
-from app.services.ingestion.complaints_flat_file import (
-    run_complaints_flat_file_ingestion, ComplaintsFlatFileStats,
-)
 
 
 def _print_stats_phase1(stats: IngestionStats, source_run_id, dry_run: bool):

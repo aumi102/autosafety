@@ -1,31 +1,27 @@
 """Tests for Phase 3 graph service — no live Neo4j required."""
 
-import pytest
 from unittest.mock import MagicMock, patch
-from dataclasses import dataclass, field
 
+import pytest
 from app.services.graph.graph_models import (
     GraphBuildStats,
-    GraphStatus,
-    VehicleNeighborhood,
-    RecallPathResult,
-    GraphSchemaSetupResult,
-    NeighborhoodNode,
     NeighborhoodEdge,
+    NeighborhoodNode,
     RecallNode,
+    RecallPathResult,
+    VehicleNeighborhood,
 )
 from app.services.graph.graph_queries import (
-    get_vehicle_neighborhood,
-    get_recall_paths_for_vehicle,
-    execute_arbitrary_cypher,
     _validate_identifier,
+    execute_arbitrary_cypher,
+    get_recall_paths_for_vehicle,
+    get_vehicle_neighborhood,
 )
 from app.services.graph.graph_schema import (
     CONSTRAINTS,
     INDEXES,
     get_schema_cypher,
 )
-
 
 # =============================================================================
 # Graph schema tests
@@ -401,11 +397,9 @@ class TestImports:
     def test_graph_service_imports_clean(self):
         """All graph service modules import without errors."""
         from app.services.graph import (
-            setup_graph_schema,
             build_graph_from_postgres,
             get_graph_status,
-            get_vehicle_neighborhood,
-            get_vehicle_recall_paths,
+            setup_graph_schema,
         )
         # Verify symbols exist and are callable
         assert callable(setup_graph_schema)
@@ -421,8 +415,8 @@ class TestImports:
     def test_graph_models_import_clean(self):
         """Graph models import cleanly."""
         from app.services.graph.graph_models import (
-            GraphBuildStats, GraphStatus, VehicleNeighborhood,
-            RecallPathResult, GraphSchemaSetupResult,
+            GraphBuildStats,
+            VehicleNeighborhood,
         )
         assert GraphBuildStats is not None
         assert VehicleNeighborhood is not None

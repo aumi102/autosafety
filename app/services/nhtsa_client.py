@@ -7,10 +7,10 @@ Bulk flat files deferred to Phase 1.5/2.
 API docs: https://api.nhtsa.gov/
 """
 
-import httpx
 import logging
-from typing import Optional
 from dataclasses import dataclass, field
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ REQUEST_TIMEOUT = 30.0
 
 class NhtsaApiError(Exception):
     """Raised when NHTSA API returns an error."""
-    def __init__(self, message: str, status_code: Optional[int] = None):
+    def __init__(self, message: str, status_code: int | None = None):
         super().__init__(message)
         self.status_code = status_code
 
@@ -41,37 +41,37 @@ class NhtsaVehicle:
 @dataclass
 class NhtsaComplaintRecord:
     """Normalized complaint record from NHTSA API."""
-    odi_number: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    model_year: Optional[int] = None
-    component: Optional[str] = None
-    summary: Optional[str] = None
+    odi_number: str | None = None
+    make: str | None = None
+    model: str | None = None
+    model_year: int | None = None
+    component: str | None = None
+    summary: str | None = None
     crash: str = "N"
     fire: str = "N"
     injury: str = "N"
     death: str = "N"
-    received_date: Optional[str] = None
-    incident_date: Optional[str] = None
-    source_url: Optional[str] = None
+    received_date: str | None = None
+    incident_date: str | None = None
+    source_url: str | None = None
     raw_json: dict = field(default_factory=dict)
 
 
 @dataclass
 class NhtsaRecallRecord:
     """Normalized recall record from NHTSA API."""
-    campaign_number: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    model_year: Optional[int] = None
-    component: Optional[str] = None
-    summary: Optional[str] = None
-    consequence: Optional[str] = None
-    remedy: Optional[str] = None
-    notes: Optional[str] = None
-    units_affected: Optional[int] = None
-    report_received_date: Optional[str] = None
-    source_url: Optional[str] = None
+    campaign_number: str | None = None
+    make: str | None = None
+    model: str | None = None
+    model_year: int | None = None
+    component: str | None = None
+    summary: str | None = None
+    consequence: str | None = None
+    remedy: str | None = None
+    notes: str | None = None
+    units_affected: int | None = None
+    report_received_date: str | None = None
+    source_url: str | None = None
     raw_json: dict = field(default_factory=dict)
 
 
@@ -114,7 +114,7 @@ def _build_recall_from_raw(raw: dict) -> NhtsaRecallRecord:
     )
 
 
-def _safe_int(value) -> Optional[int]:
+def _safe_int(value) -> int | None:
     """Safely convert value to int, return None on failure."""
     if value is None:
         return None

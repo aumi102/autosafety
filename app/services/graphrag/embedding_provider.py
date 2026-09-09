@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import math
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from app.core.config import get_settings
 
@@ -101,7 +100,6 @@ class DeterministicTestProvider(EmbeddingProvider):
 
     def _tokenize(self, text: str) -> list[str]:
         """Tokenize into unigrams and bigrams."""
-        import re
         words = text.split()
         tokens = words[:]
         for i in range(len(words) - 1):
@@ -121,8 +119,8 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
 
     def __init__(
         self,
-        model_name: Optional[str] = None,
-        dimension: Optional[int] = None,
+        model_name: str | None = None,
+        dimension: int | None = None,
         device: str = "cpu",
     ):
         self._model_name = model_name or "all-MiniLM-L6-v2"

@@ -9,7 +9,6 @@ Usage:
 
 import argparse
 import sys
-import json
 
 from app.services.graphrag import retrieve_graphrag_evidence
 
@@ -52,12 +51,12 @@ def main():
     for r in result.confidence_reasons:
         print(f"    - {r}")
 
-    print(f"\nWarnings:")
+    print("\nWarnings:")
     for w in result.warnings:
         print(f"  ! {w}")
 
     if result.retrieved_chunks:
-        print(f"\nRetrieved Evidence:")
+        print("\nRetrieved Evidence:")
         for i, chunk in enumerate(result.retrieved_chunks, 1):
             print(f"\n  [{i}] {chunk.citation_label}")
             print(f"      Source: {chunk.source_type} | {chunk.source_record_key}")
@@ -67,7 +66,7 @@ def main():
                 print(f"      URL: {chunk.source_url}")
 
     if result.graph_paths:
-        print(f"\nGraph Paths:")
+        print("\nGraph Paths:")
         for i, path in enumerate(result.graph_paths[:10], 1):
             print(f"\n  [{i}] {path.path_text}")
             print(f"      Relation: {path.relation_source} (confidence: {path.confidence})")

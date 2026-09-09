@@ -14,8 +14,6 @@ Phase 3 node labels and their key properties:
 """
 
 from neo4j import Driver
-from app.services.graph.neo4j_client import Neo4jClient
-
 
 # Constraints — each enforces uniqueness on the key property used for MERGE
 CONSTRAINTS = [

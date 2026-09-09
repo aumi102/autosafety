@@ -8,7 +8,7 @@ No credentials, no raw tracebacks, no database clients in serialized output.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from app.services.answer_synthesis.tools.base import EvidenceBundle
@@ -69,7 +69,7 @@ class ProviderClaim:
     claim_type: str  # complaint_observation | official_recall | shared_component_association | sql_fact
     citation_ids: list[str] = field(default_factory=list)
     unsupported: bool = False
-    warning: Optional[str] = None
+    warning: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -109,17 +109,17 @@ class ProviderSynthesisResult:
     claims: list[ProviderClaim] = field(default_factory=list)
     requested_tool_calls: list[ProviderToolCall] = field(default_factory=list)
     abstain: bool = False
-    abstention_reason: Optional[str] = None
+    abstention_reason: str | None = None
     provider: str = ""
     model: str = ""
-    input_tokens: Optional[int] = None
-    output_tokens: Optional[int] = None
-    finish_reason: Optional[str] = None
-    request_id: Optional[str] = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    finish_reason: str | None = None
+    request_id: str | None = None
     warnings: list[str] = field(default_factory=list)
     # Stable error codes — not raw tracebacks
-    error_code: Optional[str] = None
-    error_message: Optional[str] = None
+    error_code: str | None = None
+    error_message: str | None = None
 
     @property
     def success(self) -> bool:
@@ -188,7 +188,7 @@ class OrchestrationResult:
     # Internal only — not serialized by to_dict(). Phase 7D consumes this
     # directly to adapt evidence/citations; it is never exposed as prompt
     # or provider-facing output.
-    evidence_bundle: Optional["EvidenceBundle"] = None
+    evidence_bundle: EvidenceBundle | None = None
 
     def to_dict(self) -> dict:
         return {

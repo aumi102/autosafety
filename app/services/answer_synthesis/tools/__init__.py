@@ -15,11 +15,11 @@ Modules:
 """
 
 from app.services.answer_synthesis.tools.base import (
-    ToolDefinition,
+    EvidenceBundle,
+    EvidenceItem,
     ToolCallRequest,
     ToolCallResult,
-    EvidenceItem,
-    EvidenceBundle,
+    ToolDefinition,
     ToolExecutionPolicy,
 )
 from app.services.answer_synthesis.tools.registry import (

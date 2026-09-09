@@ -27,10 +27,10 @@ from app.services.answer_synthesis.providers import (
 )
 from app.services.answer_synthesis.service import GuardedAnswerService
 from app.services.answer_synthesis.tools.registry import build_default_tool_registry
-from app.services.observability.audited import AuditedGuardedAnswerService
-from app.services.observability.recorder import ExecutionAuditRecorder
 from app.services.graph.neo4j_client import verify_connectivity
 from app.services.graphrag import retrieve_graphrag_evidence
+from app.services.observability.audited import AuditedGuardedAnswerService
+from app.services.observability.recorder import ExecutionAuditRecorder
 
 
 @dataclass(frozen=True)

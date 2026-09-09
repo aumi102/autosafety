@@ -1,20 +1,20 @@
 """Pydantic schemas for ingestion API."""
 
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class SourceRunResponse(BaseModel):
     id: str
     source_name: str
-    source_url: Optional[str]
+    source_url: str | None
     source_type: str
     status: str
     row_count: int
     started_at: datetime
-    finished_at: Optional[datetime]
-    error_message: Optional[str]
+    finished_at: datetime | None
+    error_message: str | None
 
     class Config:
         from_attributes = True
@@ -40,7 +40,7 @@ class IngestionStatsResponse(BaseModel):
 class Phase1RunRequest(BaseModel):
     seed_csv: str = "data/seeds/phase1_vehicles.csv"
     dry_run: bool = False
-    limit_vehicles: Optional[int] = None
+    limit_vehicles: int | None = None
     complaints_only: bool = False
     recalls_only: bool = False
 
@@ -86,7 +86,7 @@ class Phase15RunRequest(BaseModel):
     seed_path: str = "data/seeds/phase1_vehicles.csv"
     complaints_flat_file_path: str
     dry_run: bool = False
-    limit_vehicles: Optional[int] = None
+    limit_vehicles: int | None = None
 
 
 class Phase15RunResponse(BaseModel):

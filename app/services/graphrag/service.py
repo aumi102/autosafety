@@ -6,15 +6,32 @@ Coordinates: document builder → chunker → embedding provider → vector stor
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Optional
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
-from app.db.models.domain import Vehicle, Complaint, Recall, RecallVehicleLink
+from app.db.models.domain import Complaint, Recall, RecallVehicleLink, Vehicle
+from app.services.graph.neo4j_client import Neo4jClient, verify_connectivity
+from app.services.graphrag.chunker import chunk_document
+from app.services.graphrag.document_builder import (
+    build_complaint_document,
+    build_recall_document,
+)
+from app.services.graphrag.embedding_provider import get_embedding_provider
+from app.services.graphrag.graph_expander import expand_sources
+from app.services.graphrag.models import (
+    GraphRAGGraphPath,
+    GraphRAGIndexStats,
+    GraphRAGRetrievalResult,
+    GraphRAGStatus,
+    RetrievedChunk,
+)
+from app.services.graphrag.retriever import GraphRAGRetriever
+from app.services.graphrag.vector_store import VectorStore
+
 
 def _pg_engine():
     settings = get_settings()
@@ -29,25 +46,6 @@ def _pg_session():
     Session = sessionmaker(bind=engine)
     return Session()
 
-
-from app.services.graphrag.models import (
-    GraphRAGIndexStats,
-    GraphRAGRetrievalResult,
-    GraphRAGStatus,
-    RetrievedChunk,
-    GraphRAGCitation,
-    GraphRAGGraphPath,
-)
-from app.services.graphrag.document_builder import (
-    build_complaint_document,
-    build_recall_document,
-)
-from app.services.graphrag.chunker import chunk_document
-from app.services.graphrag.embedding_provider import get_embedding_provider
-from app.services.graphrag.vector_store import VectorStore
-from app.services.graphrag.retriever import GraphRAGRetriever
-from app.services.graphrag.graph_expander import expand_sources
-from app.services.graph.neo4j_client import Neo4jClient, verify_connectivity
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +67,8 @@ CAVEAT_OFFICIAL_RECALL = (
 def index_graphrag_documents(
     *,
     dry_run: bool = False,
-    source_type: Optional[str] = None,
-    limit: Optional[int] = None,
+    source_type: str | None = None,
+    limit: int | None = None,
     force_reembed: bool = False,
 ) -> GraphRAGIndexStats:
     """
@@ -133,7 +131,7 @@ def _index_complaints(
     provider,
     stats: GraphRAGIndexStats,
     dry_run: bool,
-    limit: Optional[int],
+    limit: int | None,
     force_reembed: bool,
     errors: list[str],
 ) -> None:
@@ -204,7 +202,7 @@ def _index_recalls(
     provider,
     stats: GraphRAGIndexStats,
     dry_run: bool,
-    limit: Optional[int],
+    limit: int | None,
     force_reembed: bool,
     errors: list[str],
 ) -> None:
@@ -287,10 +285,10 @@ def retrieve_graphrag_evidence(
     *,
     top_k: int = 5,
     include_graph: bool = True,
-    source_type: Optional[str] = None,
-    make: Optional[str] = None,
-    model: Optional[str] = None,
-    model_year: Optional[int] = None,
+    source_type: str | None = None,
+    make: str | None = None,
+    model: str | None = None,
+    model_year: int | None = None,
 ) -> GraphRAGRetrievalResult:
     """
     High-level retrieval: semantic search + graph expansion.
@@ -318,7 +316,7 @@ def retrieve_graphrag_evidence(
     start_time = time.time()
     warnings: list[str] = []
     neo4j_available = True
-    neo4j_error: Optional[str] = None
+    neo4j_error: str | None = None
 
     if top_k < 1:
         top_k = 1

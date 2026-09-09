@@ -21,9 +21,13 @@ from __future__ import annotations
 
 import re
 
+from app.services.answer_synthesis.guarded_models import (
+    CitationValidationResult,
+    GuardedCitation,
+    GuardedClaim,
+)
 from app.services.answer_synthesis.models import ProviderClaim
-from app.services.answer_synthesis.guarded_models import GuardedClaim, GuardedCitation, CitationValidationResult
-from app.services.answer_synthesis.policy import normalize_claim_type, UNCITED_ALLOWED_CLAIM_TYPES
+from app.services.answer_synthesis.policy import UNCITED_ALLOWED_CLAIM_TYPES, normalize_claim_type
 
 MAX_INPUT_CLAIMS = 20
 MAX_OUTPUT_CLAIMS = 8

@@ -12,9 +12,6 @@ import io
 import json
 
 import pytest
-from fastapi.testclient import TestClient
-from pydantic import SecretStr
-
 from app.api.v1.endpoints import answer_synthesis as api_module
 from app.api.v1.endpoints.answer_synthesis import (
     GuardedAnswerRequest,
@@ -42,6 +39,8 @@ from app.services.answer_synthesis.policy import (
 )
 from app.services.answer_synthesis.providers import DeterministicProvider
 from app.services.answer_synthesis.service import GuardedAnswerService
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from scripts import query_phase7_answer as cli
 
 

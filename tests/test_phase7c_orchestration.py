@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import time
-from typing import Any, Optional
-
-import pytest
+from typing import Any
 
 from app.services.answer_synthesis.models import (
     ProviderSynthesisRequest,
@@ -24,7 +22,6 @@ from app.services.answer_synthesis.orchestrator import SynthesisOrchestrator
 from app.services.answer_synthesis.providers import (
     DeterministicProvider,
     FakeProvider,
-    SynthesisProvider,
 )
 from app.services.answer_synthesis.tools.base import (
     ToolCallResult,
@@ -37,7 +34,6 @@ from app.services.answer_synthesis.tools.graphrag_adapter import (
     build_graphrag_adapter,
 )
 from app.services.answer_synthesis.tools.registry import ToolRegistry
-
 
 # =============================================================================
 # Fake GraphRAG domain objects (stand-ins for Phase 6 GraphRAGRetrievalResult)
@@ -52,11 +48,11 @@ class _FakeChunk:
     source_record_key: str
     title: str
     text: str
-    make: Optional[str] = None
-    model: Optional[str] = None
-    model_year: Optional[int] = None
-    component: Optional[str] = None
-    citation_label: Optional[str] = None
+    make: str | None = None
+    model: str | None = None
+    model_year: int | None = None
+    component: str | None = None
+    citation_label: str | None = None
 
 
 @dataclasses.dataclass
@@ -89,11 +85,11 @@ class _FakeGraphRAGResult:
     confidence_reasons: list
     total_chunks_returned: int
     neo4j_available: bool
-    neo4j_error: Optional[str] = None
+    neo4j_error: str | None = None
     retrieval_mode: str = "vector"
 
 
-def _default_retrieval_fn(captured_calls: Optional[list] = None):
+def _default_retrieval_fn(captured_calls: list | None = None):
     def fn(*, question, top_k, source_type, make, model, model_year, include_graph):
         if captured_calls is not None:
             captured_calls.append(
@@ -201,7 +197,7 @@ def _registry_with_spies():
 
 
 class _CapturingFakeProvider(FakeProvider):
-    def __init__(self, config: Optional[dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         self.plan_requests: list[ProviderSynthesisRequest] = []
         self.synthesize_requests: list[ProviderSynthesisRequest] = []
@@ -401,7 +397,12 @@ class TestBudgets:
     def test_duplicate_identical_calls_deduplicated(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        same_call = lambda cid: ProviderToolCall(call_id=cid, tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})
+        def same_call(cid):
+            return ProviderToolCall(
+                call_id=cid,
+                tool_name="sql_analytics_tool",
+                arguments={"operation": "vehicles_by_complaint_count"},
+            )
         provider.queue_tool_calls([same_call("p1"), same_call("p2")])
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         result = orch.orchestrate("q")

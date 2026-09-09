@@ -9,17 +9,18 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
+from app.services.answer_synthesis.tools.argument_validator import (
+    validate_tool_arguments,
+)
 from app.services.answer_synthesis.tools.base import (
-    ToolDefinition,
     ToolCallRequest,
     ToolCallResult,
+    ToolDefinition,
     ToolExecutionPolicy,
 )
-from app.services.answer_synthesis.tools.argument_validator import validate_tool_arguments, ValidationResult
 from app.services.observability.context import notify_tool_call
-
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class ToolRegistry:
     def is_registered(self, tool_name: str) -> bool:
         return tool_name in self._tools
 
-    def get_definition(self, tool_name: str) -> Optional[ToolDefinition]:
+    def get_definition(self, tool_name: str) -> ToolDefinition | None:
         """Return definition for a registered tool, or None."""
         entry = self._tools.get(tool_name)
         return entry[0] if entry else None
@@ -164,8 +165,8 @@ def build_default_tool_registry(
     # sql_analytics_tool
     if sql_session_factory is not None:
         from app.services.answer_synthesis.tools.sql_adapter import (
-            build_sql_analytics_adapter,
             SQL_ANALYTICS_DEFINITION,
+            build_sql_analytics_adapter,
         )
         adapter = build_sql_analytics_adapter(sql_session_factory)
         registry.register(SQL_ANALYTICS_DEFINITION, adapter)
@@ -173,8 +174,8 @@ def build_default_tool_registry(
     # graph_evidence_tool
     if neo4j_available:
         from app.services.answer_synthesis.tools.graph_adapter import (
-            build_graph_evidence_adapter,
             GRAPH_EVIDENCE_DEFINITION,
+            build_graph_evidence_adapter,
         )
         adapter = build_graph_evidence_adapter()
         registry.register(GRAPH_EVIDENCE_DEFINITION, adapter)
@@ -182,16 +183,16 @@ def build_default_tool_registry(
     # graphrag_retrieval_tool
     if graphrag_retrieval_fn is not None:
         from app.services.answer_synthesis.tools.graphrag_adapter import (
-            build_graphrag_adapter,
             GRAPHRAG_RETRIEVAL_DEFINITION,
+            build_graphrag_adapter,
         )
         adapter = build_graphrag_adapter(graphrag_retrieval_fn)
         registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, adapter)
 
     # vehicle_resolution_tool — always available if domain models exist
     from app.services.answer_synthesis.tools.vehicle_adapter import (
-        build_vehicle_resolution_adapter,
         VEHICLE_RESOLUTION_DEFINITION,
+        build_vehicle_resolution_adapter,
     )
     adapter = build_vehicle_resolution_adapter(sql_session_factory)
     registry.register(VEHICLE_RESOLUTION_DEFINITION, adapter)

@@ -15,11 +15,11 @@ from __future__ import annotations
 import argparse
 import sys
 import time
-import os
 from pathlib import Path
 
 # Load .env before any app imports
 from dotenv import load_dotenv
+
 env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
     load_dotenv(env_path)

@@ -11,54 +11,49 @@ fake GraphRAG retrieval callable (matching the Phase 7C test pattern).
 from __future__ import annotations
 
 import dataclasses
-import re
-from typing import Optional
 
-import pytest
-
-from app.services.answer_synthesis.tools.base import EvidenceBundle, EvidenceItem, ToolCallResult
-from app.services.answer_synthesis.tools.registry import ToolRegistry
-from app.services.answer_synthesis.tools.graphrag_adapter import (
-    GRAPHRAG_RETRIEVAL_DEFINITION,
-    build_graphrag_adapter,
-)
-
-from app.services.answer_synthesis.guarded_models import (
-    GuardedCitation,
-    GuardedClaim,
-    CitationValidationResult,
-    EvidenceSufficiencyResult,
-    ConfidenceResult,
-    GuardedAnswerResult,
-)
+from app.services.answer_synthesis.citation_validator import validate_and_build_claims
+from app.services.answer_synthesis.composer import compose_answer
+from app.services.answer_synthesis.confidence import compute_confidence
 from app.services.answer_synthesis.evidence_adapter import (
     adapt_evidence,
     graph_availability,
     has_only_failed_tool_evidence,
-    tool_call_stats,
     has_recall_component_relation,
+    tool_call_stats,
 )
-from app.services.answer_synthesis.policy import (
-    classify_question_intent,
-    evaluate_sufficiency,
-    build_mandatory_warnings,
-    normalize_claim_type,
-    CLAIM_TYPES,
+from app.services.answer_synthesis.guarded_models import (
+    CitationValidationResult,
+    EvidenceSufficiencyResult,
+    GuardedAnswerResult,
+    GuardedCitation,
+    GuardedClaim,
 )
-from app.services.answer_synthesis.citation_validator import validate_and_build_claims
-from app.services.answer_synthesis.confidence import compute_confidence
-from app.services.answer_synthesis.composer import compose_answer
-from app.services.answer_synthesis.service import GuardedAnswerService
-
-from app.services.answer_synthesis.orchestrator import SynthesisOrchestrator
-from app.services.answer_synthesis.providers import DeterministicProvider, FakeProvider, SynthesisProvider
 from app.services.answer_synthesis.models import (
     ProviderClaim,
     ProviderSynthesisResult,
-    ProviderSynthesisRequest,
     SynthesisConfig,
 )
-
+from app.services.answer_synthesis.orchestrator import SynthesisOrchestrator
+from app.services.answer_synthesis.policy import (
+    CLAIM_TYPES,
+    build_mandatory_warnings,
+    classify_question_intent,
+    evaluate_sufficiency,
+    normalize_claim_type,
+)
+from app.services.answer_synthesis.providers import (
+    DeterministicProvider,
+    FakeProvider,
+    SynthesisProvider,
+)
+from app.services.answer_synthesis.service import GuardedAnswerService
+from app.services.answer_synthesis.tools.base import EvidenceBundle, EvidenceItem, ToolCallResult
+from app.services.answer_synthesis.tools.graphrag_adapter import (
+    GRAPHRAG_RETRIEVAL_DEFINITION,
+    build_graphrag_adapter,
+)
+from app.services.answer_synthesis.tools.registry import ToolRegistry
 
 # =============================================================================
 # Helpers
@@ -68,12 +63,12 @@ def _citation(
     citation_id: str,
     source_type: str,
     source_record_key: str = "k1",
-    relation_basis: Optional[str] = None,
+    relation_basis: str | None = None,
     score: float = 0.8,
     text_span: str = "evidence text",
     tool_name: str = "graphrag_retrieval_tool",
-    source_entity_id: Optional[str] = None,
-    title: Optional[str] = None,
+    source_entity_id: str | None = None,
+    title: str | None = None,
 ) -> GuardedCitation:
     return GuardedCitation(
         citation_id=citation_id,
@@ -92,13 +87,13 @@ def _citation(
 def _evidence_item(
     evidence_type: str,
     source_record_key: str,
-    citation_id: Optional[str] = None,
-    relation_basis: Optional[str] = None,
+    citation_id: str | None = None,
+    relation_basis: str | None = None,
     text: str = "evidence text",
     score: float = 0.8,
     tool_name: str = "graphrag_retrieval_tool",
-    metadata: Optional[dict] = None,
-    source_entity_id: Optional[str] = None,
+    metadata: dict | None = None,
+    source_entity_id: str | None = None,
 ) -> EvidenceItem:
     return EvidenceItem(
         evidence_id=EvidenceItem.make_id(evidence_type, source_record_key),
@@ -115,7 +110,7 @@ def _evidence_item(
     )
 
 
-def _bundle(items: list[EvidenceItem], tool_calls: Optional[list[ToolCallResult]] = None) -> EvidenceBundle:
+def _bundle(items: list[EvidenceItem], tool_calls: list[ToolCallResult] | None = None) -> EvidenceBundle:
     return EvidenceBundle(items=items, tool_calls=tool_calls or [])
 
 
@@ -124,9 +119,9 @@ def _sufficiency(
     evidence_count: int = 1,
     graph_available: bool = True,
     official_relation_count: int = 0,
-    source_types: Optional[list[str]] = None,
+    source_types: list[str] | None = None,
     max_retrieval_score: float = 0.8,
-    valid_citation_count: Optional[int] = None,
+    valid_citation_count: int | None = None,
 ) -> EvidenceSufficiencyResult:
     return EvidenceSufficiencyResult(
         status=status,
@@ -148,11 +143,11 @@ class _FakeChunk:
     source_record_key: str
     title: str
     text: str
-    make: Optional[str] = None
-    model: Optional[str] = None
-    model_year: Optional[int] = None
-    component: Optional[str] = None
-    citation_label: Optional[str] = None
+    make: str | None = None
+    model: str | None = None
+    model_year: int | None = None
+    component: str | None = None
+    citation_label: str | None = None
 
 
 @dataclasses.dataclass
@@ -185,7 +180,7 @@ class _FakeGraphRAGResult:
     confidence_reasons: list
     total_chunks_returned: int
     neo4j_available: bool
-    neo4j_error: Optional[str] = None
+    neo4j_error: str | None = None
     retrieval_mode: str = "vector"
 
 
@@ -1142,7 +1137,6 @@ class TestGuardedService:
         assert result.abstention_reason == "empty_question"
 
     def test_complaint_only_recall_request_no_fabrication(self):
-        service = _build_service(DeterministicProvider(), retrieval_fn=_complaint_and_affects_retrieval_fn)
         # Only complaint evidence, ask specifically about official recall applicability.
         result = _build_service(
             FakeProvider(), retrieval_fn=lambda **kw: _FakeGraphRAGResult(
@@ -1227,13 +1221,14 @@ class TestPromptInjection:
 
 class TestSecurity:
     def test_no_eval_or_exec_in_module_source(self):
-        import app.services.answer_synthesis.service as svc_mod
+        import inspect
+
         import app.services.answer_synthesis.citation_validator as cv_mod
         import app.services.answer_synthesis.composer as comp_mod
-        import app.services.answer_synthesis.policy as pol_mod
         import app.services.answer_synthesis.confidence as conf_mod
         import app.services.answer_synthesis.evidence_adapter as ea_mod
-        import inspect
+        import app.services.answer_synthesis.policy as pol_mod
+        import app.services.answer_synthesis.service as svc_mod
         for mod in (svc_mod, cv_mod, comp_mod, pol_mod, conf_mod, ea_mod):
             src = inspect.getsource(mod)
             assert "eval(" not in src
@@ -1263,8 +1258,9 @@ class TestSecurity:
             assert "DROP TABLE" not in c.text
 
     def test_phase7d_service_remains_transport_agnostic(self):
-        import app.services.answer_synthesis.service as svc_mod
         import inspect
+
+        import app.services.answer_synthesis.service as svc_mod
         src = inspect.getsource(svc_mod)
         assert "fastapi" not in src.lower()
         assert "argparse" not in src.lower()

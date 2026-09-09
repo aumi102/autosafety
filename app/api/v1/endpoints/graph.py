@@ -1,18 +1,17 @@
 """Graph API endpoints — Phase 3."""
 
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 
 from app.core.security import verify_admin_token
 from app.services.graph import (
-    setup_graph_schema,
     build_graph_from_postgres,
     get_graph_status,
+    get_vehicle_component_evidence,
     get_vehicle_neighborhood,
     get_vehicle_recall_paths,
-    get_vehicle_component_evidence,
-    get_vehicle_shared_component_recalls,
+    setup_graph_schema,
 )
 
 router = APIRouter(tags=["graph"])
@@ -20,7 +19,7 @@ router = APIRouter(tags=["graph"])
 
 class GraphBuildRequest(BaseModel):
     dry_run: bool = False
-    limit_vehicles: Optional[int] = None
+    limit_vehicles: int | None = None
 
 
 class GraphBuildResponse(BaseModel):
@@ -47,8 +46,8 @@ class GraphStatusResponse(BaseModel):
     postgres_complaint_count: int
     postgres_recall_count: int
     postgres_component_count: int
-    last_build: Optional[dict] = None
-    error: Optional[str] = None
+    last_build: dict | None = None
+    error: str | None = None
     phase: str = "phase_3"
 
 

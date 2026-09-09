@@ -7,15 +7,15 @@ GraphRAG is read-only. No synthesis. No embeddings exposed. Max 20 chunks.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from app.services.answer_synthesis.tools.base import (
+    ToolCallResult,
     ToolDefinition,
     ToolInputField,
     ToolInputSchema,
-    ToolCallResult,
 )
-
 
 SUPPORTED_OPERATIONS = [
     "retrieve_complaints_and_recalls",

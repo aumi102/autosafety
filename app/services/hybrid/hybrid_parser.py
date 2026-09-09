@@ -7,12 +7,8 @@ then extends for hybrid SQL+graph question patterns.
 
 from __future__ import annotations
 
-import re
-from typing import Optional
-
-from app.services.sql_analytics.question_parser import parse_question, ParsedQuestion
-from app.services.hybrid.hybrid_models import HybridIntent, HYBRID_INTENTS
-
+from app.services.hybrid.hybrid_models import HYBRID_INTENTS, HybridIntent
+from app.services.sql_analytics.question_parser import ParsedQuestion, parse_question
 
 # Hybrid keyword patterns — presence of these activates graph retrieval
 GRAPH_KEYWORDS = [

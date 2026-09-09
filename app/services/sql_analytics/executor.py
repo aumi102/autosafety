@@ -8,15 +8,15 @@ Enforces LIMIT.
 
 from __future__ import annotations
 
-import time
 import logging
+import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services.sql_safety import validate_sql, enforce_limit, ValidationResult
+from app.services.sql_safety import ValidationResult, enforce_limit, validate_sql
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExecutionResult:
     """Result of SQL execution."""
-    columns: Optional[list[str]]
-    rows: Optional[list[dict]]
+    columns: list[str] | None
+    rows: list[dict] | None
     row_count: int
     execution_ms: int
     truncated: bool
     validated: bool
-    validation_warning: Optional[str] = None
+    validation_warning: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -46,7 +46,7 @@ class ExecutionResult:
 def execute_readonly_sql(
     session: Session,
     sql: str,
-    params: Optional[dict[str, Any]] = None,
+    params: dict[str, Any] | None = None,
     max_rows: int = 100,
 ) -> ExecutionResult:
     """

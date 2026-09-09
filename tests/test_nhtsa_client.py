@@ -1,12 +1,16 @@
 """Tests for NHTSA client — mock-based, no live network."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from app.services.nhtsa_client import (
-    NhtsaVehicle, NhtsaComplaintRecord, NhtsaRecallRecord,
-    fetch_complaints_by_vehicle, fetch_recalls_by_vehicle,
-    NhtsaApiError, _build_complaint_from_raw, _build_recall_from_raw,
-    _safe_int, NHTSA_COMPLAINTS_API, NHTSA_RECALLS_API,
+    NhtsaApiError,
+    NhtsaVehicle,
+    _build_complaint_from_raw,
+    _build_recall_from_raw,
+    _safe_int,
+    fetch_complaints_by_vehicle,
+    fetch_recalls_by_vehicle,
 )
 
 

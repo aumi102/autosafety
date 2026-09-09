@@ -12,7 +12,6 @@ Deterministic serialization. Bounded text and list sizes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 MAX_CLAIMS = 8
 MAX_CITATIONS = 20
@@ -24,7 +23,7 @@ MAX_TEXT_SPAN_CHARS = 500
 MAX_MESSAGES = 20
 
 
-def _bound(text: Optional[str], limit: int) -> str:
+def _bound(text: str | None, limit: int) -> str:
     if not text:
         return ""
     return text[:limit]
@@ -61,13 +60,13 @@ class GuardedCitation:
     citation_id: str
     source_type: str
     source_record_key: str
-    source_entity_id: Optional[str] = None
-    title: Optional[str] = None
-    source_url: Optional[str] = None
+    source_entity_id: str | None = None
+    title: str | None = None
+    source_url: str | None = None
     text_span: str = ""
     retrieval_score: float = 0.0
-    relation_basis: Optional[str] = None
-    tool_name: Optional[str] = None
+    relation_basis: str | None = None
+    tool_name: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -180,7 +179,7 @@ class GuardedTrace:
     validation_outcome: str
     repaired_claim_count: int = 0
     rejected_claim_count: int = 0
-    abstention_reason: Optional[str] = None
+    abstention_reason: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -209,12 +208,12 @@ class GuardedAnswerResult:
     warnings: list[str] = field(default_factory=list)
     confidence: ConfidenceResult = field(default_factory=lambda: ConfidenceResult(score=0.0, level="low"))
     abstained: bool = False
-    abstention_reason: Optional[str] = None
+    abstention_reason: str | None = None
     synthesis_mode: str = "abstention"  # llm | deterministic | fallback | repaired | abstention
     provider: str = ""
     retrieval_summary: RetrievalSummary = field(default_factory=RetrievalSummary)
-    validation: Optional[CitationValidationResult] = None
-    trace: Optional[GuardedTrace] = None
+    validation: CitationValidationResult | None = None
+    trace: GuardedTrace | None = None
     phase: str = "phase_7"
 
     def to_dict(self) -> dict:

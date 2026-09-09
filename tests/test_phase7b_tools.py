@@ -8,32 +8,27 @@ No network, no LLM, no real DB required for unit tests.
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
+from app.services.answer_synthesis.tools.argument_validator import (
+    validate_tool_arguments,
+)
 from app.services.answer_synthesis.tools.base import (
+    EvidenceBundle,
+    EvidenceItem,
+    ToolCallRequest,
+    ToolCallResult,
     ToolDefinition,
     ToolInputField,
     ToolInputSchema,
-    ToolCallRequest,
-    ToolCallResult,
-    EvidenceItem,
-    EvidenceBundle,
-    ToolExecutionPolicy,
 )
-from app.services.answer_synthesis.tools.argument_validator import (
-    validate_tool_arguments,
-    ValidationResult,
-    ValidationError,
-    FORBIDDEN_KEYS,
-)
-from app.services.answer_synthesis.tools.registry import ToolRegistry
 from app.services.answer_synthesis.tools.bundle_builder import (
     EvidenceBundleBuilder,
-    _sanitize,
     _format_table,
+    _sanitize,
 )
-
+from app.services.answer_synthesis.tools.registry import ToolRegistry
 
 # =============================================================================
 # A. BASE CONTRACTS
@@ -410,9 +405,7 @@ class TestSqlAdapter:
         # The SQL adapter takes structured arguments, not raw SQL
         # Verify it calls Phase 2 service correctly
         from app.services.answer_synthesis.tools.sql_adapter import (
-            build_sql_analytics_adapter,
             SQL_ANALYTICS_DEFINITION,
-            _build_question,
         )
 
         # Check definition has no raw SQL fields
@@ -490,7 +483,9 @@ class TestGraphAdapter:
 
 class TestGraphragAdapter:
     def test_graphrag_adapter_readonly(self):
-        from app.services.answer_synthesis.tools.graphrag_adapter import GRAPHRAG_RETRIEVAL_DEFINITION
+        from app.services.answer_synthesis.tools.graphrag_adapter import (
+            GRAPHRAG_RETRIEVAL_DEFINITION,
+        )
         assert GRAPHRAG_RETRIEVAL_DEFINITION.read_only is True
 
     def test_source_type_mapping(self):
@@ -518,7 +513,9 @@ class TestGraphragAdapter:
         assert d["text"].endswith("A" * 10)
 
     def test_adapter_definition_fields(self):
-        from app.services.answer_synthesis.tools.graphrag_adapter import GRAPHRAG_RETRIEVAL_DEFINITION
+        from app.services.answer_synthesis.tools.graphrag_adapter import (
+            GRAPHRAG_RETRIEVAL_DEFINITION,
+        )
         schema = GRAPHRAG_RETRIEVAL_DEFINITION.input_schema.to_dict()
         assert "question" in schema
         assert schema["question"]["max_length"] == 500
@@ -531,17 +528,23 @@ class TestGraphragAdapter:
 
 class TestVehicleAdapter:
     def test_vehicle_adapter_readonly(self):
-        from app.services.answer_synthesis.tools.vehicle_adapter import VEHICLE_RESOLUTION_DEFINITION
+        from app.services.answer_synthesis.tools.vehicle_adapter import (
+            VEHICLE_RESOLUTION_DEFINITION,
+        )
         assert VEHICLE_RESOLUTION_DEFINITION.read_only is True
 
     def test_no_raw_sql_fields(self):
-        from app.services.answer_synthesis.tools.vehicle_adapter import VEHICLE_RESOLUTION_DEFINITION
+        from app.services.answer_synthesis.tools.vehicle_adapter import (
+            VEHICLE_RESOLUTION_DEFINITION,
+        )
         schema = VEHICLE_RESOLUTION_DEFINITION.input_schema.to_dict()
         assert "sql" not in schema
         assert "query" not in schema
 
     def test_required_fields(self):
-        from app.services.answer_synthesis.tools.vehicle_adapter import VEHICLE_RESOLUTION_DEFINITION
+        from app.services.answer_synthesis.tools.vehicle_adapter import (
+            VEHICLE_RESOLUTION_DEFINITION,
+        )
         schema = VEHICLE_RESOLUTION_DEFINITION.input_schema.to_dict()
         assert schema["make"]["required"] is True
         assert schema["model"]["required"] is True
@@ -733,7 +736,6 @@ class TestSanitization:
 
 class TestSecurity:
     def test_no_eval_in_validator(self):
-        from app.services.answer_synthesis.tools.argument_validator import validate_tool_arguments
         source = open("app/services/answer_synthesis/tools/argument_validator.py").read()
         assert "eval(" not in source
         assert "exec(" not in source
@@ -772,7 +774,7 @@ class TestSecurity:
                 # Forbidden-key constant names are OK; check for credential VALUE patterns
                 import re
                 # Match: "api_key" = or api_key: or api_key = after stripping comments
-                lines = [l for l in source.split("\n") if not l.strip().startswith("#")]
+                lines = [ln for ln in source.split("\n") if not ln.strip().startswith("#")]
                 for line in lines:
                     if re.match(r'\s*(api_key|api_key\s*[=:])', line) and 'FORBIDDEN' not in line.upper():
                         assert False, f"{fname} contains api_key assignment: {line.strip()}"

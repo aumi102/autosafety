@@ -11,11 +11,10 @@ Usage:
 
 import argparse
 import sys
-import json
 
 from app.services.graphrag import (
-    index_graphrag_documents,
     get_graphrag_status,
+    index_graphrag_documents,
 )
 
 
@@ -36,7 +35,7 @@ def main():
 
     if args.status:
         status = get_graphrag_status()
-        print(f"GraphRAG Index Status")
+        print("GraphRAG Index Status")
         print(f"  Vector backend: {'available' if status.vector_backend_available else 'unavailable'}")
         print(f"  Embedding model: {status.embedding_model}")
         print(f"  Embedding dimension: {status.embedding_dimension}")
@@ -48,7 +47,7 @@ def main():
             print(f"  Error: {status.error}")
         return 0
 
-    print(f"Indexing GraphRAG documents...")
+    print("Indexing GraphRAG documents...")
     print(f"  source_type: {args.source_type}")
     print(f"  dry_run: {args.dry_run}")
     print(f"  limit: {args.limit}")
@@ -76,7 +75,7 @@ def main():
     print(f"  errors_count: {stats.errors_count}")
 
     if stats.errors:
-        print(f"\nErrors:")
+        print("\nErrors:")
         for err in stats.errors[:10]:
             print(f"  - {err}")
 

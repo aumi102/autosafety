@@ -4,20 +4,26 @@ GraphRAG models — Pydantic/dataclass types and SQLAlchemy persistence models.
 
 from __future__ import annotations
 
-import uuid
 import hashlib
-import json
-from datetime import datetime, timezone
+import uuid
 from dataclasses import dataclass, field
-from typing import Optional
+from datetime import UTC, datetime
 from enum import Enum
 
-from sqlalchemy import String, Text, Integer, ForeignKey, DateTime, JSON, Index, Float, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -77,11 +83,11 @@ class RetrievedChunk:
     source_record_key: str  # ODI number or campaign number
     title: str
     text: str
-    source_url: Optional[str]
-    make: Optional[str]
-    model: Optional[str]
-    model_year: Optional[int]
-    component: Optional[str]
+    source_url: str | None
+    make: str | None
+    model: str | None
+    model_year: int | None
+    component: str | None
     citation_label: str
     chunk_index: int = 0
 
@@ -111,7 +117,7 @@ class GraphRAGCitation:
     source_id: str
     source_key: str
     citation_label: str
-    text_span: Optional[str] = None
+    text_span: str | None = None
     confidence: float = 1.0
 
     def to_dict(self) -> dict:
@@ -159,7 +165,7 @@ class GraphRAGRetrievalResult:
     total_chunks_returned: int = 0
     execution_ms: int = 0
     neo4j_available: bool = True
-    neo4j_error: Optional[str] = None
+    neo4j_error: str | None = None
     phase: str = "phase_6"
 
     def to_dict(self) -> dict:
@@ -194,7 +200,7 @@ class GraphRAGStatus:
     chunk_count: int = 0
     complaints_indexed: int = 0
     recalls_indexed: int = 0
-    error: Optional[str] = None
+    error: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -214,7 +220,7 @@ class GraphRAGStatus:
 # ─── SQLAlchemy persistence models ──────────────────────────────────────────────
 
 def _utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class EvidenceDocument(Base):
@@ -243,7 +249,7 @@ class EvidenceDocument(Base):
     full_text: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     metadata_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
@@ -251,7 +257,7 @@ class EvidenceDocument(Base):
         DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow
     )
 
-    chunks: Mapped[list["EvidenceChunk"]] = relationship(
+    chunks: Mapped[list[EvidenceChunk]] = relationship(
         "EvidenceChunk", back_populates="document", cascade="all, delete-orphan"
     )
 
@@ -282,11 +288,11 @@ class EvidenceChunk(Base):
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     # pgvector column — type registered at migration time
-    embedding_vector_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    embedding_vector_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
-    embedding_model: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    embedding_dimension: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    embedding_dimension: Mapped[int | None] = mapped_column(Integer, nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
@@ -295,7 +301,7 @@ class EvidenceChunk(Base):
         DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow
     )
 
-    document: Mapped["EvidenceDocument"] = relationship(
+    document: Mapped[EvidenceDocument] = relationship(
         "EvidenceDocument", back_populates="chunks"
     )
 

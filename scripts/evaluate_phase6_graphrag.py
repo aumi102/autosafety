@@ -110,12 +110,12 @@ def main():
         print(f"ERROR: fixture not found: {fixture_path}", file=sys.stderr)
         return 1
 
-    with open(fixture_path, "r", encoding="utf-8") as f:
+    with open(fixture_path, encoding="utf-8") as f:
         fixture = json.load(f)
 
     queries = fixture.get("queries", [])
     caveat = fixture.get("caveat", "")
-    print(f"=== Phase 6 GraphRAG Evaluation ===")
+    print("=== Phase 6 GraphRAG Evaluation ===")
     print(f"Provider: {fixture.get('provider', 'unknown')}")
     print(f"Dimension: {fixture.get('dimension', 'unknown')}")
     print(f"Queries: {len(queries)}")

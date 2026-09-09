@@ -6,27 +6,31 @@ Coordinates: question parsing → template selection → SQL validation → exec
 
 from __future__ import annotations
 
-import uuid
-import time
 import logging
-from typing import Optional
+import time
+import uuid
 
 from sqlalchemy.orm import Session
 
-from app.services.sql_analytics.question_parser import (
-    parse_question, ParsedQuestion, build_clarification_response,
-)
-from app.services.sql_analytics.templates import (
-    TemplateId, get_template, TEMPLATES,
-)
-from app.services.sql_analytics.executor import execute_readonly_sql, ExecutionResult
-from app.services.sql_analytics.schema_registry import validate_table_access
 from app.services.answer_contract import (
-    AnswerResponse, Answer, AnswerSection,
-    SqlResult, Evidence, Confidence,
-    make_safety_response, make_stub_response,
+    Answer,
+    AnswerResponse,
+    AnswerSection,
+    Confidence,
+    Evidence,
+    SqlResult,
 )
 from app.services.ingestion.normalization import normalize_make, normalize_model
+from app.services.sql_analytics.executor import ExecutionResult, execute_readonly_sql
+from app.services.sql_analytics.question_parser import (
+    ParsedQuestion,
+    build_clarification_response,
+    parse_question,
+)
+from app.services.sql_analytics.templates import (
+    TemplateId,
+    get_template,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +107,7 @@ class SqlAnalyticsService:
 
     def _build_template_sql(
         self, parsed: ParsedQuestion
-    ) -> tuple[Optional[str], dict, Optional[str]]:
+    ) -> tuple[str | None, dict, str | None]:
         """Select and parameterize the appropriate SQL template."""
         intent = parsed.intent
         vehicle = parsed.vehicle
@@ -184,7 +188,7 @@ class SqlAnalyticsService:
         parsed: ParsedQuestion,
         sql: str,
         execution: ExecutionResult,
-        template_id: Optional[str],
+        template_id: str | None,
         start_time: float,
         tool_calls: int,
     ) -> AnswerResponse:

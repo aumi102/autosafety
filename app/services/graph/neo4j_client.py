@@ -7,11 +7,9 @@ Supports dependency injection for tests via constructor override.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 from contextlib import contextmanager
 
-from neo4j import GraphDatabase, Driver, Session
-from neo4j.api import BookmarkManager
+from neo4j import Driver, GraphDatabase
 
 from app.core.config import get_settings
 
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 # available in bounded tool and answer results.
 logging.getLogger("neo4j.notifications").setLevel(logging.ERROR)
 
-_driver: Optional[Driver] = None
+_driver: Driver | None = None
 
 
 def get_neo4j_driver() -> Driver:
@@ -63,7 +61,7 @@ class Neo4jClient:
     Use constructor to inject a fake/mock driver in tests.
     """
 
-    def __init__(self, driver: Optional[Driver] = None):
+    def __init__(self, driver: Driver | None = None):
         self._driver = driver
 
     @property
@@ -87,13 +85,13 @@ class Neo4jClient:
         finally:
             session.close()
 
-    def execute(self, cypher: str, params: Optional[dict] = None) -> list[dict]:
+    def execute(self, cypher: str, params: dict | None = None) -> list[dict]:
         """Execute a Cypher query and return results as list of dicts."""
         with self.session() as session:
             result = session.run(cypher, params or {})
             return [dict(record) for record in result]
 
-    def execute_single(self, cypher: str, params: Optional[dict] = None) -> Optional[dict]:
+    def execute_single(self, cypher: str, params: dict | None = None) -> dict | None:
         """Execute and return first result."""
         results = self.execute(cypher, params)
         return results[0] if results else None

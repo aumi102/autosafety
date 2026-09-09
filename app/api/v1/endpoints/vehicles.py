@@ -1,14 +1,14 @@
 """Vehicle API endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
-from typing import Optional
 import uuid
 
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from app.core.config import get_settings
-from app.db.models.domain import Vehicle, Component, Complaint, Recall, RecallVehicleLink
+from app.db.models.domain import Complaint, Component, Recall, RecallVehicleLink, Vehicle
 
 router = APIRouter(tags=["vehicles"])
 
@@ -53,32 +53,32 @@ class VehicleSearchResponse(BaseModel):
 
 class ComplaintResponse(BaseModel):
     id: str
-    odi_number: Optional[str]
-    component: Optional[str]
-    summary: Optional[str]
-    received_date: Optional[str]
+    odi_number: str | None
+    component: str | None
+    summary: str | None
+    received_date: str | None
     crash_flag: bool
     fire_flag: bool
     injury_flag: bool
     death_flag: bool
-    source_url: Optional[str]
+    source_url: str | None
 
 
 class RecallResponse(BaseModel):
     id: str
-    campaign_number: Optional[str]
-    component: Optional[str]
-    summary: Optional[str]
-    remedy: Optional[str]
-    report_received_date: Optional[str]
-    units_affected: Optional[int]
+    campaign_number: str | None
+    component: str | None
+    summary: str | None
+    remedy: str | None
+    report_received_date: str | None
+    units_affected: int | None
 
 
 @router.get("/search", response_model=VehicleSearchResponse)
 def search_vehicles(
-    make: Optional[str] = Query(None),
-    model: Optional[str] = Query(None),
-    model_year: Optional[int] = Query(None),
+    make: str | None = Query(None),
+    model: str | None = Query(None),
+    model_year: int | None = Query(None),
 ):
     """Search vehicles by make, model, year."""
     session = _get_sync_session()

@@ -15,24 +15,28 @@ import hashlib
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.db.models.domain import (
-    SourceRun, RawSourceRow, Vehicle, Component, Complaint,
+    Complaint,
+    Component,
+    RawSourceRow,
+    SourceRun,
+    Vehicle,
 )
 from app.services.ingestion.normalization import (
-    normalize_make, normalize_model, models_equivalent,
+    normalize_make,
+    normalize_model,
 )
 
 logger = logging.getLogger(__name__)
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ComplaintsFlatFileStats:
@@ -60,7 +64,7 @@ class ComplaintsFlatFileStats:
         }
 
 
-def _parse_date(date_str: Optional[str]) -> Optional[datetime]:
+def _parse_date(date_str: str | None) -> datetime | None:
     """Parse NHTSA date string (YYYYMMDD) to date."""
     if not date_str:
         return None
@@ -72,7 +76,7 @@ def _parse_date(date_str: Optional[str]) -> Optional[datetime]:
     return None
 
 
-def _build_source_record_key(odi_number: Optional[str], raw_json: dict) -> str:
+def _build_source_record_key(odi_number: str | None, raw_json: dict) -> str:
     """Build stable source_record_key for a complaint."""
     if odi_number:
         return f"nhtsa_complaint:{odi_number}"
@@ -85,7 +89,7 @@ def _upsert_vehicle_from_complaint(
     make: str,
     model: str,
     model_year: int,
-) -> Optional[Vehicle]:
+) -> Vehicle | None:
     """Upsert vehicle, return None on failure."""
     norm_make = normalize_make(make)
     norm_model = normalize_model(model)
@@ -110,7 +114,7 @@ def _upsert_vehicle_from_complaint(
     return vehicle
 
 
-def _upsert_component(session: Session, component_name: str) -> Optional[Component]:
+def _upsert_component(session: Session, component_name: str) -> Component | None:
     """Upsert component, return None on failure."""
     if not component_name:
         return None
@@ -134,19 +138,19 @@ def _upsert_component(session: Session, component_name: str) -> Optional[Compone
 def _upsert_complaint(
     session: Session,
     vehicle_id: uuid.UUID,
-    component_id: Optional[uuid.UUID],
+    component_id: uuid.UUID | None,
     source_run_id: uuid.UUID,
     source_record_key: str,
-    odi_number: Optional[str],
-    received_date: Optional[datetime],
-    incident_date: Optional[datetime],
-    original_component: Optional[str],
-    summary: Optional[str],
+    odi_number: str | None,
+    received_date: datetime | None,
+    incident_date: datetime | None,
+    original_component: str | None,
+    summary: str | None,
     crash_flag: bool,
     fire_flag: bool,
     injury_flag: bool,
     death_flag: bool,
-    source_url: Optional[str],
+    source_url: str | None,
     raw_json: dict,
     stats: ComplaintsFlatFileStats,
 ) -> None:
@@ -210,8 +214,8 @@ def run_complaints_flat_file_ingestion(
     seed_csv_path: str,
     complaints_csv_path: str,
     dry_run: bool = False,
-    limit_vehicles: Optional[int] = None,
-) -> tuple[Optional[uuid.UUID], ComplaintsFlatFileStats]:
+    limit_vehicles: int | None = None,
+) -> tuple[uuid.UUID | None, ComplaintsFlatFileStats]:
     """
     Ingest complaints from a local CSV file for seeded vehicles.
 

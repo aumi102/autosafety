@@ -7,15 +7,15 @@ Read-only. No raw SQL. No fuzzy LLM-generated queries.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from app.services.answer_synthesis.tools.base import (
+    ToolCallResult,
     ToolDefinition,
     ToolInputField,
     ToolInputSchema,
-    ToolCallResult,
 )
-
 
 VEHICLE_RESOLUTION_DEFINITION = ToolDefinition(
     name="vehicle_resolution_tool",
@@ -63,6 +63,7 @@ def build_vehicle_resolution_adapter(
     """
     if session_factory is None:
         from sqlalchemy.orm import sessionmaker
+
         from app.db.session import get_sync_engine
 
         session_factory = sessionmaker(bind=get_sync_engine(), expire_on_commit=False)

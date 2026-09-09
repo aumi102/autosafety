@@ -1,7 +1,5 @@
 """Tests for ingestion service — mock-based."""
 
-import pytest
-from unittest.mock import MagicMock, patch
 from app.services.ingestion.normalization import (
     normalize_component_name,
     normalize_make,
