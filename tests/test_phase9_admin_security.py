@@ -44,6 +44,10 @@ READ_ONLY_ROUTES = (
     "/v1/ingestion/source-runs",
     "/v1/conversations/status/config",
 )
+# Subset of READ_ONLY_ROUTES whose handlers touch no external service, so this
+# offline suite can execute them for real. `/v1/ingestion/source-runs` opens a
+# PostgreSQL session in its handler and is covered structurally instead.
+OFFLINE_SAFE_READ_ONLY_ROUTES = ("/v1/conversations/status/config",)
 
 
 def _settings(**overrides) -> Settings:
@@ -190,6 +194,17 @@ class TestRouteEnforcement:
         assert verify_admin_token(VALID_TOKEN) is None
 
     @pytest.mark.parametrize("route", READ_ONLY_ROUTES)
+    def test_read_only_routes_do_not_declare_the_guard(self, route, unconfigured):
+        """No read-only route resolves the admin guard, so none can 401/503 on it.
+
+        Asserted through the OpenAPI schema rather than by issuing the request:
+        some read-only handlers open a PostgreSQL session, which this offline
+        suite must not require.
+        """
+        parameters = app.openapi()["paths"][route]["get"].get("parameters", [])
+        assert not any(p.get("name") == ADMIN_TOKEN_HEADER for p in parameters), route
+
+    @pytest.mark.parametrize("route", OFFLINE_SAFE_READ_ONLY_ROUTES)
     def test_read_only_routes_are_unaffected(self, route, unconfigured):
         with TestClient(app) as client:
             response = client.get(route)
