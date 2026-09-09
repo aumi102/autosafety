@@ -674,10 +674,29 @@ class TestAuditIsNotMemory:
         assert "AgentRun" not in source
         assert "ToolCall" not in source
 
-    def test_no_public_api_route_exposes_audit_rows(self):
+    def test_no_unauthenticated_api_route_exposes_audit_rows(self):
+        """Superseded in scope by Phase 10, not weakened.
+
+        Phase 9 shipped with no audit read surface at all, so this asserted that
+        no route path mentioned `agent-runs`. Phase 10 added the admin-only
+        `GET /v1/agent-runs/*` that `docs/06_api_contract.md` had deferred
+        pending authorization and redaction rules, both of which Phase 9 itself
+        defined. The invariant that still matters is the one kept here: audit
+        rows must be unreachable without the fail-closed admin guard.
+        """
+        from app.core.security import ADMIN_TOKEN_HEADER
         from app.main import app
 
-        for path in app.openapi()["paths"]:
-            assert "agent-run" not in path
-            assert "agent_runs" not in path
-            assert "tool-call" not in path
+        schema = app.openapi()["paths"]
+        audit_paths = [
+            path
+            for path in schema
+            if "agent-run" in path or "agent_runs" in path or "tool-call" in path
+        ]
+        assert audit_paths, "expected the Phase 10 audit routes to exist"
+        for path in audit_paths:
+            for operation in schema[path].values():
+                parameters = operation.get("parameters", [])
+                assert any(
+                    parameter.get("name") == ADMIN_TOKEN_HEADER for parameter in parameters
+                ), f"{path} does not resolve the admin guard"

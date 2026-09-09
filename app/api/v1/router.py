@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    agent_runs,
     answer_synthesis,
     chat,
     conversations,
@@ -9,6 +10,7 @@ from app.api.v1.endpoints import (
     health,
     hybrid,
     ingestion,
+    ops,
     sql_analytics,
     vehicles,
 )
@@ -24,3 +26,5 @@ router.include_router(hybrid.router, prefix="/hybrid", tags=["hybrid"])
 router.include_router(graphrag.router, prefix="/graphrag", tags=["graphrag"])
 router.include_router(answer_synthesis.router, prefix="/graphrag", tags=["graphrag-answer"])
 router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])
+router.include_router(agent_runs.router, prefix="/agent-runs", tags=["agent-runs"])
+router.include_router(ops.router, prefix="/ops", tags=["ops"])
