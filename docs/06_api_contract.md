@@ -71,13 +71,48 @@ GET /v1/recalls/{recall_id}/graph
 ## Chat and agent runs
 
 ```http
-POST /v1/chat/sessions
+POST /v1/chat/sessions                       (deprecated since Phase 9)
 GET  /v1/chat/sessions
 GET  /v1/chat/sessions/{session_id}
-POST /v1/chat/sessions/{session_id}/messages
+POST /v1/chat/sessions/{session_id}/messages (deprecated since Phase 9)
 GET  /v1/agent-runs/{run_id}
 GET  /v1/agent-runs/{run_id}/tool-calls
 ```
+
+### Deprecation notice — `/v1/chat/*` (Phase 9)
+
+The chat routes are **deprecated**. They previously bypassed
+`GuardedAnswerService`; since Phase 9 they are a thin bridge over the guarded
+conversation path. The response shape below is preserved, and responses carry:
+
+```text
+Deprecation: true
+Link: </v1/conversations>; rel="successor-version"
+```
+
+Behavior notes: `session_id` must be a real conversation id (404 otherwise),
+`POST /sessions` now persists a conversation, and `sql.query` / `sql.rows` are
+always null because the guarded path never surfaces raw SQL.
+
+Migration path: `/v1/chat/*` -> `/v1/conversations/*`.
+
+`GET /v1/agent-runs/*` is **not implemented**. Phase 9 populates `agent_runs`
+and `tool_calls` as a database-only audit trail with no public read surface;
+exposing one requires authorization and redaction rules not yet defined.
+
+## Guarded multi-turn conversations (Phase 8)
+
+```http
+POST   /v1/conversations
+GET    /v1/conversations/{conversation_id}
+GET    /v1/conversations/{conversation_id}/turns
+POST   /v1/conversations/{conversation_id}/messages
+DELETE /v1/conversations/{conversation_id}
+GET    /v1/conversations/status/config
+```
+
+These return the `phase_8` guarded contract: validated claims, citations,
+cross-turn citation provenance, deterministic confidence, and abstention.
 
 ### `POST /v1/chat/sessions/{session_id}/messages`
 
@@ -125,7 +160,18 @@ Response:
 
 ## Ingestion APIs
 
-These endpoints should be admin-only.
+These endpoints are admin-only and **fail closed** (Phase 9). They require an
+`X-Admin-Token` header matching the operator-configured `ADMIN_API_TOKEN`:
+
+```text
+server token not configured  -> 503 ADMIN_PROTECTION_UNAVAILABLE
+header missing or wrong      -> 401 ADMIN_TOKEN_REQUIRED
+header correct               -> allowed
+```
+
+The same guard protects `POST /v1/graph/schema/setup`, `POST /v1/graph/build`,
+and `POST /v1/graphrag/index`. The token is header-only, never a query
+parameter.
 
 ```http
 POST /v1/ingestion/runs

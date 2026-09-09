@@ -26,4 +26,7 @@ Phase 7: guarded answer synthesis   phase7_*.md
 Phase 8: multi-turn conversation    phase8_design.md,
                                     phase8_implementation_report.md,
                                     phase8_runtime_acceptance_report.md
+Phase 9: deployability, security,   phase9_design.md,
+         observability              phase9_implementation_report.md,
+                                    phase9_runtime_acceptance_report.md
 ```

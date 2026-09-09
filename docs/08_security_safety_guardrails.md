@@ -113,6 +113,48 @@ CORS allowlist
 no secrets in logs
 ```
 
+### Maintenance/admin protection (Phase 9, fail-closed)
+
+Implemented in `app/core/security.py` as an interim guard while JWT auth and
+roles remain deferred.
+
+```text
+server token not configured  -> 503 ADMIN_PROTECTION_UNAVAILABLE
+header missing or wrong      -> 401 ADMIN_TOKEN_REQUIRED
+header correct               -> allowed
+```
+
+Rules:
+
+```text
+ADMIN_API_TOKEN is canonical; PHASE8_ADMIN_TOKEN is a deprecated alias
+minimum 16 characters; placeholder values are treated as unconfigured
+header only (X-Admin-Token); never a query parameter
+SecretStr in settings; constant-time comparison
+never logged, never returned, never in the OpenAPI schema
+read-only routes are never gated
+```
+
+Protected: ingestion runs, graph schema setup, graph build, graphrag index.
+
+Not gated, by deliberate classification: conversation deletion (a privacy
+action scoped by an unguessable UUID) and the retention purge (service-only,
+no HTTP route).
+
+### Execution audit privacy (Phase 9)
+
+`agent_runs` and `tool_calls` record execution metadata only.
+
+```text
+never stored: prompts, provider raw requests/responses, API keys, credentials,
+              connection strings, raw SQL, raw Cypher, unrestricted tool
+              arguments, evidence text, tracebacks
+tool arguments dropped; only the allowlisted operation name retained
+input_json / output_json written empty
+audit rows are never read back into an answer
+audit writes fail open: an audit outage never fails a user request
+```
+
 ## Observability requirements
 
 Every agent response must store:

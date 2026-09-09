@@ -65,6 +65,59 @@ CREATE TABLE tool_calls (
 );
 ```
 
+### Phase 9 execution audit columns
+
+`agent_runs` and `tool_calls` existed from the initial migration but were never
+populated. Migration `2025_01_01_0005` adds the safe metadata columns Phase 9
+records. Additive only.
+
+```sql
+ALTER TABLE agent_runs
+  ADD COLUMN conversation_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  ADD COLUMN turn_id UUID REFERENCES chat_turns(id) ON DELETE CASCADE,
+  ADD COLUMN phase TEXT,
+  ADD COLUMN surface TEXT,
+  ADD COLUMN provider TEXT,
+  ADD COLUMN model TEXT,
+  ADD COLUMN synthesis_mode TEXT,
+  ADD COLUMN started_at TIMESTAMPTZ,
+  ADD COLUMN tool_call_count INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN fallback_used BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN abstained BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN abstention_reason TEXT,
+  ADD COLUMN confidence_score INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN confidence_level TEXT,
+  ADD COLUMN validation_outcome TEXT,
+  ADD COLUMN error_code TEXT;
+
+ALTER TABLE tool_calls
+  ADD COLUMN call_id TEXT,
+  ADD COLUMN operation TEXT,
+  ADD COLUMN started_at TIMESTAMPTZ,
+  ADD COLUMN completed_at TIMESTAMPTZ,
+  ADD COLUMN success BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN error_code TEXT,
+  ADD COLUMN evidence_item_count INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN truncated BOOLEAN NOT NULL DEFAULT false,
+  ADD CONSTRAINT uq_tool_call_run_call_id UNIQUE (agent_run_id, call_id);
+```
+
+`confidence_score` is the deterministic confidence multiplied by 10000.
+`surface` records the entry point (`api_conversation`, `api_guarded`, ...).
+`call_id` is application-owned and never LLM-supplied. `operation` holds only
+the allowlisted tool operation name.
+
+Audit privacy rules:
+
+```text
+never stored: prompts, provider raw requests/responses, API keys, credentials,
+              connection strings, raw SQL, raw Cypher, unrestricted tool
+              arguments, evidence text, tracebacks
+input_json / output_json are deliberately written empty
+tool arguments are dropped; only the allowlisted operation name is kept
+audit rows are observability only and are never read back into an answer
+```
+
 ## Source tables
 
 ```sql

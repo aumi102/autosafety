@@ -131,9 +131,10 @@ curl http://localhost:8000/v1/health
 All endpoints return stub responses. Real implementation in Phase 1.
 
 - `GET /v1/vehicles/search` — returns empty list, notes Phase 0 stub
-- `POST /v1/chat/sessions` — creates session stub (legacy Phase 2/4 surface;
-  the guarded multi-turn surface is `POST /v1/conversations`, see Phase 8)
-- `POST /v1/chat/sessions/{id}/messages` — returns safety response, notes Phase 0
+- `POST /v1/chat/sessions` — deprecated since Phase 9; now persists a real
+  conversation and bridges to the guarded path. Use `POST /v1/conversations`.
+- `POST /v1/chat/sessions/{id}/messages` — deprecated since Phase 9; routes
+  through GuardedAnswerService. Use `POST /v1/conversations/{id}/messages`.
 - `POST /v1/ingestion/nhtsa/probe` — returns deferred status
 
 ---
@@ -817,12 +818,119 @@ remain deferred.
   source of truth for conversation state.
 - `agent_runs` and `tool_calls` remain unpopulated Phase 0 scaffolding.
 - Maintenance protection is a shared-secret header, not real authentication.
-- Migration files are not tracked by Git (`.gitignore` excludes
-  `migrations/versions/*.py` for every migration in this repository), so
-  `alembic upgrade head` must be run against an environment that already has
-  the migration files present.
+- ~~Migration files are not tracked by Git~~ — fixed in Phase 9; the complete
+  Alembic chain is now committed and a fresh clone can migrate to head.
 - The small corpus, lexical deterministic embeddings, and
   `RELATED_TO_COMPONENT = 0` limitations are unchanged from Phase 6/7.
 
 See `docs/phase8_design.md`, `docs/phase8_implementation_report.md`, and
 `docs/phase8_runtime_acceptance_report.md` for Phase 8 evidence.
+
+## Phase 9: Deployability, Security, and Observability
+
+Phase 9 hardens the platform before adding more product intelligence. **No
+answer semantics changed** — the Phase 7 guarded path and the Phase 8
+conversation contract are untouched, and both evaluations still pass at full
+gates.
+
+### 1. Migration history is now tracked
+
+`.gitignore` previously excluded `migrations/versions/*.py`, so **none** of the
+Alembic revisions were committed and a fresh clone could not rebuild the schema
+at all. The ignore rule is gone and the complete chain is tracked together:
+
+```text
+<base> -> 0001 initial -> 0002 graphrag -> 0003 pgvector
+       -> 0004 conversation -> 0005 execution audit   (single head)
+```
+
+A fresh empty database now migrates to head. Verified against a temporary
+database and guarded by `tests/test_phase9_migrations.py`.
+
+### 2. Maintenance routes fail closed
+
+Phase 8's admin guard was fail-**open**: with no token configured, ingestion and
+rebuild routes stayed public. Phase 9 inverts that default.
+
+```text
+server token not configured  -> 503 ADMIN_PROTECTION_UNAVAILABLE
+header missing or wrong      -> 401 ADMIN_TOKEN_REQUIRED
+header correct               -> allowed
+```
+
+Set `ADMIN_API_TOKEN` (minimum 16 characters; placeholders like `changeme` are
+rejected) and send it as `X-Admin-Token`:
+
+```bash
+export ADMIN_API_TOKEN="a-long-random-operator-secret"
+
+curl -X POST http://localhost:8000/v1/graph/build \
+     -H "X-Admin-Token: $ADMIN_API_TOKEN" -H 'Content-Type: application/json' -d '{}'
+```
+
+Protected: ingestion runs, graph schema setup, graph build, graphrag index.
+Read-only routes are unaffected. Conversation deletion is **not** admin-gated —
+it is a privacy action scoped by an unguessable UUID.
+
+### 3. Legacy `/v1/chat/*` no longer bypasses the guard
+
+The chat routes previously called the Phase 2/Phase 4 services directly,
+skipping citation validation, the causality guard, deterministic confidence, and
+abstention — and `POST /sessions` returned an id that was never persisted.
+
+They are now a **deprecated bridge** over the guarded conversation path. The
+documented answer-contract shape is preserved; responses carry
+`Deprecation: true` and `Link: </v1/conversations>`, and the routes are marked
+deprecated in OpenAPI.
+
+Migration path: `/v1/chat/*` → `/v1/conversations/*`.
+
+### 4. Execution audit (`agent_runs` / `tool_calls`)
+
+Both tables existed since the initial migration and were never populated. Phase
+9 fills them with safe execution metadata: provider, synthesis mode, fallback,
+abstention, confidence, validation outcome, tool call count, latency, and the
+conversation/turn each run belongs to, plus one row per real tool execution.
+
+```sql
+SELECT surface, status, synthesis_mode, validation_outcome, tool_call_count
+FROM agent_runs ORDER BY created_at DESC LIMIT 5;
+```
+
+Audit is **observability, not memory**: nothing recorded is ever read back into
+an answer, and no API route exposes audit rows. Never stored: prompts, provider
+raw responses, credentials, connection strings, raw SQL, raw Cypher, or tool
+arguments — only the allowlisted operation name is kept.
+
+Audit writes **fail open**: an audit outage never fails a user request.
+
+### Phase 9 results
+
+- 953/953 repository tests pass (830 baseline, minus 18 superseded fail-open
+  admin tests, plus 141 new Phase 9 tests).
+- Fresh empty database migrates to head; existing database upgraded 0004 → 0005
+  with no data loss.
+- Phase 7 evaluation 20/20 all gates; Phase 8 evaluation 10 cases / 20 turns,
+  all 11 gates (citation validity and coverage 1.00, conversation isolation
+  1.00, prompt-injection resistance 1.00, leak rates 0.00).
+- Live multi-turn run recorded 3 audit runs, all linked to their turn, 11 tool
+  calls with no duplicates and zero persisted payloads.
+- Scanning every value in the live audit tables for secrets, SQL, or Cypher
+  returned 0 matches.
+- No live external LLM request was spent; Phase 7/8 already proved the real
+  provider.
+
+### Current limitations
+
+- Admin protection is a shared operator secret, not real authentication; JWT and
+  roles remain deferred.
+- Audit is fail-open by design, so a database outage loses audit rows while
+  answers continue.
+- No audit read API exists; inspection is direct read-only SQL.
+- `agent_runs.total_tokens` stays unpopulated — provider token usage is
+  deliberately not exposed.
+- Live model-driven `plan_tool_calls()` is still absent, and deterministic
+  embeddings remain lexical (unchanged Phase 6/7/8 debt).
+
+See `docs/phase9_design.md`, `docs/phase9_implementation_report.md`, and
+`docs/phase9_runtime_acceptance_report.md` for Phase 9 evidence.
