@@ -1037,3 +1037,109 @@ messages.
 Operators start at `docs/phase10_operator_runbook.md`. Design rationale is in
 `docs/phase10_design.md`; evidence in
 `docs/phase10_runtime_acceptance_report.md`.
+
+---
+
+## Phase 11: Type Safety, CI, and Developer Quality Gates
+
+Phase 11 turns static analysis on, fixes what it finds, and adds the CI that
+`docs/09_roadmap_phase0_phase1.md` listed as a **Phase 0 deliverable** and that
+was never built. For eleven phases, nothing verified this repository
+automatically.
+
+### mypy: 47 errors to zero
+
+mypy was configured from the start and shipped in the dev extras, but no target
+invoked it until Phase 10 gave it one. It reported 47 errors across 16 files.
+All are resolved, with no blanket ignore and no weakening of the settings:
+
+```text
+mypy app/    Success: no issues found in 106 source files
+```
+
+Exactly two suppressions remain in `app/`, both error-code scoped, both for
+optional packages that are not project dependencies and ship no stubs
+(`sentence_transformers`, `redis`). One pre-existing ignore was removed.
+
+### Four real defects it found
+
+- **A route that always raised.** `GET /v1/graph/vehicles/{id}/recall-paths`
+  builds its response with `[r.to_dict() for r in result.recalls]`, but
+  `RecallNode` had no `to_dict` — unlike its sibling node types. Every call
+  returning a recall raised `AttributeError`. No test covered the route, only the
+  query beneath it. `RecallPathResult.to_dict` had been quietly working around
+  the gap with a duplicated inline copy of the same mapping.
+- **An answer-contract violation.** The Phase 4 hybrid composer passed the
+  internal `relation_basis` straight into `relation_source`, emitting values
+  like `official_recall_affects_vehicle` when the documented contract defines
+  exactly three. Internal bases are now mapped onto that vocabulary.
+- **A supported intent outside its own type.**
+  `complaint_count_by_component_for_vehicle` has a template, a parser branch, two
+  service branches, and a tool operation, but was missing from the
+  `ParsedQuestion.intent` Literal.
+- **Two classes, one name.** `VectorStore.upsert_document` was annotated with the
+  ORM `EvidenceDocument` while every caller passes the dataclass of the same
+  name, so `document.metadata` resolved to SQLAlchemy's `MetaData`.
+
+The rest were annotations that did not describe the code: 33 nullable ORM
+columns declared non-Optional, two JSON array columns declared `dict`, an
+`__exit__` annotated `-> bool` (which told mypy the context manager might
+swallow exceptions, turning six correct methods into "missing return"), and an
+audit recorder typed `object`, now a Protocol.
+
+### One command before you commit
+
+```bash
+make check       # lint + typecheck + test + evaluate
+```
+
+`evaluate` is new to the gate. `docs/phase7_closeout_report.md` already called
+the Phase 7 and Phase 8 safety evaluations mandatory, but nothing ran them
+automatically — a regression in citation validity or conversation isolation
+would surface only if someone remembered. Every part is offline: no Docker, no
+credential, no paid provider.
+
+### CI
+
+`.github/workflows/ci.yml`, on every push and pull request, Python 3.11:
+
+| Job | Services | Runs |
+|---|---|---|
+| `quality` | none | lint, typecheck, tests, both safety evaluations, offline migration-chain check |
+| `migrations` | `pgvector/pgvector:pg16` | one head, empty DB → head, schema verification, idempotent re-run |
+
+`quality` provisions nothing because the suite is hermetic. `migrations` needs a
+real database to prove the Phase 9 fresh-clone gate, and needs pgvector
+specifically — revision `0003` adds a `vector(384)` column.
+
+**The workflow requires no secrets.** No provider key, no `ADMIN_API_TOKEN`, no
+operator `.env`, no external LLM call; `permissions: contents: read`. Tests
+assert this. GitHub Actions cannot run locally, so validation was structural
+plus running each `quality` command directly against the checkout — stated as
+such rather than claimed as a green run.
+
+### Line length: measured, not hidden
+
+`ruff format` would change **5539 lines across 96 files** and still leave 39
+`E501` findings, because it cannot split long strings, URLs, or comments. It
+would therefore push a large diff through security-sensitive Phase 7–10 code
+*and still* leave E501 unable to serve as a hard gate. E501 stays advisory and
+counted via `make lint-all` (398).
+
+### Phase 11 results
+
+- 1097 tests pass (1039 at entry, plus 58 new), with every container stopped.
+- `mypy app/` clean; `ruff` gate clean; Phase 7 and Phase 8 evaluations pass.
+- No safety boundary changed. Where mypy and an invariant disagreed, the
+  annotation was corrected — never the guard.
+
+### Current limitations
+
+- 398 `E501` findings remain advisory by measured decision.
+- `tests/` and `scripts/` are not yet type-checked; `app/` is the gate.
+- `make` is not installed in the development environment, so Makefile targets
+  are validated by running their commands directly and by parsing the file.
+- The CI workflow has not yet had a real run on GitHub.
+
+Design rationale is in `docs/phase11_design.md`; evidence in
+`docs/phase11_ci_quality_report.md`.

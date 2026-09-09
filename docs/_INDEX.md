@@ -32,6 +32,8 @@ Phase 9: deployability, security,   phase9_design.md,
 Phase 10: maintainability and       phase10_design.md,
           operational hardening     phase10_runtime_acceptance_report.md,
                                     phase10_operator_runbook.md
+Phase 11: type safety, CI, and      phase11_design.md,
+          developer quality gates   phase11_ci_quality_report.md
 ```
 
 Operators start at `phase10_operator_runbook.md`.

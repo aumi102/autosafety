@@ -251,12 +251,18 @@ compliance obligation requires refusing service without an audit trail.
 ## 8. Quality gates
 
 ```bash
+make check       # the canonical gate: lint + typecheck + test + evaluate
 make lint        # enforced; expected green
+make typecheck   # enforced since Phase 11; expected zero errors
 make test        # full suite
-make check       # lint + test
-make lint-all    # advisory; adds line-length findings
-make typecheck   # advisory; 47 pre-existing errors
+make evaluate    # Phase 7 and Phase 8 safety evaluations
+make lint-all    # advisory; adds line-length findings (398)
 ```
+
+Run `make check` before committing. Every part is offline: no Docker, no
+credential, no external provider. GitHub Actions runs the same commands on every
+push and pull request, plus a real fresh-database migration
+(`.github/workflows/ci.yml`).
 
 `make lint` covers `app/`, `tests/`, `scripts/`, and `migrations/`. Before
 Phase 10 it ran `ruff check autosafety/` — a directory that has never existed —
