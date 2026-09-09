@@ -42,10 +42,27 @@ stamped version: 2025_01_01_0004
 temp database dropped
 ```
 
-*(Run before revision `0005` was authored; `0005` was subsequently applied to
-the live database, below, and the offline chain tests cover it.)*
+*(That run predated revision `0005`. It was therefore repeated after `0005`
+was authored, so the gate is proven against the true head:)*
 
-**A fresh clone can now reconstruct the schema from tracked migrations.**
+```text
+created temp database: autosafety_phase9_freshclone_0005
+alembic upgrade head  rc=0
+  Running upgrade  -> 2025_01_01_0001, Initial schema - Phase 0
+  Running upgrade 2025_01_01_0001 -> 2025_01_01_0002, Phase 6: GraphRAG ...
+  Running upgrade 2025_01_01_0002 -> 2025_01_01_0003, Phase 6 pgvector column.
+  Running upgrade 2025_01_01_0003 -> 2025_01_01_0004, Phase 8: conversation state.
+  Running upgrade 2025_01_01_0004 -> 2025_01_01_0005, Phase 9: execution audit ...
+tables: 22   missing required: []
+pgvector column on evidence_chunks: True
+agent_runs columns: 25      tool_calls columns: 16
+tool_calls unique constraints: ['uq_tool_call_run_call_id']
+stamped version: 2025_01_01_0005
+temp database dropped
+```
+
+**A fresh clone can now reconstruct the full schema, through head `0005`, from
+tracked migrations.**
 
 ## 4. Existing database migration
 
@@ -95,6 +112,30 @@ Maintenance route refused: no usable ADMIN_API_TOKEN is configured.
 
 This is the Phase 8 exposure closed: the same environment previously left these
 routes publicly callable.
+
+The *configured* states were then proven live, with a throwaway token exported
+for the duration of the check only. An intentionally invalid request body was
+used so that a `422` proves the guard cleared **without the maintenance handler
+ever running**:
+
+```text
+admin_protection_enabled()          True
+
+POST /v1/ingestion/nhtsa/phase1/run
+  no token                  -> 401 ADMIN_TOKEN_REQUIRED
+  wrong token               -> 401 ADMIN_TOKEN_REQUIRED
+  valid X-Admin-Token       -> 422   (guard cleared, handler not run)
+  valid token, query string -> 401   (header-only, as designed)
+GET  /v1/conversations/status/config -> 200   (read-only, unaffected)
+
+token present in any response body: False
+token present in the OpenAPI schema: False
+after unsetting, admin_protection_enabled(): False
+```
+
+Operator note: because the guard fails closed, a fresh deployment has **no**
+working maintenance routes until `ADMIN_API_TOKEN` is set. Phase 9 therefore
+documents the setting in `.env.example`, including how to generate one.
 
 ## 6. Legacy chat bridge — live
 
@@ -185,15 +226,40 @@ audit trail.
 
 ## 10. Real LLM
 
-**No live external request was spent.**
+The re-verification run **did** reach the real provider, and the acceptance
+report is corrected here to say so.
 
-Phase 7 and Phase 8 already proved the real provider
-(`openai_compatible` / `gpt-5.6-luna`) end to end. Phase 9 concerns
-infrastructure, security, and observability, and the audit path records
-`provider` from the guarded contract through identical code regardless of which
-provider produced it. A paid request would have demonstrated nothing the
-deterministic run does not already demonstrate, so per the phase's own guidance
-it was not spent.
+`Settings(_env_file=None)` was expected to select the deterministic provider,
+but `PHASE7_PROVIDER_*` is exported in this machine's process environment, which
+pydantic-settings reads regardless of `_env_file`. Two live
+`openai_compatible` / `gpt-5.6-luna` requests were therefore made. They were not
+wasted: they close the one invariant a deterministic run cannot close, proving
+the audit trail records a **real** external provider end to end.
+
+```text
+turn 0  provider=openai_compatible  mode=llm        claims=3  citations=10  conf=high 0.85
+turn 1  provider=openai_compatible  mode=repaired   claims=7  citations=10  conf=high 0.94
+        (context inherited on turn 1; 0 accepted claims left uncited in either turn)
+
+agent_runs
+  phase_9  api_conversation  completed  openai_compatible  llm       accepted  tools=1  turn-linked  7778ms
+  phase_9  api_conversation  completed  openai_compatible  repaired  repaired  tools=1  turn-linked  12141ms
+
+tool_calls
+  graphrag_retrieval_tool  retrieve_complaints_only  success  17 evidence  call_id=base-3725d6bd6f77  input_json={} output_json={}
+  graphrag_retrieval_tool  retrieve_recalls_only     success  18 evidence  call_id=base-8da6370a161a  input_json={} output_json={}
+
+duplicate (agent_run_id, call_id) groups: 0
+privacy scan over the run's own rows:  agent_runs leaks=0   tool_calls leaks=0
+after conversation hard delete:        agent_runs=0  tool_calls=0   (cascade holds)
+```
+
+Real provider → `GuardedAnswerService` → `AgentRun` → `ToolCall` is therefore
+proven, not inferred. Turn 1 recorded `validation_outcome = repaired`, a second
+audit outcome beyond the `accepted`/`rejected` pair seen in §8.
+
+Corpus row counts were identical before and after the run, and the acceptance
+conversations were hard-deleted afterwards.
 
 ## 11. Offline evaluations (regression)
 
@@ -211,13 +277,31 @@ scripts/evaluate_phase8_conversations.py
 
 ```text
 pytest tests/ -q
-953 passed, 4 warnings
+954 passed, 4 warnings
 ```
 
-Baseline at entry was 830. Phase 9 added 141 tests and superseded 18 Phase 8
+Baseline at entry was 830. Phase 9 added 142 tests and superseded 18 Phase 8
 admin tests that encoded the fail-open contract. The 4 warnings are the
 pre-existing Starlette/httpx and Pydantic deprecations plus one Alembic config
 deprecation.
+
+### Hermeticity defect found during re-verification
+
+The suite was first re-run with the Docker services **stopped**, which exposed a
+defect the original run could not see:
+
+```text
+FAILED tests/test_phase9_admin_security.py::TestRouteEnforcement
+       ::test_read_only_routes_are_unaffected[/v1/ingestion/source-runs]
+```
+
+`GET /v1/ingestion/source-runs` opens a PostgreSQL session inside its handler,
+so asserting `200` on it silently made an offline security test depend on a live
+database. The route's guard-related property does not need the handler to run,
+so it is now asserted structurally — the route must not declare
+`X-Admin-Token` — and only the genuinely dependency-free read-only route is
+still executed for a real `200`. The suite now passes with every container
+stopped.
 
 ## 13. Verdict
 
@@ -229,6 +313,9 @@ execution audit trail were all exercised against live infrastructure.
 
 Remaining limitations: `ADMIN_API_TOKEN` is unset in this environment, so
 maintenance routes are correctly unavailable rather than usable — an operator
-must set it before running ingestion or rebuilds; audit is fail-open by design;
-no audit read API exists; and the Phase 7/8 debts (live model-driven tool
-planning, lexical embeddings) are unchanged.
+must set it before running ingestion or rebuilds (now documented in
+`.env.example`); audit is fail-open by design; no audit read API exists;
+`make lint` still targets a non-existent `autosafety/` directory while the
+package is `app/`, and pointing it at `app/` surfaces 633 pre-existing findings,
+so that cleanup is deferred rather than folded into this phase; and the Phase
+7/8 debts (live model-driven tool planning, lexical embeddings) are unchanged.
