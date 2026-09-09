@@ -137,20 +137,26 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
         return self._dimension
 
     def _load_model(self):
-        """Lazy-load the sentence-transformer model."""
+        """Lazy-load and return the sentence-transformer model."""
         if self._model is None:
             try:
-                from sentence_transformers import SentenceTransformer
+                # Optional dependency: this provider is only selected when the
+                # operator configures it, so the package is not a project
+                # requirement and has no stubs.
+                from sentence_transformers import (  # type: ignore[import-not-found]
+                    SentenceTransformer,
+                )
                 self._model = SentenceTransformer(self._model_name, device=self._device)
-            except ImportError:
+            except ImportError as exc:
                 raise ImportError(
                     "sentence-transformers not installed. "
                     "Install with: pip install sentence-transformers"
-                )
+                ) from exc
+        return self._model
 
     def embed_text(self, text: str) -> list[float]:
-        self._load_model()
-        embedding = self._model.encode(text, normalize_embeddings=True)
+        model = self._load_model()
+        embedding = model.encode(text, normalize_embeddings=True)
         return embedding.tolist()
 
 

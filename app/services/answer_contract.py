@@ -35,6 +35,12 @@ class CitationItem:
         }
 
 
+ConfidenceLabel = Literal["low", "medium", "high"]
+
+# The documented `relation_source` vocabulary (docs/contracts/answer_contract.md).
+RelationSource = Literal["source_record", "normalized_join", "semantic_similarity"]
+
+
 @dataclass
 class GraphPath:
     """A graph traversal path for evidence."""

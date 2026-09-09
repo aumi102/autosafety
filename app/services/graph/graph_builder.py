@@ -386,7 +386,7 @@ def _upsert_complaint(
     if complaint.original_component:
         from app.services.ingestion.normalization import normalize_component_name
         norm = normalize_component_name(complaint.original_component)
-        comp_data = component_map.get(norm)
+        comp_data = component_map.get(norm) if norm else None
         if comp_data and norm:
             stats.complaint_component_links_seen += 1
             try:
@@ -455,7 +455,7 @@ def _upsert_recall_and_affects(
     if recall_data.get("original_component"):
         from app.services.ingestion.normalization import normalize_component_name
         norm = normalize_component_name(recall_data["original_component"])
-        comp_data = component_map.get(norm)
+        comp_data = component_map.get(norm) if norm else None
         if comp_data and norm:
             stats.recall_component_links_seen += 1
             try:

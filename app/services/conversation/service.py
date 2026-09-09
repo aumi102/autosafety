@@ -28,6 +28,7 @@ import logging
 import time
 import uuid as uuid_module
 from collections.abc import Callable
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
@@ -55,7 +56,11 @@ from app.services.conversation.models import (
     TurnCitationProvenance,
 )
 from app.services.conversation.repository import ConversationRepository
-from app.services.observability.context import audit_run
+from app.services.observability.context import (
+    AuditRecorder,
+    AuditRunContext,
+    audit_run,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +88,7 @@ class ConversationService:
         session_factory: Callable[[], Session],
         guarded_service: GuardedAnswerService,
         settings: Settings | None = None,
-        audit_recorder: object | None = None,
+        audit_recorder: AuditRecorder | None = None,
     ):
         self._session_factory = session_factory
         self._guarded = guarded_service
@@ -197,7 +202,7 @@ class ConversationService:
 
     # ------------------------------------------------------------------ audit
 
-    def _start_audit_run(self, conversation_id) -> object | None:
+    def _start_audit_run(self, conversation_id) -> AuditRunContext | None:
         """Open a Phase 9 audit run. Never fails the request."""
         if self._audit is None:
             return None
@@ -209,7 +214,13 @@ class ConversationService:
             logger.warning("Execution audit: run not opened (%s)", type(exc).__name__)
             return None
 
-    def _finish_audit_run(self, audit, guarded, result, started: float) -> None:
+    def _finish_audit_run(
+        self,
+        audit: AuditRunContext | None,
+        guarded,
+        result,
+        started: float,
+    ) -> None:
         """Close the audit run and link the persisted conversation and turn."""
         if audit is None or self._audit is None:
             return
@@ -377,7 +388,7 @@ class ConversationService:
         def __enter__(self) -> Session:
             return self._session
 
-        def __exit__(self, exc_type, exc, tb) -> bool:
+        def __exit__(self, exc_type, exc, tb) -> Literal[False]:
             try:
                 if exc_type is None:
                     self._session.commit()

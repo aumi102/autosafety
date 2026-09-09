@@ -21,8 +21,8 @@ import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from uuid import UUID
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -41,11 +41,48 @@ class AuditRunContext:
     tool_calls_recorded: int = 0
     # Application-owned call ids already recorded for this run. Guarantees a
     # replayed or retried execution cannot create duplicate audit rows.
-    seen_call_ids: set = None  # type: ignore[assignment]
+    seen_call_ids: set[str] = field(default_factory=set)
 
-    def __post_init__(self) -> None:
-        if self.seen_call_ids is None:
-            self.seen_call_ids = set()
+
+@runtime_checkable
+class AuditRecorder(Protocol):
+    """The audit surface a caller may use.
+
+    Declared as a Protocol so callers depend on the shape rather than on
+    `ExecutionAuditRecorder` itself, which keeps the audit side channel
+    substitutable in tests without weakening the call sites to `object`.
+    """
+
+    @property
+    def enabled(self) -> bool: ...
+
+    def start_run(
+        self,
+        *,
+        surface: str,
+        provider: str | None = None,
+        model: str | None = None,
+        conversation_id: UUID | None = None,
+    ) -> AuditRunContext | None: ...
+
+    def finish_run(
+        self,
+        run_id: UUID,
+        guarded: Any,
+        *,
+        latency_ms: int,
+        intent: str | None = None,
+    ) -> None: ...
+
+    def fail_run(self, run_id: UUID, error_code: str, *, latency_ms: int = 0) -> None: ...
+
+    def link_conversation_turn(
+        self,
+        run_id: UUID,
+        *,
+        conversation_id: UUID | None = None,
+        turn_id: UUID | None = None,
+    ) -> None: ...
 
 
 _current_run: ContextVar[AuditRunContext | None] = ContextVar(

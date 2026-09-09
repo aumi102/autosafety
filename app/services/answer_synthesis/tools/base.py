@@ -266,5 +266,5 @@ class EvidenceBundle:
         # Deduplicate by citation_id
         seen: dict[str, dict] = {}
         for row in table:
-            seen[row["citation_id"]] = row
+            seen[str(row["citation_id"])] = row
         return list(seen.values())

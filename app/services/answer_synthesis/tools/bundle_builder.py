@@ -335,7 +335,7 @@ def _sanitize(d: dict[str, Any]) -> dict[str, Any]:
     """
     if not isinstance(d, dict):
         return d
-    result = {}
+    result: dict[str, Any] = {}
     for k, v in d.items():
         k_lower = k.lower()
         if any(fk in k_lower for fk in _FORBIDDEN_KEYS):

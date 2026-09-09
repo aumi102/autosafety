@@ -36,18 +36,26 @@ class VehicleEntity:
         self.normalized_model = normalize_model(self.model)
 
 
+# The full intent vocabulary. `complaint_count_by_component_for_vehicle` was
+# missing from the original literal even though it has a template, a service
+# branch, and a tool operation, so a fully supported intent was outside the
+# declared type.
+QuestionIntent = Literal[
+    "top_complaint_components_by_vehicle",
+    "complaint_count_by_vehicle",
+    "recalls_by_vehicle",
+    "recall_count_by_vehicle",
+    "complaint_count_by_component_for_vehicle",
+    "vehicles_by_complaint_count",
+    "unknown",
+    "clarification_needed",
+]
+
+
 @dataclass
 class ParsedQuestion:
     """Result of parsing a natural language question."""
-    intent: Literal[
-        "top_complaint_components_by_vehicle",
-        "complaint_count_by_vehicle",
-        "recalls_by_vehicle",
-        "recall_count_by_vehicle",
-        "vehicles_by_complaint_count",
-        "unknown",
-        "clarification_needed",
-    ]
+    intent: QuestionIntent
     vehicle: VehicleEntity | None = None
     limit: int | None = None
     component: str | None = None  # Only for component-specific questions
@@ -155,7 +163,7 @@ def _extract_limit(text: str) -> int | None:
     return None
 
 
-def _classify_intent(text: str, vehicle: VehicleEntity | None) -> str:
+def _classify_intent(text: str, vehicle: VehicleEntity | None) -> QuestionIntent:
     """Classify question intent from keywords."""
     text_lower = text.lower()
 

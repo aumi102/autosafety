@@ -69,7 +69,7 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
     """
     def adapter(*, call_id: str, arguments: dict[str, Any]) -> ToolCallResult:
         operation = arguments.get("operation")
-        vehicle_id = arguments.get("vehicle_id")
+        vehicle_id = str(arguments.get("vehicle_id") or "")
         max_paths = arguments.get("max_paths", 20)
 
         try:
@@ -84,56 +84,56 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
             result_data: dict[str, Any] = {}
 
             if operation == "vehicle_neighborhood":
-                result = get_vehicle_neighborhood(vehicle_id)
-                if result is None:
+                neighborhood = get_vehicle_neighborhood(vehicle_id)
+                if neighborhood is None:
                     return ToolCallResult.error(
                         call_id, "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
-                result_data = _neighborhood_to_dict(result, max_paths)
+                result_data = _neighborhood_to_dict(neighborhood, max_paths)
                 warnings.append(
                     "Graph neighborhood links are potential associations. "
                     "Recall → AFFECTS → ModelYear is the only official linkage."
                 )
 
             elif operation == "recall_paths_by_vehicle":
-                result = get_vehicle_recall_paths(vehicle_id)
-                if result is None:
+                recall_paths = get_vehicle_recall_paths(vehicle_id)
+                if recall_paths is None:
                     return ToolCallResult.error(
                         call_id, "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
-                result_data = _recall_paths_to_dict(result, max_paths)
+                result_data = _recall_paths_to_dict(recall_paths, max_paths)
                 warnings.append(
                     "Recall links are potentially related — not official causality. "
                     "Only Recall → AFFECTS → ModelYear is official when explicitly in campaign records."
                 )
 
             elif operation == "component_evidence_by_vehicle":
-                result = get_vehicle_component_evidence(vehicle_id)
-                if result is None:
+                component_evidence = get_vehicle_component_evidence(vehicle_id)
+                if component_evidence is None:
                     return ToolCallResult.error(
                         call_id, "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
-                result_data = _component_evidence_to_dict(result, max_paths)
+                result_data = _component_evidence_to_dict(component_evidence, max_paths)
                 warnings.append(
                     "Complaint component links are potential associations, not causality. "
                     "Shared-component links may be zero if NHTSA recall records lack component data."
                 )
 
             elif operation == "shared_component_recall_paths":
-                result = get_vehicle_shared_component_recalls(vehicle_id)
-                if result is None:
+                shared_recalls = get_vehicle_shared_component_recalls(vehicle_id)
+                if shared_recalls is None:
                     return ToolCallResult.error(
                         call_id, "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
-                result_data = _component_evidence_to_dict(result, max_paths)
+                result_data = _component_evidence_to_dict(shared_recalls, max_paths)
                 warnings.append(
                     "Shared-component associations are potential, not causal or official."
                 )

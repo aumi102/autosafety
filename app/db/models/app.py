@@ -32,8 +32,8 @@ class User(Base):
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    title: Mapped[str] = mapped_column(Text, nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     # Phase 8 — retention/expiry anchor, refreshed on each guarded turn.
     last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -58,14 +58,14 @@ class AgentRun(Base):
     """
     __tablename__ = "agent_runs"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True)
-    intent: Mapped[str] = mapped_column(Text, nullable=True)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True)
+    intent: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="created")
-    latency_ms: Mapped[int] = mapped_column(Integer, nullable=True)
-    total_tokens: Mapped[int] = mapped_column(Integer, nullable=True)
-    warnings: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Phase 9 execution audit columns.
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=True, index=True
@@ -73,20 +73,20 @@ class AgentRun(Base):
     turn_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_turns.id", ondelete="CASCADE"), nullable=True, index=True
     )
-    phase: Mapped[str] = mapped_column(String(20), nullable=True)
-    surface: Mapped[str] = mapped_column(String(32), nullable=True)
-    provider: Mapped[str] = mapped_column(String(64), nullable=True)
-    model: Mapped[str] = mapped_column(String(128), nullable=True)
-    synthesis_mode: Mapped[str] = mapped_column(String(20), nullable=True)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
+    phase: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    surface: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    synthesis_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
     tool_call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     fallback_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     abstained: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    abstention_reason: Mapped[str] = mapped_column(String(128), nullable=True)
+    abstention_reason: Mapped[str | None] = mapped_column(String(128), nullable=True)
     confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
-    confidence_level: Mapped[str] = mapped_column(String(10), nullable=True)
-    validation_outcome: Mapped[str] = mapped_column(String(32), nullable=True)
-    error_code: Mapped[str] = mapped_column(String(64), nullable=True)
+    confidence_level: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    validation_outcome: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 class ToolCall(Base):
     """
@@ -102,16 +102,16 @@ class ToolCall(Base):
     tool_name: Mapped[str] = mapped_column(Text, nullable=False)
     input_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     output_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    latency_ms: Mapped[int] = mapped_column(Integer, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     # Phase 9 execution audit columns.
-    call_id: Mapped[str] = mapped_column(String(64), nullable=True)
-    operation: Mapped[str] = mapped_column(String(64), nullable=True)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    call_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    operation: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    error_code: Mapped[str] = mapped_column(String(64), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     evidence_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     truncated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     __table_args__ = (
@@ -143,19 +143,19 @@ class ChatTurn(Base):
     resolved_question: Mapped[str] = mapped_column(Text, nullable=False)
     context_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Deterministic allowlisted entity slots only. Never free user text.
-    entity_make: Mapped[str] = mapped_column(String(64), nullable=True)
-    entity_model: Mapped[str] = mapped_column(String(64), nullable=True)
-    entity_model_year: Mapped[int] = mapped_column(Integer, nullable=True)
-    entity_component: Mapped[str] = mapped_column(String(64), nullable=True)
+    entity_make: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entity_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entity_model_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    entity_component: Mapped[str | None] = mapped_column(String(64), nullable=True)
     synthesis_mode: Mapped[str] = mapped_column(String(20), nullable=False)
     provider: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     abstained: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    abstention_reason: Mapped[str] = mapped_column(String(128), nullable=True)
+    abstention_reason: Mapped[str | None] = mapped_column(String(128), nullable=True)
     confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
     confidence_level: Mapped[str] = mapped_column(String(10), nullable=False, default="low")
     claim_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     citation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    warnings: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
+    warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     __table_args__ = (
         UniqueConstraint("session_id", "turn_index", name="uq_chat_turn_session_index"),
@@ -182,12 +182,12 @@ class ChatTurnCitation(Base):
     citation_id: Mapped[str] = mapped_column(String(64), nullable=False)
     source_type: Mapped[str] = mapped_column(String(32), nullable=False)
     source_record_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
-    source_entity_id: Mapped[str] = mapped_column(String(64), nullable=True)
-    title: Mapped[str] = mapped_column(Text, nullable=True)
-    source_url: Mapped[str] = mapped_column(Text, nullable=True)
+    source_entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     text_span: Mapped[str] = mapped_column(Text, nullable=False, default="")
     retrieval_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
-    relation_basis: Mapped[str] = mapped_column(String(64), nullable=True)
-    tool_name: Mapped[str] = mapped_column(String(64), nullable=True)
+    relation_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tool_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cited_by_claim: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)

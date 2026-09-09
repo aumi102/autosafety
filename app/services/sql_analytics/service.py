@@ -17,6 +17,7 @@ from app.services.answer_contract import (
     AnswerResponse,
     AnswerSection,
     Confidence,
+    ConfidenceLabel,
     Evidence,
     SqlResult,
 )
@@ -49,6 +50,17 @@ CAVEAT_SEMANTIC_MATCH = (
 
 # Default LIMIT for queries
 DEFAULT_LIMIT = 10
+
+
+# Intents whose SQL templates bind make, model, and model year. `parse_question`
+# guarantees a fully specified vehicle for each of these.
+VEHICLE_SCOPED_INTENTS = frozenset({
+    "top_complaint_components_by_vehicle",
+    "complaint_count_by_vehicle",
+    "recalls_by_vehicle",
+    "recall_count_by_vehicle",
+    "complaint_count_by_component_for_vehicle",
+})
 
 
 class SqlAnalyticsService:
@@ -121,6 +133,17 @@ class SqlAnalyticsService:
             norm_make = None
             norm_model = None
 
+        # `parse_question` downgrades every vehicle-scoped intent to
+        # "clarification_needed" when the vehicle or its model year is missing,
+        # so the branches below may rely on `vehicle`. That invariant lived only
+        # in the parser; state it here too, because this function is the one
+        # that would raise AttributeError if it were ever broken.
+        if intent in VEHICLE_SCOPED_INTENTS and (vehicle is None or not vehicle.model_year):
+            return None, {}, None
+        # Bound once after the guard above, so the vehicle-scoped branches below
+        # read a value that is known to be present.
+        model_year = vehicle.model_year if vehicle else None
+
         params: dict = {}
 
         if intent == "top_complaint_components_by_vehicle":
@@ -128,7 +151,7 @@ class SqlAnalyticsService:
             params = {
                 "make": norm_make,
                 "model": norm_model,
-                "model_year": vehicle.model_year,
+                "model_year": model_year,
                 "limit": limit,
             }
             return t.sql.strip(), params, intent
@@ -138,7 +161,7 @@ class SqlAnalyticsService:
             params = {
                 "make": norm_make,
                 "model": norm_model,
-                "model_year": vehicle.model_year,
+                "model_year": model_year,
             }
             return t.sql.strip(), params, intent
 
@@ -147,7 +170,7 @@ class SqlAnalyticsService:
             params = {
                 "make": norm_make,
                 "model": norm_model,
-                "model_year": vehicle.model_year,
+                "model_year": model_year,
                 "limit": limit,
             }
             return t.sql.strip(), params, intent
@@ -157,7 +180,7 @@ class SqlAnalyticsService:
             params = {
                 "make": norm_make,
                 "model": norm_model,
-                "model_year": vehicle.model_year,
+                "model_year": model_year,
             }
             return t.sql.strip(), params, intent
 
@@ -174,7 +197,7 @@ class SqlAnalyticsService:
             params = {
                 "make": norm_make,
                 "model": norm_model,
-                "model_year": vehicle.model_year,
+                "model_year": model_year,
                 "limit": limit,
             }
             return t.sql.strip(), params, intent
@@ -196,6 +219,7 @@ class SqlAnalyticsService:
         latency_ms = int((time.time() - start_time) * 1000)
 
         # Build summary
+        confidence_label: ConfidenceLabel
         summary, sections, warnings, confidence_score, confidence_label = \
             self._summarize_result(question, parsed, execution)
 
@@ -243,7 +267,7 @@ class SqlAnalyticsService:
 
     def _summarize_result(
         self, question: str, parsed: ParsedQuestion, execution: ExecutionResult
-    ) -> tuple[str, list[AnswerSection], list[str], float, str]:
+    ) -> tuple[str, list[AnswerSection], list[str], float, ConfidenceLabel]:
         """Generate natural-language summary from SQL result."""
         vehicle_desc = ""
         if parsed.vehicle:
@@ -255,7 +279,7 @@ class SqlAnalyticsService:
         sections: list[AnswerSection] = []
         warnings: list[str] = []
         confidence_score = 0.7
-        confidence_label = "medium"
+        confidence_label: ConfidenceLabel = "medium"
 
         # Build warnings
         if "complaint" in parsed.intent.lower():

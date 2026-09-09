@@ -107,7 +107,7 @@ def build_graphrag_adapter(
         include_graph = arguments.get("include_graph", True)
 
         # Map operation to source_type
-        source_type = _operation_to_source_type(operation)
+        source_type = _operation_to_source_type(str(operation or ""))
 
         try:
             result = retrieval_fn(

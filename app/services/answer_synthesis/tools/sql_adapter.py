@@ -104,7 +104,9 @@ def build_sql_analytics_adapter(
 
         # Build a natural-language question from structured arguments
         # so we can reuse the existing Phase 2 parser and templates
-        question = _build_question(operation, make, model, model_year, component, limit)
+        question = _build_question(
+            str(operation or ""), make, model, model_year, component, limit
+        )
 
         session = session_factory()
         try:

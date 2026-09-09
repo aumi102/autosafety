@@ -144,6 +144,23 @@ class RecallNode:
     remedy: str | None = None
     units_affected: int | None = None
 
+    def to_dict(self) -> dict:
+        """Serialize one recall node.
+
+        `GET /v1/graph/vehicles/{id}/recall-paths` calls this per recall, as its
+        sibling node types allow. Without it that route raised AttributeError,
+        and `RecallPathResult.to_dict` carried a duplicated inline copy of this
+        mapping to work around the gap.
+        """
+        return {
+            "campaign_number": self.campaign_number,
+            "report_received_date": self.report_received_date,
+            "summary": self.summary,
+            "component": self.component,
+            "remedy": self.remedy,
+            "units_affected": self.units_affected,
+        }
+
 
 @dataclass
 class ComponentEvidence:
@@ -235,17 +252,7 @@ class RecallPathResult:
             "model": self.model,
             "year": self.year,
             "vehicle_id": self.vehicle_id,
-            "recalls": [
-                {
-                    "campaign_number": r.campaign_number,
-                    "report_received_date": r.report_received_date,
-                    "summary": r.summary,
-                    "component": r.component,
-                    "remedy": r.remedy,
-                    "units_affected": r.units_affected,
-                }
-                for r in self.recalls
-            ],
+            "recalls": [r.to_dict() for r in self.recalls],
             "path_type": self.path_type,
         }
 

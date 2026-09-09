@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
+from app.services.graphrag.document_builder import (
+    EvidenceDocument as EvidenceDocumentData,
+)
 from app.services.graphrag.models import (
     EvidenceChunk,
     EvidenceDocument,
@@ -73,7 +76,7 @@ class VectorStore:
 
     def upsert_document(
         self,
-        document: EvidenceDocument,
+        document: EvidenceDocumentData,
         chunks_data: list[dict],
         force_reembed: bool = False,
     ) -> tuple[str, int, int, int, int]:

@@ -28,7 +28,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy.orm import Session
 
@@ -272,7 +272,7 @@ class ExecutionAuditRecorder:
         def __enter__(self) -> Session:
             return self._session
 
-        def __exit__(self, exc_type, exc, tb) -> bool:
+        def __exit__(self, exc_type, exc, tb) -> Literal[False]:
             try:
                 if exc_type is None:
                     self._session.commit()

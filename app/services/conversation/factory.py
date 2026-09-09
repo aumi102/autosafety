@@ -21,6 +21,7 @@ from app.services.answer_synthesis.factory import (
 )
 from app.services.answer_synthesis.service import GuardedAnswerService
 from app.services.conversation.service import ConversationService
+from app.services.observability.context import AuditRecorder
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ def build_conversation_service(
     *,
     session_factory: Callable[[], Session] | None = None,
     guarded_service: GuardedAnswerService | None = None,
-    audit_recorder: object | None = None,
+    audit_recorder: AuditRecorder | None = None,
 ) -> ConversationService:
     """Build the application-owned Phase 8 service dependency.
 

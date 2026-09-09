@@ -14,11 +14,34 @@ from app.services.answer_contract import (
     AnswerResponse,
     AnswerSection,
     Confidence,
+    ConfidenceLabel,
     Evidence,
     GraphPath,
+    RelationSource,
     SqlResult,
 )
 from app.services.hybrid.hybrid_models import GraphEvidenceItem, HybridAnswerResult
+
+# `GraphEvidenceItem.relation_basis` is an internal, graph-layer label
+# ("official_recall_affects_vehicle", "complaint_mentions_component", ...).
+# `docs/contracts/answer_contract.md` allows only three values for the emitted
+# `relation_source`, so passing the internal label straight through put
+# out-of-contract strings into the public answer. Map instead of leaking.
+_RELATION_SOURCE_BY_BASIS: dict[str, RelationSource] = {
+    # Stated in the campaign record itself.
+    "official_recall_affects_vehicle": "source_record",
+    # Reached by joining on a normalized component name.
+    "complaint_mentions_component": "normalized_join",
+    "potentially_related_by_shared_component": "normalized_join",
+}
+
+
+def _relation_source(relation_basis: str | None) -> RelationSource:
+    """Map an internal relation basis onto the documented contract vocabulary."""
+    if not relation_basis:
+        return "source_record"
+    return _RELATION_SOURCE_BY_BASIS.get(relation_basis, "normalized_join")
+
 
 CAVEAT_COMPLAINT_VOLUME = (
     "Complaint volume alone does not prove a safety defect. "
@@ -95,7 +118,7 @@ def compose_hybrid_answer(
 
     # Confidence
     if sql_row_count > 0 and graph_items:
-        confidence_label = "high"
+        confidence_label: ConfidenceLabel = "high"
         confidence_score = 0.8
     elif sql_row_count > 0:
         confidence_label = "medium"
@@ -163,7 +186,7 @@ def compose_hybrid_answer(
         path_text = _build_path_text(item, sql_rows)
         graph_paths.append(GraphPath(
             path_text=path_text,
-            relation_source=item.relation_basis,
+            relation_source=_relation_source(item.relation_basis),
             confidence=0.7 if item.relation_basis == "potentially_related_by_shared_component" else 0.9,
         ))
 
