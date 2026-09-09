@@ -108,7 +108,11 @@ class AuditQuery:
             conversation_id=self.conversation_id,
             fallback_used=self.fallback_used,
             abstained=self.abstained,
-            since_hours=None if self.since_hours is None else max(1, min(int(self.since_hours), max_hours)),
+            since_hours=(
+                None
+                if self.since_hours is None
+                else max(1, min(int(self.since_hours), max_hours))
+            ),
         )
 
 

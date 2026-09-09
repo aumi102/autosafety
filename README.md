@@ -114,17 +114,25 @@ pytest tests/ -v
 
 ```bash
 curl http://localhost:8000/
-# {"message":"AutoSafety GraphQL Copilot","phase":"phase_0","version":"0.1.0"}
+# {"message":"AutoSafety GraphQL Copilot","phase":"phase_10","version":"0.1.0"}
 
 curl http://localhost:8000/healthz
-# {"status":"ok"}
+# {"status":"ok"}                     liveness only
 
-curl http://localhost:8000/readyz
-# {"status":"ready"}
+# Readiness actually probes dependencies since Phase 10, and returns 503 when a
+# required one is down. Only PostgreSQL is required.
+curl -i http://localhost:8000/readyz
+# 200 {"status":"ready","ready":true,"dependencies":[
+#       {"name":"postgresql","reachable":true,"required":true,...},
+#       {"name":"neo4j","reachable":true,"required":false,...}, ...]}
 
 curl http://localhost:8000/v1/health
 # {"status":"ok","version":"0.1.0"}
 ```
+
+Operator detail — Alembic revision, provider configuration shape, audit
+counters — lives behind the admin guard at `GET /v1/ops/diagnostics`. See
+`docs/phase10_operator_runbook.md`.
 
 ### API stubs (Phase 0)
 
@@ -926,7 +934,6 @@ Audit writes **fail open**: an audit outage never fails a user request.
   roles remain deferred.
 - Audit is fail-open by design, so a database outage loses audit rows while
   answers continue.
-- No audit read API exists; inspection is direct read-only SQL.
 - `agent_runs.total_tokens` stays unpopulated — provider token usage is
   deliberately not exposed.
 - Live model-driven `plan_tool_calls()` is still absent, and deterministic
@@ -934,3 +941,99 @@ Audit writes **fail open**: an audit outage never fails a user request.
 
 See `docs/phase9_design.md`, `docs/phase9_implementation_report.md`, and
 `docs/phase9_runtime_acceptance_report.md` for Phase 9 evidence.
+
+---
+
+## Phase 10: Maintainability and Operational Hardening
+
+Phase 10 makes the quality tooling real, fixes what it found, and gives
+operators the configuration and visibility they lacked. **No product feature
+was added.**
+
+### The gate that checked nothing
+
+`make lint` ran `ruff check autosafety/` — a directory that has never existed in
+this repository; the package is `app/`. Ruff exits 0 on a missing path, so the
+quality gate silently inspected nothing and passed for every phase from 0
+through 9. mypy was configured and installed, but no target ever invoked it.
+
+Pointing ruff at the real trees reported **1079 findings**, triaged rather than
+mass-formatted:
+
+```text
+626  fixed by ruff's safe autofix (behavior-preserving)
+ 42  correctness and style findings fixed by hand
+400  line-length findings -> `make lint-all` (advisory), not the enforced gate
+ 20  SQLAlchemy/enum idioms -> ignored with rationale in pyproject.toml
+~30  Alembic template artifacts -> narrow per-file ignores
+```
+
+`make lint` is now green across `app/`, `tests/`, `scripts/`, and `migrations/`.
+No exemption disables a correctness rule, and a test asserts that.
+
+### Three real defects it had been hiding
+
+- **A dead retrieval path.** `graph_service.get_vehicle_neighborhood` shadowed
+  the same-named import from `graph_queries`, so its internal call invoked
+  *itself* with the wrong signature. The `TypeError` was swallowed by a broad
+  `except`, and every vehicle-neighborhood lookup returned `None` while
+  appearing to work.
+- **A redaction gap.** The evidence-metadata denylist listed `"api_key"` twice.
+  Matching is substring-based, and `"api_key"` is not a substring of
+  `"apikey"` — so a key spelled `apiKey` was never redacted.
+- **A destructive target that destroyed nothing.** `make db-reset` ran
+  `rm -rf postgres_data …` against directories that do not exist, because
+  compose uses named volumes. It deleted nothing and reported success. It now
+  runs `docker compose down -v` and requires `CONFIRM=yes`.
+
+### Audit read access
+
+`docs/06_api_contract.md` had deferred `GET /v1/agent-runs/*` pending
+"authorization and redaction rules not yet defined". Phase 9 defined both, so
+Phase 10 implements it:
+
+```http
+GET /v1/agent-runs            list, filterable, bounded
+GET /v1/agent-runs/summary    aggregate counters
+GET /v1/agent-runs/{run_id}   one run with its tool calls
+```
+
+Admin-only, reusing the existing fail-closed guard — no second auth mechanism.
+Responses come from an explicit safe-field allowlist, so `input_json`,
+`output_json`, `intent`, and `warnings` can never be projected. Tests seed
+credentials, raw SQL, and raw Cypher into exactly those columns and assert none
+of it escapes.
+
+### Readiness that means something
+
+`/readyz` returned a hardcoded `{"status": "ready"}` regardless of whether any
+dependency was reachable, so an orchestrator kept routing traffic to an
+instance whose database was down. It now probes its dependencies and returns
+503 when a required one is unreachable. The public payload is booleans and
+coarse status words only; driver exceptions are reduced to a class name because
+SQLAlchemy and the Neo4j driver both embed host, port, and user in their
+messages.
+
+### Phase 10 results
+
+- 1039 tests pass (954 at entry, plus 85 new Phase 10 tests).
+- `make lint` green; `make lint-all` reports 398 line-length findings;
+  `make typecheck` reports 47 pre-existing mypy errors. Both are baselined, not
+  suppressed.
+- Live acceptance: audit routes 503 with no token, 200 with one, 404/422 on bad
+  input, and a privacy scan over live responses found zero forbidden markers.
+- Phase 7 and Phase 8 evaluations pass unchanged.
+
+### Current limitations
+
+- 398 line-length findings and 47 mypy errors remain, baselined and visible via
+  `make lint-all` / `make typecheck`.
+- `ADMIN_API_TOKEN` is unset in the development environment, so maintenance and
+  audit routes correctly fail closed until an operator sets one.
+- Audit writes remain fail-open by design.
+- `/v1/chat/*` is still deprecated but present; no doc defines a retirement
+  milestone.
+
+Operators start at `docs/phase10_operator_runbook.md`. Design rationale is in
+`docs/phase10_design.md`; evidence in
+`docs/phase10_runtime_acceptance_report.md`.

@@ -96,9 +96,10 @@ def ops_diagnostics() -> DiagnosticsResponse:
     settings = get_settings()
     report = readiness()
 
-    credential = getattr(settings, "PHASE7_PROVIDER_API_KEY", None)
-    if hasattr(credential, "get_secret_value"):
-        credential = credential.get_secret_value()
+    raw_credential = getattr(settings, "PHASE7_PROVIDER_API_KEY", None)
+    reveal = getattr(raw_credential, "get_secret_value", None)
+    # Resolved only to test presence; the value is never placed in a response.
+    credential = reveal() if callable(reveal) else raw_credential
 
     runs = failures = 0
     try:

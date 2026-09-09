@@ -135,7 +135,12 @@ never logged, never returned, never in the OpenAPI schema
 read-only routes are never gated
 ```
 
-Protected: ingestion runs, graph schema setup, graph build, graphrag index.
+Protected: ingestion runs, graph schema setup, graph build, graphrag index,
+and — added in Phase 10 — the execution audit routes (`GET /v1/agent-runs*`)
+and `GET /v1/ops/diagnostics`. Phase 10 introduces no second authorization
+mechanism: every one of those routes resolves the same `verify_admin_token`
+dependency, so an unconfigured deployment leaves the audit trail unreachable
+over HTTP rather than public.
 
 Not gated, by deliberate classification: conversation deletion (a privacy
 action scoped by an unguessable UUID) and the retention purge (service-only,
@@ -154,6 +159,33 @@ input_json / output_json written empty
 audit rows are never read back into an answer
 audit writes fail open: an audit outage never fails a user request
 ```
+
+### Audit read exposure (Phase 10)
+
+The admin-only `GET /v1/agent-runs*` routes project rows through an explicit
+safe-field allowlist rather than excluding known-bad columns, so a column added
+to `agent_runs` or `tool_calls` later cannot reach a response until it is added
+to that allowlist deliberately.
+
+```text
+never projected: input_json, output_json (always-empty Phase 9 legacy columns)
+                 intent, warnings        (copied from the guarded result; not
+                                          assumed free of user text)
+bounded:         limit <= 100, since_hours <= 90 days, <= 50 tool calls per run
+clamped twice:   the API rejects out-of-range values with 422, and
+                 AuditQuery.bounded() clamps again inside the reader
+read-only:       nothing in the read path writes, and no audit row is ever fed
+                 back into an answer
+```
+
+### Operational endpoint exposure (Phase 10)
+
+`/readyz` and `/v1/ops/readiness` are unauthenticated, so their payload is
+restricted to per-dependency booleans and a coarse status word. Driver
+exceptions are reduced to a class name and logged only: SQLAlchemy and the
+Neo4j driver both embed host, port, and user in their exception text.
+`/v1/ops/diagnostics` is admin-gated and reports configuration *shape* —
+`provider_credential_configured` is a boolean, never the credential.
 
 ## Observability requirements
 

@@ -8,12 +8,27 @@
 4. Persist every chat/agent run.
 5. Include evidence payloads by default for analyst views.
 
-## Health
+## Health and operations
 
 ```http
-GET /healthz
-GET /readyz
+GET /healthz                 liveness; static
+GET /readyz                  readiness; probes dependencies (Phase 10)
+GET /v1/ops/readiness        same report, structured
+GET /v1/ops/diagnostics      admin-only operational detail (Phase 10)
 ```
+
+`/readyz` returns **503** when a *required* dependency is unreachable. Only
+PostgreSQL is required; Neo4j, pgvector, and Redis are reported but degrade
+answer quality rather than removing the ability to answer. Before Phase 10 both
+routes returned a hardcoded `ok`/`ready` regardless of dependency state.
+
+The public readiness payload is deliberately thin — per-dependency booleans and
+a coarse status word (`timeout`, `unreachable`, `auth_failed`,
+`client_not_installed`, `error`). It never contains a connection string,
+hostname, port, credential, or driver exception text. Operators who need the
+Alembic revision, provider configuration shape, admin-protection state, or 24h
+audit counters use the admin-only `GET /v1/ops/diagnostics`, which reports
+credential *presence* as a boolean and never a value.
 
 ## Auth
 
@@ -96,9 +111,29 @@ always null because the guarded path never surfaces raw SQL.
 
 Migration path: `/v1/chat/*` -> `/v1/conversations/*`.
 
-`GET /v1/agent-runs/*` is **not implemented**. Phase 9 populates `agent_runs`
-and `tool_calls` as a database-only audit trail with no public read surface;
-exposing one requires authorization and redaction rules not yet defined.
+`GET /v1/agent-runs/*` is **implemented in Phase 10** and is admin-only. The
+authorization and redaction rules this was waiting on were defined by Phase 9
+(`docs/08_security_safety_guardrails.md`, sections "Maintenance/admin
+protection" and "Execution audit privacy"), so the surface is built on them:
+
+```http
+GET /v1/agent-runs                 list, newest first
+GET /v1/agent-runs/summary         aggregate counters over a window
+GET /v1/agent-runs/{run_id}        one run plus its tool calls
+```
+
+Filters: `status`, `provider`, `surface`, `conversation_id`, `fallback_used`,
+`abstained`, `since_hours`. Bounds: `limit` <= 100, `since_hours` <= 90 days,
+<= 50 tool calls per run. Out-of-range values are rejected with 422.
+
+Authorization is the same fail-closed `X-Admin-Token` guard used by the
+maintenance routes, so with no `ADMIN_API_TOKEN` configured these routes return
+503 and the audit trail is unreachable over HTTP.
+
+Responses are built from an explicit safe-field allowlist. `input_json`,
+`output_json`, `intent`, and `warnings` are never projected, so prompts,
+provider responses, tool arguments, raw SQL, raw Cypher, and credentials have
+no path into a response.
 
 ## Guarded multi-turn conversations (Phase 8)
 

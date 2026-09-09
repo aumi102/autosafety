@@ -29,4 +29,9 @@ Phase 8: multi-turn conversation    phase8_design.md,
 Phase 9: deployability, security,   phase9_design.md,
          observability              phase9_implementation_report.md,
                                     phase9_runtime_acceptance_report.md
+Phase 10: maintainability and       phase10_design.md,
+          operational hardening     phase10_runtime_acceptance_report.md,
+                                    phase10_operator_runbook.md
 ```
+
+Operators start at `phase10_operator_runbook.md`.

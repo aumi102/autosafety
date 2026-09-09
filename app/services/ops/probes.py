@@ -154,11 +154,18 @@ def probe_redis(settings: Settings | None = None) -> DependencyStatus:
             name="redis", reachable=False, required=False, detail="not_configured"
         )
 
+    try:
+        import redis  # type: ignore[import-not-found]  # optional, not a project dep
+    except ImportError:
+        # The client library is not a project dependency: Redis is provisioned
+        # by docker-compose but nothing on the answer path uses it yet. Say that
+        # plainly rather than reporting a generic probe error, which would send
+        # an operator looking for a network fault that does not exist.
+        return DependencyStatus(
+            name="redis", reachable=False, required=False, detail="client_not_installed"
+        )
+
     def _run() -> None:
-        try:
-            import redis  # noqa: PLC0415  (optional dependency)
-        except ImportError as exc:
-            raise RuntimeError("redis client not installed") from exc
         client = redis.Redis.from_url(url, socket_connect_timeout=PROBE_TIMEOUT_SECONDS)
         try:
             client.ping()
