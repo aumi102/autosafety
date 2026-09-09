@@ -15,7 +15,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings, get_settings
 from app.db.session import get_sync_engine
-from app.services.answer_synthesis.factory import get_guarded_answer_service
+from app.services.answer_synthesis.factory import (
+    build_execution_audit_recorder,
+    get_unaudited_guarded_answer_service,
+)
 from app.services.answer_synthesis.service import GuardedAnswerService
 from app.services.conversation.service import ConversationService
 
@@ -59,6 +62,7 @@ def build_conversation_service(
     *,
     session_factory: Callable[[], Session] | None = None,
     guarded_service: GuardedAnswerService | None = None,
+    audit_recorder: object | None = None,
 ) -> ConversationService:
     """Build the application-owned Phase 8 service dependency.
 
@@ -68,10 +72,19 @@ def build_conversation_service(
     resolved_settings = settings or get_settings()
     if session_factory is None:
         session_factory = sessionmaker(bind=get_sync_engine(), expire_on_commit=False)
+    if guarded_service is None:
+        # The unaudited graph: ConversationService opens its own Phase 9 audit
+        # run so it can link the persisted conversation and turn to it.
+        guarded_service = get_unaudited_guarded_answer_service()
+    if audit_recorder is None:
+        audit_recorder = build_execution_audit_recorder(
+            resolved_settings, session_factory=session_factory
+        )
     return ConversationService(
         session_factory=session_factory,
-        guarded_service=guarded_service or get_guarded_answer_service(),
+        guarded_service=guarded_service,
         settings=resolved_settings,
+        audit_recorder=audit_recorder,
     )
 
 

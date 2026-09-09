@@ -35,6 +35,14 @@ class ChatMessage(Base):
     __table_args__ = (CheckConstraint("role IN ('user', 'assistant', 'system')", name="chat_message_role_check"),)
 
 class AgentRun(Base):
+    """
+    Phase 9 — execution audit record for one guarded answer run.
+
+    Observability and audit only; never agent memory and never an input to a
+    later answer. Stores non-sensitive execution metadata: no prompt, no
+    provider raw response, no credential, no connection string, no raw SQL,
+    and no raw Cypher.
+    """
     __tablename__ = "agent_runs"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True)
@@ -45,17 +53,57 @@ class AgentRun(Base):
     warnings: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Phase 9 execution audit columns.
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    turn_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chat_turns.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    phase: Mapped[str] = mapped_column(String(20), nullable=True)
+    surface: Mapped[str] = mapped_column(String(32), nullable=True)
+    provider: Mapped[str] = mapped_column(String(64), nullable=True)
+    model: Mapped[str] = mapped_column(String(128), nullable=True)
+    synthesis_mode: Mapped[str] = mapped_column(String(20), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
+    tool_call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    fallback_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    abstained: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    abstention_reason: Mapped[str] = mapped_column(String(128), nullable=True)
+    confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
+    confidence_level: Mapped[str] = mapped_column(String(10), nullable=True)
+    validation_outcome: Mapped[str] = mapped_column(String(32), nullable=True)
+    error_code: Mapped[str] = mapped_column(String(64), nullable=True)
 
 class ToolCall(Base):
+    """
+    Phase 9 — execution audit record for one application-owned tool execution.
+
+    `input_json` and `output_json` predate Phase 9 and are deliberately left
+    empty: raw tool arguments and raw tool output are never persisted. Only
+    the allowlisted `operation` name and bounded counters are recorded.
+    """
     __tablename__ = "tool_calls"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False)
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False, index=True)
     tool_name: Mapped[str] = mapped_column(Text, nullable=False)
     input_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     output_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    # Phase 9 execution audit columns.
+    call_id: Mapped[str] = mapped_column(String(64), nullable=True)
+    operation: Mapped[str] = mapped_column(String(64), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    error_code: Mapped[str] = mapped_column(String(64), nullable=True)
+    evidence_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    truncated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    __table_args__ = (
+        UniqueConstraint("agent_run_id", "call_id", name="uq_tool_call_run_call_id"),
+    )
 
 
 class ChatTurn(Base):

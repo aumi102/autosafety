@@ -25,6 +25,8 @@ against the citations that turn actually retrieved.
 from __future__ import annotations
 
 import logging
+import time
+import uuid as uuid_module
 from collections.abc import Callable
 
 from sqlalchemy.orm import Session
@@ -53,6 +55,7 @@ from app.services.conversation.models import (
     TurnCitationProvenance,
 )
 from app.services.conversation.repository import ConversationRepository
+from app.services.observability.context import audit_run
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +83,14 @@ class ConversationService:
         session_factory: Callable[[], Session],
         guarded_service: GuardedAnswerService,
         settings: Settings | None = None,
+        audit_recorder: object | None = None,
     ):
         self._session_factory = session_factory
         self._guarded = guarded_service
         self._settings = settings or get_settings()
+        # Phase 9 execution audit. Optional: when absent nothing is recorded and
+        # behavior is identical. Audit never changes an answer.
+        self._audit = audit_recorder
 
     # ---------------------------------------------------------------- lifecycle
 
@@ -159,12 +166,17 @@ class ConversationService:
             max_context_chars=int(self._settings.PHASE8_MAX_CONTEXT_CHARS),
         )
 
+        audit = self._start_audit_run(resolved_conversation_id)
+        started = time.time()
         if not question:
             guarded = self._abstain(context.resolved_question, "empty_question")
         else:
             # Only the resolved question crosses this boundary. No prior user
             # text, no prior assistant text, and no prior citation is passed in.
-            guarded = self._guarded.answer(context.resolved_question)
+            # The audit run is scoped here so tool executions inside the guarded
+            # path are attributed to it.
+            with audit_run(audit):
+                guarded = self._guarded.answer(context.resolved_question)
 
         conversation_warnings: list[str] = []
         guarded, violation = self._enforce_turn_provenance(guarded)
@@ -173,13 +185,45 @@ class ConversationService:
         elif context.context_applied:
             conversation_warnings.append(CONTEXT_APPLIED_WARNING)
 
-        return self._persist_turn(
+        result = self._persist_turn(
             conversation_id=conversation_id,
             question=question,
             context=context,
             guarded=guarded,
             conversation_warnings=conversation_warnings,
         )
+        self._finish_audit_run(audit, guarded, result, started)
+        return result
+
+    # ------------------------------------------------------------------ audit
+
+    def _start_audit_run(self, conversation_id) -> object | None:
+        """Open a Phase 9 audit run. Never fails the request."""
+        if self._audit is None:
+            return None
+        try:
+            return self._audit.start_run(
+                surface="api_conversation", conversation_id=conversation_id
+            )
+        except Exception as exc:
+            logger.warning("Execution audit: run not opened (%s)", type(exc).__name__)
+            return None
+
+    def _finish_audit_run(self, audit, guarded, result, started: float) -> None:
+        """Close the audit run and link the persisted conversation and turn."""
+        if audit is None or self._audit is None:
+            return
+        try:
+            self._audit.finish_run(
+                audit.run_id, guarded, latency_ms=int((time.time() - started) * 1000)
+            )
+            self._audit.link_conversation_turn(
+                audit.run_id,
+                conversation_id=uuid_module.UUID(result.conversation_id),
+                turn_id=uuid_module.UUID(result.turn_id),
+            )
+        except Exception as exc:
+            logger.warning("Execution audit: run not finalized (%s)", type(exc).__name__)
 
     # ------------------------------------------------------------- provenance
 

@@ -18,6 +18,7 @@ from app.services.answer_synthesis.tools.base import (
     ToolExecutionPolicy,
 )
 from app.services.answer_synthesis.tools.argument_validator import validate_tool_arguments, ValidationResult
+from app.services.observability.context import notify_tool_call
 
 
 logger = logging.getLogger(__name__)
@@ -75,10 +76,13 @@ class ToolRegistry:
 
         # 1. Check registration
         if request.tool_name not in self._tools:
-            return ToolCallResult.validation_error(
-                request.call_id,
-                request.tool_name,
-                f"Unknown tool: '{request.tool_name}'. Available: {self._available_names()}",
+            return self._audited(
+                request,
+                ToolCallResult.validation_error(
+                    request.call_id,
+                    request.tool_name,
+                    f"Unknown tool: '{request.tool_name}'. Available: {self._available_names()}",
+                ),
             )
 
         definition, adapter = self._tools[request.tool_name]
@@ -86,10 +90,13 @@ class ToolRegistry:
         # 2. Validate arguments
         validation = validate_tool_arguments(definition, request.arguments)
         if not validation.valid:
-            return ToolCallResult.validation_error(
-                request.call_id,
-                request.tool_name,
-                "; ".join(str(e) for e in validation.errors),
+            return self._audited(
+                request,
+                ToolCallResult.validation_error(
+                    request.call_id,
+                    request.tool_name,
+                    "; ".join(str(e) for e in validation.errors),
+                ),
             )
 
         # 3. Execute adapter with timeout awareness
@@ -98,15 +105,28 @@ class ToolRegistry:
             elapsed_ms = int((time.time() - start) * 1000)
             if result.duration_ms == 0:
                 result.duration_ms = elapsed_ms
-            return result
+            return self._audited(request, result)
         except Exception as e:
             logger.warning(f"Tool adapter error for {request.tool_name}: {e}")
-            return ToolCallResult.error(
-                request.call_id,
-                request.tool_name,
-                "adapter_error",
-                f"Tool execution failed: {type(e).__name__}",
+            return self._audited(
+                request,
+                ToolCallResult.error(
+                    request.call_id,
+                    request.tool_name,
+                    "adapter_error",
+                    f"Tool execution failed: {type(e).__name__}",
+                ),
             )
+
+    @staticmethod
+    def _audited(request: ToolCallRequest, result: ToolCallResult) -> ToolCallResult:
+        """Report the execution to the Phase 9 audit side channel and return it.
+
+        A no-op when no audit run is in scope. Audit never alters the result and
+        never fails the call.
+        """
+        notify_tool_call(request, result)
+        return result
 
     def execute_batch(
         self,

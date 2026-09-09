@@ -27,6 +27,8 @@ from app.services.answer_synthesis.providers import (
 )
 from app.services.answer_synthesis.service import GuardedAnswerService
 from app.services.answer_synthesis.tools.registry import build_default_tool_registry
+from app.services.observability.audited import AuditedGuardedAnswerService
+from app.services.observability.recorder import ExecutionAuditRecorder
 from app.services.graph.neo4j_client import verify_connectivity
 from app.services.graphrag import retrieve_graphrag_evidence
 
@@ -121,10 +123,42 @@ def build_guarded_answer_service(
     return GuardedAnswerService(orchestrator)
 
 
+def build_execution_audit_recorder(
+    settings: Settings | None = None,
+    *,
+    session_factory: Callable | None = None,
+) -> ExecutionAuditRecorder:
+    """Build the Phase 9 execution audit recorder from trusted configuration."""
+    resolved = settings or get_settings()
+    if session_factory is None:
+        session_factory = sessionmaker(bind=get_sync_engine(), expire_on_commit=False)
+    return ExecutionAuditRecorder(
+        session_factory, enabled=bool(getattr(resolved, "PHASE9_AUDIT_ENABLED", True))
+    )
+
+
 @lru_cache(maxsize=1)
-def get_guarded_answer_service() -> GuardedAnswerService:
-    """Return one process-level service graph for FastAPI dependency injection."""
+def get_unaudited_guarded_answer_service() -> GuardedAnswerService:
+    """Return the single process-level Phase 7 service graph, without audit.
+
+    Callers that open their own Phase 9 audit run — the conversation service
+    does — must use this, so one execution never opens two nested audit runs.
+    """
     return build_guarded_answer_service()
+
+
+@lru_cache(maxsize=1)
+def get_guarded_answer_service():
+    """Return the audited process-level service for FastAPI dependency injection.
+
+    The wrapper is transparent: it forwards the question unchanged and returns
+    the guarded contract unchanged.
+    """
+    return AuditedGuardedAnswerService(
+        get_unaudited_guarded_answer_service(),
+        build_execution_audit_recorder(),
+        surface="api_guarded",
+    )
 
 
 def get_answer_synthesis_status(
