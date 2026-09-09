@@ -1,0 +1,170 @@
+name: CI
+
+# `docs/09_roadmap_phase0_phase1.md` task 10 and
+# `docs/prompts/phase0_bootstrap_prompt.md` task 10 both call for a GitHub
+# Actions workflow running lint, tests, and a migration check. It was never
+# built. `docs/phase7_closeout_report.md` additionally makes the Phase 7
+# evaluation and full regression mandatory CI gates. This workflow is those
+# deliverables.
+#
+# Secrets policy: this workflow requires none. No provider API key, no
+# ADMIN_API_TOKEN, no operator .env. Every job is deterministic after
+# dependency installation, and no job reaches an external LLM provider.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+# A newer push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # pyproject requires >=3.11, ruff targets py311, mypy is pinned to 3.11, and
+  # the Dockerfile is python:3.11-slim. One primary version, no matrix.
+  PYTHON_VERSION: "3.11"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  quality:
+    name: Lint, typecheck, tests, evaluations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Mirrors `make lint`. The enforced gate; expected green.
+      - name: Lint
+        run: ruff check app/ tests/ scripts/ migrations/
+
+      # Mirrors `make typecheck`. Zero errors since Phase 11.
+      - name: Typecheck
+        run: mypy app/
+
+      # The suite is hermetic: it passes with every container stopped, so no
+      # service containers are provisioned here.
+      - name: Tests
+        run: pytest tests/ -q
+
+      # Mandatory safety gates per docs/phase7_closeout_report.md. Both are
+      # offline and use the deterministic provider.
+      - name: Phase 7 guarded answer evaluation
+        run: python scripts/evaluate_phase7_answers.py
+
+      - name: Phase 8 multi-turn conversation evaluation
+        run: python scripts/evaluate_phase8_conversations.py
+
+      # The gate the whole repository depends on: a clone must be able to
+      # rebuild its schema. This asserts the revision chain offline; the
+      # `migrations` job below actually applies it.
+      - name: Migration chain (offline)
+        run: pytest tests/test_phase9_migrations.py -q
+
+  migrations:
+    name: Fresh-database migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # Same image as docker-compose.yml. Revision 0003 adds a `vector(384)`
+        # column, so a stock postgres image cannot apply the chain.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autosafety
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # Throwaway credentials for an ephemeral CI container. Not a secret, and
+      # not reused anywhere: the database is destroyed with the runner.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/autosafety
+      DATABASE_URL_SYNC: postgresql+psycopg2://postgres:postgres@localhost:5432/autosafety
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Enable pgvector
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d autosafety \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      - name: Exactly one head
+        run: |
+          heads=$(alembic heads | grep -c "(head)")
+          test "$heads" -eq 1 || { alembic heads; echo "expected one head, got $heads"; exit 1; }
+
+      # The Phase 9 gate: an empty database must reach head from tracked
+      # revisions alone.
+      - name: Migrate an empty database to head
+        run: alembic upgrade head
+
+      - name: Verify the schema was created
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+
+          engine = create_engine(os.environ["DATABASE_URL_SYNC"])
+          required = {
+              "complaints", "recalls", "vehicles", "evidence_documents",
+              "evidence_chunks", "source_runs", "chat_sessions", "chat_messages",
+              "agent_runs", "tool_calls",
+          }
+          with engine.connect() as connection:
+              tables = {
+                  row[0]
+                  for row in connection.execute(
+                      text("SELECT tablename FROM pg_tables WHERE schemaname='public'")
+                  )
+              }
+              revision = connection.execute(
+                  text("SELECT version_num FROM alembic_version")
+              ).scalar()
+              vector_columns = connection.execute(
+                  text(
+                      "SELECT count(*) FROM information_schema.columns "
+                      "WHERE table_name='evidence_chunks' AND udt_name='vector'"
+                  )
+              ).scalar()
+
+          missing = sorted(required - tables)
+          assert not missing, f"missing tables: {missing}"
+          assert vector_columns == 1, "pgvector column missing on evidence_chunks"
+          print(f"tables={len(tables)} revision={revision} pgvector=ok")
+          PY
+
+      # Downgrade is not exercised: the chain is forward-only by design and
+      # several revisions are additive-only.
+      - name: Re-running upgrade is a no-op
+        run: alembic upgrade head
