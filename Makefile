@@ -1,4 +1,4 @@
-.PHONY: install dev test lint lint-all lint-fix typecheck check clean \
+.PHONY: install dev test lint lint-all lint-fix typecheck evaluate check clean \
         db-up db-down db-reset migrate migrate-create \
         docker-up docker-down docker-build
 
@@ -37,16 +37,22 @@ lint-all:
 lint-fix:
 	ruff check $(LINT_PATHS) --fix
 
-# Advisory. mypy was configured in pyproject.toml from the start but no target
-# ever invoked it, so it had never run: it reports 47 pre-existing errors across
-# 16 files. Baselined in docs/phase10_design.md and deliberately kept out of
-# `check` until that debt is paid, rather than weakening the mypy settings to
-# manufacture a green result.
+# Enforced since Phase 11. mypy had never actually run before Phase 10 gave it a
+# target; it reported 47 errors, all now resolved without weakening the settings.
+# It is expected to stay at zero.
 typecheck:
 	mypy app/
 
-# What CI and a pre-push check should run. Both parts are expected to pass.
-check: lint test
+# Phase 7 and Phase 8 safety evaluations. docs/phase7_closeout_report.md makes
+# these mandatory CI gates. Both are fully offline: no database, no graph, no
+# external provider, no credential.
+evaluate:
+	python scripts/evaluate_phase7_answers.py
+	python scripts/evaluate_phase8_conversations.py
+
+# The canonical pre-commit gate. Every part is expected to pass, and CI runs the
+# same four commands. Nothing here needs Docker, a secret, or a paid provider.
+check: lint typecheck test evaluate
 
 clean:
 	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache
