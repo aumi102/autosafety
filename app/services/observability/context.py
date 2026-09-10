@@ -85,9 +85,7 @@ class AuditRecorder(Protocol):
     ) -> None: ...
 
 
-_current_run: ContextVar[AuditRunContext | None] = ContextVar(
-    "autosafety_audit_run", default=None
-)
+_current_run: ContextVar[AuditRunContext | None] = ContextVar("autosafety_audit_run", default=None)
 
 
 def current_run() -> AuditRunContext | None:

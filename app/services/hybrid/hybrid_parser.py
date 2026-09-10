@@ -12,17 +12,29 @@ from app.services.sql_analytics.question_parser import ParsedQuestion, parse_que
 
 # Hybrid keyword patterns — presence of these activates graph retrieval
 GRAPH_KEYWORDS = [
-    "related recall", "related recalls", "recall evidence",
-    "recall paths", "recall link", "recalls linked",
-    "associated recall", "associated recalls",
-    "connected recall", "graph evidence",
-    "recall connection", "complaint and recall",
-    "complaints and recalls", "recall pattern",
+    "related recall",
+    "related recalls",
+    "recall evidence",
+    "recall paths",
+    "recall link",
+    "recalls linked",
+    "associated recall",
+    "associated recalls",
+    "connected recall",
+    "graph evidence",
+    "recall connection",
+    "complaint and recall",
+    "complaints and recalls",
+    "recall pattern",
 ]
 
 SQL_ONLY_KEYWORDS = [
-    "only", "just sql", "no graph", "skip graph",
-    "without recalls", "without graph",
+    "only",
+    "just sql",
+    "no graph",
+    "skip graph",
+    "without recalls",
+    "without graph",
 ]
 
 
@@ -99,30 +111,44 @@ def _classify_hybrid_type(
         return "sql_only"
 
     # "top component with most complaints and related recalls"
-    if any(kw in text for kw in [
-        "top complaint component", "most complaints",
-        "top component", "component with most",
-    ]):
+    if any(
+        kw in text
+        for kw in [
+            "top complaint component",
+            "most complaints",
+            "top component",
+            "component with most",
+        ]
+    ):
         if any(kw in text for kw in ["recall", "related", "linked", "connection"]):
             return "top_complaint_component_with_related_recalls"
 
     # "complaints and recall evidence"
-    if any(kw in text for kw in [
-        "complaint and recall", "complaints and recall",
-        "recall evidence", "complaints and recalls",
-        "complaint and recalls",
-    ]):
+    if any(
+        kw in text
+        for kw in [
+            "complaint and recall",
+            "complaints and recall",
+            "recall evidence",
+            "complaints and recalls",
+            "complaint and recalls",
+        ]
+    ):
         return "complaint_count_with_related_recalls"
 
     # "does X have complaints and recalls"
-    if any(kw in text for kw in ["does", "have"]) and \
-       "complaint" in text and "recall" in text:
+    if any(kw in text for kw in ["does", "have"]) and "complaint" in text and "recall" in text:
         return "vehicle_recall_evidence"
 
     # "complaints by component with graph evidence"
-    if any(kw in text for kw in [
-        "by component", "component breakdown", "component complaints",
-    ]):
+    if any(
+        kw in text
+        for kw in [
+            "by component",
+            "component breakdown",
+            "component complaints",
+        ]
+    ):
         return "component_complaints_with_graph_evidence"
 
     # "vehicles with most complaints and recall evidence"

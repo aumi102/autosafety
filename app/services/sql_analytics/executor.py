@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExecutionResult:
     """Result of SQL execution."""
+
     columns: list[str] | None
     rows: list[dict] | None
     row_count: int

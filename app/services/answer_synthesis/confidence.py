@@ -53,7 +53,9 @@ def compute_confidence(
     score = 0.0
 
     n = sufficiency.evidence_count
-    retrieval_component = W_RETRIEVAL * min(1.0, n / 3.0) * max(0.3, min(1.0, sufficiency.max_retrieval_score))
+    retrieval_component = (
+        W_RETRIEVAL * min(1.0, n / 3.0) * max(0.3, min(1.0, sufficiency.max_retrieval_score))
+    )
     score += retrieval_component
     if retrieval_component > 0:
         reasons.append(f"retrieval strength from {n} evidence item(s)")
@@ -73,7 +75,9 @@ def compute_confidence(
     if coverage_component:
         reasons.append(f"citation coverage {validation.citation_coverage:.2f}")
 
-    claim_quality = (accepted_claim_count / considered_claim_count) if considered_claim_count else 0.0
+    claim_quality = (
+        (accepted_claim_count / considered_claim_count) if considered_claim_count else 0.0
+    )
     claim_component = W_CLAIM_QUALITY * claim_quality
     score += claim_component
     if claim_component:

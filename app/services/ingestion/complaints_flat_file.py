@@ -41,6 +41,7 @@ def utcnow() -> datetime:
 
 class ComplaintsFlatFileStats:
     """Track flat-file complaint ingestion statistics."""
+
     def __init__(self) -> None:
         self.vehicles_seen: int = 0
         self.complaint_rows_seen: int = 0
@@ -94,11 +95,15 @@ def _upsert_vehicle_from_complaint(
     norm_make = normalize_make(make)
     norm_model = normalize_model(model)
 
-    existing = session.query(Vehicle).filter_by(
-        normalized_make=norm_make,
-        normalized_model=norm_model,
-        model_year=model_year,
-    ).first()
+    existing = (
+        session.query(Vehicle)
+        .filter_by(
+            normalized_make=norm_make,
+            normalized_model=norm_model,
+            model_year=model_year,
+        )
+        .first()
+    )
     if existing:
         return existing
 
@@ -156,9 +161,7 @@ def _upsert_complaint(
 ) -> None:
     """Insert or skip complaint record."""
     # Check for existing complaint by source_record_key
-    existing = session.query(Complaint).filter_by(
-        source_record_key=source_record_key
-    ).first()
+    existing = session.query(Complaint).filter_by(source_record_key=source_record_key).first()
     if existing:
         stats.complaints_skipped_duplicates += 1
         return
@@ -201,11 +204,13 @@ def _load_seed_vehicles(seed_csv_path: str) -> list[tuple[str, str, int]]:
     with open(Path(seed_csv_path), newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            vehicles.append((
-                row["make"].strip(),
-                row["model"].strip(),
-                int(row["model_year"].strip()),
-            ))
+            vehicles.append(
+                (
+                    row["make"].strip(),
+                    row["model"].strip(),
+                    int(row["model_year"].strip()),
+                )
+            )
     return vehicles
 
 
@@ -324,22 +329,24 @@ def run_complaints_flat_file_ingestion(
 
                 raw_json = dict(row)
 
-                matched_rows.append({
-                    "make": make,
-                    "model": model,
-                    "model_year": model_year,
-                    "odi_number": odi_number,
-                    "component": component,
-                    "summary": summary,
-                    "crash_flag": crash,
-                    "fire_flag": fire,
-                    "injury_flag": injury,
-                    "death_flag": death,
-                    "received_date": received_date,
-                    "incident_date": incident_date,
-                    "source_url": source_url,
-                    "raw_json": raw_json,
-                })
+                matched_rows.append(
+                    {
+                        "make": make,
+                        "model": model,
+                        "model_year": model_year,
+                        "odi_number": odi_number,
+                        "component": component,
+                        "summary": summary,
+                        "crash_flag": crash,
+                        "fire_flag": fire,
+                        "injury_flag": injury,
+                        "death_flag": death,
+                        "received_date": received_date,
+                        "incident_date": incident_date,
+                        "source_url": source_url,
+                        "raw_json": raw_json,
+                    }
+                )
 
                 seen_vehicle_keys.add(seed_key)
 
@@ -378,7 +385,11 @@ def run_complaints_flat_file_ingestion(
 
         for row in matched_rows:
             # Get or create vehicle
-            cache_key = (normalize_make(row["make"]), _strip_model_for_matching(normalize_model(row["model"])), row["model_year"])
+            cache_key = (
+                normalize_make(row["make"]),
+                _strip_model_for_matching(normalize_model(row["model"])),
+                row["model_year"],
+            )
             if cache_key in vehicle_cache:
                 vehicle_id = vehicle_cache[cache_key]
             else:
@@ -387,7 +398,9 @@ def run_complaints_flat_file_ingestion(
                 )
                 if not vehicle:
                     stats.errors_count += 1
-                    stats.errors.append(f"Failed to upsert vehicle: {row['make']} {row['model']} {row['model_year']}")
+                    stats.errors.append(
+                        f"Failed to upsert vehicle: {row['make']} {row['model']} {row['model_year']}"
+                    )
                     continue
                 vehicle_id = vehicle.id
                 vehicle_cache[cache_key] = vehicle_id

@@ -25,6 +25,7 @@ REQUEST_TIMEOUT = 30.0
 
 class NhtsaApiError(Exception):
     """Raised when NHTSA API returns an error."""
+
     def __init__(self, message: str, status_code: int | None = None):
         super().__init__(message)
         self.status_code = status_code
@@ -33,6 +34,7 @@ class NhtsaApiError(Exception):
 @dataclass
 class NhtsaVehicle:
     """Vehicle descriptor used for API queries."""
+
     make: str
     model: str
     model_year: int
@@ -41,6 +43,7 @@ class NhtsaVehicle:
 @dataclass
 class NhtsaComplaintRecord:
     """Normalized complaint record from NHTSA API."""
+
     odi_number: str | None = None
     make: str | None = None
     model: str | None = None
@@ -60,6 +63,7 @@ class NhtsaComplaintRecord:
 @dataclass
 class NhtsaRecallRecord:
     """Normalized recall record from NHTSA API."""
+
     campaign_number: str | None = None
     make: str | None = None
     model: str | None = None
@@ -149,7 +153,9 @@ def fetch_complaints_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaComplaintRec
         with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
             response = client.get(NHTSA_COMPLAINTS_API, params=params)
     except httpx.TimeoutException:
-        raise NhtsaApiError(f"Timeout fetching complaints for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+        raise NhtsaApiError(
+            f"Timeout fetching complaints for {vehicle.make} {vehicle.model} {vehicle.model_year}"
+        )
     except httpx.RequestError as e:
         raise NhtsaApiError(f"Network error fetching complaints: {e}")
 
@@ -158,7 +164,9 @@ def fetch_complaints_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaComplaintRec
         try:
             body = response.json()
             if body.get("message", "").startswith("Results returned successfully"):
-                logger.info(f"No complaints found for {vehicle.make} {vehicle.model} {vehicle.model_year} (API returned 400 with empty results)")
+                logger.info(
+                    f"No complaints found for {vehicle.make} {vehicle.model} {vehicle.model_year} (API returned 400 with empty results)"
+                )
                 return []
         except Exception:
             pass
@@ -177,7 +185,9 @@ def fetch_complaints_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaComplaintRec
     results = data.get("results", [])
 
     if results is None:
-        logger.warning(f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+        logger.warning(
+            f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}"
+        )
         return []
 
     records = []
@@ -214,7 +224,9 @@ def fetch_recalls_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaRecallRecord]:
         with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
             response = client.get(NHTSA_RECALLS_API, params=params)
     except httpx.TimeoutException:
-        raise NhtsaApiError(f"Timeout fetching recalls for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+        raise NhtsaApiError(
+            f"Timeout fetching recalls for {vehicle.make} {vehicle.model} {vehicle.model_year}"
+        )
     except httpx.RequestError as e:
         raise NhtsaApiError(f"Network error fetching recalls: {e}")
 
@@ -228,7 +240,9 @@ def fetch_recalls_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaRecallRecord]:
     results = data.get("results", [])
 
     if results is None:
-        logger.warning(f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}")
+        logger.warning(
+            f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}"
+        )
         return []
 
     records = []

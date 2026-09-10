@@ -35,47 +35,49 @@ SQL_ANALYTICS_DEFINITION = ToolDefinition(
         "Operations return tables of counts, rankings, and lists. "
         "No raw SQL — uses predefined templates only."
     ),
-    input_schema=ToolInputSchema(fields={
-        "operation": ToolInputField(
-            type="enum",
-            description="Analytics operation to execute",
-            required=True,
-            enum_values=SUPPORTED_OPERATIONS,
-        ),
-        "make": ToolInputField(
-            type="string",
-            description="Vehicle make (e.g. Ford)",
-            required=False,
-            max_length=50,
-        ),
-        "model": ToolInputField(
-            type="string",
-            description="Vehicle model (e.g. F-150)",
-            required=False,
-            max_length=50,
-        ),
-        "model_year": ToolInputField(
-            type="integer",
-            description="Vehicle model year (e.g. 2020)",
-            required=False,
-            min_value=1990,
-            max_value=2030,
-        ),
-        "component": ToolInputField(
-            type="string",
-            description="Component name for component-specific queries",
-            required=False,
-            max_length=100,
-        ),
-        "limit": ToolInputField(
-            type="integer",
-            description="Maximum rows to return (default 10, max 50)",
-            required=False,
-            default=10,
-            min_value=1,
-            max_value=50,
-        ),
-    }),
+    input_schema=ToolInputSchema(
+        fields={
+            "operation": ToolInputField(
+                type="enum",
+                description="Analytics operation to execute",
+                required=True,
+                enum_values=SUPPORTED_OPERATIONS,
+            ),
+            "make": ToolInputField(
+                type="string",
+                description="Vehicle make (e.g. Ford)",
+                required=False,
+                max_length=50,
+            ),
+            "model": ToolInputField(
+                type="string",
+                description="Vehicle model (e.g. F-150)",
+                required=False,
+                max_length=50,
+            ),
+            "model_year": ToolInputField(
+                type="integer",
+                description="Vehicle model year (e.g. 2020)",
+                required=False,
+                min_value=1990,
+                max_value=2030,
+            ),
+            "component": ToolInputField(
+                type="string",
+                description="Component name for component-specific queries",
+                required=False,
+                max_length=100,
+            ),
+            "limit": ToolInputField(
+                type="integer",
+                description="Maximum rows to return (default 10, max 50)",
+                required=False,
+                default=10,
+                min_value=1,
+                max_value=50,
+            ),
+        }
+    ),
     read_only=True,
     max_result_items=50,
     timeout_seconds=15,
@@ -92,6 +94,7 @@ def build_sql_analytics_adapter(
         session_factory: callable returning a SQLAlchemy session.
                         The session is closed after each call.
     """
+
     def adapter(*, call_id: str, arguments: dict[str, Any]) -> ToolCallResult:
         from sqlalchemy.exc import SQLAlchemyError
 
@@ -104,13 +107,12 @@ def build_sql_analytics_adapter(
 
         # Build a natural-language question from structured arguments
         # so we can reuse the existing Phase 2 parser and templates
-        question = _build_question(
-            str(operation or ""), make, model, model_year, component, limit
-        )
+        question = _build_question(str(operation or ""), make, model, model_year, component, limit)
 
         session = session_factory()
         try:
             from app.services.sql_analytics.service import SqlAnalyticsService
+
             service = SqlAnalyticsService(session)
             response = service.answer(question)
 
@@ -136,17 +138,21 @@ def build_sql_analytics_adapter(
             }
 
             warnings = list(response.warnings or [])
-            return ToolCallResult.ok(call_id, "sql_analytics_tool", result_data, warnings, truncated)
+            return ToolCallResult.ok(
+                call_id, "sql_analytics_tool", result_data, warnings, truncated
+            )
 
         except SQLAlchemyError as e:
             return ToolCallResult.error(
-                call_id, "sql_analytics_tool",
+                call_id,
+                "sql_analytics_tool",
                 "db_error",
                 f"Database error: {type(e).__name__}",
             )
         except Exception as e:
             return ToolCallResult.error(
-                call_id, "sql_analytics_tool",
+                call_id,
+                "sql_analytics_tool",
                 "adapter_error",
                 f"SQL analytics adapter error: {type(e).__name__}",
             )

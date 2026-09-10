@@ -23,6 +23,7 @@ HYBRID_INTENTS = {
 @dataclass
 class HybridIntent:
     """Result of parsing a hybrid question."""
+
     # Base SQL intent from Phase 2 parser
     sql_intent: str  # e.g. "top_complaint_components_by_vehicle"
     # Hybrid subtype
@@ -39,11 +40,14 @@ class HybridIntent:
 @dataclass
 class GraphEvidenceItem:
     """A single evidence item from graph retrieval."""
+
     path_type: str  # e.g. "potentially related by shared vehicle/component"
     nodes: list[dict] = field(default_factory=list)
     relationships: list[dict] = field(default_factory=list)
     recall_campaigns: list[str] = field(default_factory=list)
-    relation_basis: str = "unknown"  # official_recall_affects_vehicle | potentially_related_by_shared_component
+    relation_basis: str = (
+        "unknown"  # official_recall_affects_vehicle | potentially_related_by_shared_component
+    )
     summary: str = ""
 
     def to_dict(self) -> dict:
@@ -60,6 +64,7 @@ class GraphEvidenceItem:
 @dataclass
 class HybridAnswerResult:
     """Result of answering a hybrid question."""
+
     sql_response: dict  # from Phase 2 answer_sql_analytics_question
     graph_evidence: list[GraphEvidenceItem] = field(default_factory=list)
     neo4j_available: bool = True

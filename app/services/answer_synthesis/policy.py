@@ -16,16 +16,18 @@ from app.services.answer_synthesis.guarded_models import EvidenceSufficiencyResu
 # Claim type allowlist
 # =============================================================================
 
-CLAIM_TYPES: frozenset[str] = frozenset({
-    "complaint_observation",
-    "complaint_component_observation",
-    "official_recall",
-    "official_recall_applicability",
-    "potential_shared_component_association",
-    "sql_fact",
-    "data_limitation",
-    "synthesis_summary",
-})
+CLAIM_TYPES: frozenset[str] = frozenset(
+    {
+        "complaint_observation",
+        "complaint_component_observation",
+        "official_recall",
+        "official_recall_applicability",
+        "potential_shared_component_association",
+        "sql_fact",
+        "data_limitation",
+        "synthesis_summary",
+    }
+)
 
 # Claim types a provider might plausibly emit that map onto the allowlist.
 CLAIM_TYPE_ALIASES: dict[str, str] = {
@@ -53,6 +55,7 @@ def normalize_claim_type(raw: str) -> str | None:
 # Question intent classification
 # =============================================================================
 
+
 @dataclass
 class QuestionIntent:
     is_causal: bool
@@ -62,14 +65,31 @@ class QuestionIntent:
 
 
 _CAUSAL_KEYWORDS = (
-    "why did", "why do", "why does", "why is", "why are",
-    "what caused", "what causes", "caused by", "cause of", "reason for",
-    "cause the", "causes the", "caused the", "cause this", "reason why",
+    "why did",
+    "why do",
+    "why does",
+    "why is",
+    "why are",
+    "what caused",
+    "what causes",
+    "caused by",
+    "cause of",
+    "reason for",
+    "cause the",
+    "causes the",
+    "caused the",
+    "cause this",
+    "reason why",
 )
 _RECALL_KEYWORDS = ("recall", "campaign")
 _APPLICABILITY_KEYWORDS = (
-    "apply to", "applies to", "affected by", "does it affect",
-    "is my vehicle", "does the recall apply", "affects my",
+    "apply to",
+    "applies to",
+    "affected by",
+    "does it affect",
+    "is my vehicle",
+    "does the recall apply",
+    "affects my",
 )
 _COMPLAINT_KEYWORDS = ("complaint", "complaints")
 
@@ -95,6 +115,7 @@ def classify_question_intent(question: str) -> QuestionIntent:
 # =============================================================================
 # Evidence sufficiency gate
 # =============================================================================
+
 
 def evaluate_sufficiency(
     *,
@@ -161,8 +182,12 @@ def evaluate_sufficiency(
     if intent.is_causal:
         reasons.append("causal_conclusion_unsupported")
 
-    if weak or "official_applicability_unverified" in reasons or \
-            "no_recall_evidence_for_recall_question" in reasons or intent.is_causal:
+    if (
+        weak
+        or "official_applicability_unverified" in reasons
+        or "no_recall_evidence_for_recall_question" in reasons
+        or intent.is_causal
+    ):
         status = "partial"
     else:
         status = "sufficient"
@@ -195,8 +220,7 @@ SHARED_COMPONENT_WARNING = (
     "causality or official linkage."
 )
 GRAPH_UNAVAILABLE_WARNING = (
-    "Graph-based applicability could not be verified because the graph "
-    "database was unavailable."
+    "Graph-based applicability could not be verified because the graph database was unavailable."
 )
 NO_AFFECTS_WARNING = (
     "Official vehicle applicability was not verified because no official "
@@ -206,18 +230,12 @@ RELATED_TO_COMPONENT_WARNING = (
     "Recall component relations are unavailable because source recall "
     "component fields are missing in current data."
 )
-FALLBACK_WARNING = (
-    "LLM synthesis was unavailable or invalid; deterministic synthesis was used."
-)
-REPAIRED_WARNING = (
-    "Generated output required application-level correction before acceptance."
-)
+FALLBACK_WARNING = "LLM synthesis was unavailable or invalid; deterministic synthesis was used."
+REPAIRED_WARNING = "Generated output required application-level correction before acceptance."
 PARTIAL_EVIDENCE_WARNING = (
     "This answer is limited to the available evidence and may not be complete."
 )
-CAUSAL_LIMITATION_WARNING = (
-    "Available evidence cannot establish causality."
-)
+CAUSAL_LIMITATION_WARNING = "Available evidence cannot establish causality."
 
 
 def build_mandatory_warnings(

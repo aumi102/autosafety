@@ -22,6 +22,7 @@ class GraphRelStats:
 @dataclass
 class GraphBuildStats:
     """Statistics from a graph build run."""
+
     vehicle_makes_seen: int = 0
     vehicle_models_seen: int = 0
     model_years_seen: int = 0
@@ -72,6 +73,7 @@ class GraphBuildStats:
 @dataclass
 class GraphStatus:
     """Current status of the graph database."""
+
     neo4j_connected: bool
     node_count: int
     relationship_count: int
@@ -90,7 +92,9 @@ class GraphStatus:
             "node_count": self.node_count,
             "relationship_count": self.relationship_count,
             "node_labels": [{"label": n.label, "count": n.count} for n in self.node_labels],
-            "relationship_types": [{"type": r.type, "count": r.count} for r in self.relationship_types],
+            "relationship_types": [
+                {"type": r.type, "count": r.count} for r in self.relationship_types
+            ],
             "postgres_vehicle_count": self.postgres_vehicle_count,
             "postgres_complaint_count": self.postgres_complaint_count,
             "postgres_recall_count": self.postgres_recall_count,
@@ -165,6 +169,7 @@ class RecallNode:
 @dataclass
 class ComponentEvidence:
     """Component-level evidence from graph retrieval."""
+
     make: str
     model: str
     year: int
@@ -212,6 +217,7 @@ class NeighborhoodEdge:
 @dataclass
 class VehicleNeighborhood:
     """Vehicle neighborhood from graph retrieval."""
+
     make: str
     model: str
     year: int
@@ -229,7 +235,15 @@ class VehicleNeighborhood:
             "year": self.year,
             "vehicle_id": self.vehicle_id,
             "nodes": [n.to_dict() for n in self.nodes],
-            "edges": [{"type": e.type, "source_id": e.source_id, "target_id": e.target_id, "properties": e.properties} for e in self.edges],
+            "edges": [
+                {
+                    "type": e.type,
+                    "source_id": e.source_id,
+                    "target_id": e.target_id,
+                    "properties": e.properties,
+                }
+                for e in self.edges
+            ],
             "complaint_count": self.complaint_count,
             "recall_count": self.recall_count,
             "components": self.components,
@@ -239,6 +253,7 @@ class VehicleNeighborhood:
 @dataclass
 class RecallPathResult:
     """Recall paths for a vehicle from graph retrieval."""
+
     make: str
     model: str
     year: int

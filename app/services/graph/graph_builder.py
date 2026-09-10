@@ -82,9 +82,9 @@ def build_graph(
                 stats.vehicle_makes_seen += 1
                 stats.vehicle_models_seen += 1
                 stats.model_years_seen += 1
-                complaint_count = pg_session.query(Complaint).filter(
-                    Complaint.vehicle_id == vehicle.id
-                ).count()
+                complaint_count = (
+                    pg_session.query(Complaint).filter(Complaint.vehicle_id == vehicle.id).count()
+                )
                 stats.complaints_seen += complaint_count
                 stats.complaint_component_links_seen += complaint_count
                 stats.nodes_merged += 1  # ModelYear node
@@ -101,8 +101,12 @@ def build_graph(
         for vehicle in vehicles:
             try:
                 _process_vehicle(
-                    vehicle, pg_session, neo4j_client,
-                    component_map, recall_map, stats,
+                    vehicle,
+                    pg_session,
+                    neo4j_client,
+                    component_map,
+                    recall_map,
+                    stats,
                 )
             except Exception as e:
                 stats.errors_count += 1
@@ -182,9 +186,7 @@ def _build_recall_map(session: Session, errors: list[str]) -> dict[str, dict]:
                     "id": str(recall.id),
                     "campaign_number": recall.campaign_number,
                     "component_id": str(recall.component_id) if recall.component_id else None,
-                    "component_normalized": (
-                        None if not recall.component_id else None
-                    ),
+                    "component_normalized": (None if not recall.component_id else None),
                     "original_component": recall.original_component,
                     "summary": recall.summary,
                     "remedy": recall.remedy,
@@ -200,9 +202,8 @@ def _build_recall_map(session: Session, errors: list[str]) -> dict[str, dict]:
 
 def _fetch_vehicles(session: Session, limit: int | None) -> Iterator[Vehicle]:
     """Fetch vehicles ordered by make/model/year."""
-    stmt = (
-        select(Vehicle)
-        .order_by(Vehicle.normalized_make, Vehicle.normalized_model, Vehicle.model_year)
+    stmt = select(Vehicle).order_by(
+        Vehicle.normalized_make, Vehicle.normalized_model, Vehicle.model_year
     )
     if limit:
         stmt = stmt.limit(limit)
@@ -292,32 +293,38 @@ def _process_vehicle(
     stats.relationships_merged += 1
 
     # ── MERGE Complaints ──────────────────────────────────────────────────────
-    complaints = pg_session.query(Complaint).filter(
-        Complaint.vehicle_id == vehicle.id
-    ).all()
+    complaints = pg_session.query(Complaint).filter(Complaint.vehicle_id == vehicle.id).all()
 
     for complaint in complaints:
         stats.complaints_seen += 1
         try:
             _upsert_complaint(
-                complaint, neo4j_client, year_key,
-                component_map, stats,
+                complaint,
+                neo4j_client,
+                year_key,
+                component_map,
+                stats,
             )
         except Exception as e:
             stats.errors_count += 1
             stats.errors.append(f"Complaint {complaint.id}: {e}")
 
     # ── MERGE RecallVehicleLinks (recalls that AFFECT this vehicle) ──────────
-    recall_links = pg_session.query(RecallVehicleLink).filter(
-        RecallVehicleLink.vehicle_id == vehicle.id
-    ).all()
+    recall_links = (
+        pg_session.query(RecallVehicleLink).filter(RecallVehicleLink.vehicle_id == vehicle.id).all()
+    )
 
     for link in recall_links:
-        recall = recall_map.get(link.recall_id.hex if hasattr(link.recall_id, 'hex') else str(link.recall_id))
+        recall = recall_map.get(
+            link.recall_id.hex if hasattr(link.recall_id, "hex") else str(link.recall_id)
+        )
         if recall:
             _upsert_recall_and_affects(
-                recall, year_key, component_map,
-                neo4j_client, stats,
+                recall,
+                year_key,
+                component_map,
+                neo4j_client,
+                stats,
             )
         else:
             # Try fetching from DB
@@ -327,7 +334,9 @@ def _process_vehicle(
                     {
                         "id": str(recall_obj.id),
                         "campaign_number": recall_obj.campaign_number,
-                        "component_id": str(recall_obj.component_id) if recall_obj.component_id else None,
+                        "component_id": str(recall_obj.component_id)
+                        if recall_obj.component_id
+                        else None,
                         "original_component": recall_obj.original_component,
                         "summary": recall_obj.summary,
                         "remedy": recall_obj.remedy,
@@ -336,7 +345,10 @@ def _process_vehicle(
                         "report_received_date": _date_str(recall_obj.report_received_date),
                         "source_url": recall_obj.source_url,
                     },
-                    year_key, component_map, neo4j_client, stats,
+                    year_key,
+                    component_map,
+                    neo4j_client,
+                    stats,
                 )
 
 
@@ -386,6 +398,7 @@ def _upsert_complaint(
     # Link Complaint → Component (MENTIONS_COMPONENT)
     if complaint.original_component:
         from app.services.ingestion.normalization import normalize_component_name
+
         norm = normalize_component_name(complaint.original_component)
         comp_data = component_map.get(norm) if norm else None
         if comp_data and norm:
@@ -455,6 +468,7 @@ def _upsert_recall_and_affects(
     # Link Recall → Component (RELATED_TO_COMPONENT) if known
     if recall_data.get("original_component"):
         from app.services.ingestion.normalization import normalize_component_name
+
         norm = normalize_component_name(recall_data["original_component"])
         comp_data = component_map.get(norm) if norm else None
         if comp_data and norm:

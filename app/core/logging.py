@@ -29,6 +29,7 @@ def setup_logging() -> None:
         cache_logger_on_first_use=True,
     )
 
+
 def get_logger(name: str) -> logging.Logger:
     logger: logging.Logger = structlog.get_logger(name)
     return logger

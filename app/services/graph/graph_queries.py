@@ -28,7 +28,7 @@ def _validate_identifier(value: str, field_name: str) -> str:
     if not value or not value.strip():
         raise ValueError(f"{field_name} cannot be empty")
     # Only allow alphanumeric, dash, underscore, space, colon
-    if not re.match(r'^[\w\-\s:]+$', value):
+    if not re.match(r"^[\w\-\s:]+$", value):
         raise ValueError(f"Invalid characters in {field_name}: {value!r}")
     return value.strip()
 
@@ -121,79 +121,100 @@ def get_vehicle_neighborhood(
     components: list[str] = []
 
     # Add VehicleMake node
-    nodes.append(NeighborhoodNode(
-        id=result["make_name"],
-        label="VehicleMake",
-        properties={"normalized_name": result["make_name"], "name": result.get("make_display", result["make_name"])},
-    ))
+    nodes.append(
+        NeighborhoodNode(
+            id=result["make_name"],
+            label="VehicleMake",
+            properties={
+                "normalized_name": result["make_name"],
+                "name": result.get("make_display", result["make_name"]),
+            },
+        )
+    )
 
     # Add VehicleModel node
-    nodes.append(NeighborhoodNode(
-        id=result["model_name"],
-        label="VehicleModel",
-        properties={"normalized_name": result["model_name"]},
-    ))
+    nodes.append(
+        NeighborhoodNode(
+            id=result["model_name"],
+            label="VehicleModel",
+            properties={"normalized_name": result["model_name"]},
+        )
+    )
 
     # Add ModelYear node
     year_id = result["vehicle_id"] or year_key
-    nodes.append(NeighborhoodNode(
-        id=year_id,
-        label="ModelYear",
-        properties={"year": result["model_year"], "vehicle_id": result["vehicle_id"]},
-    ))
+    nodes.append(
+        NeighborhoodNode(
+            id=year_id,
+            label="ModelYear",
+            properties={"year": result["model_year"], "vehicle_id": result["vehicle_id"]},
+        )
+    )
 
     complaint_count = result.get("complaint_count", 0) or 0
     recall_count = result.get("recall_count", 0) or 0
 
     # Add complaint nodes and edges
-    for c_data in (result.get("complaints") or []):
+    for c_data in result.get("complaints") or []:
         if c_data and c_data.get("id"):
             props = c_data.get("properties") or {}
-            nodes.append(NeighborhoodNode(
-                id=str(c_data["id"]),
-                label="Complaint",
-                properties={k: v for k, v in props.items() if v is not None},
-            ))
-            edges.append(NeighborhoodEdge(
-                type="HAS_COMPLAINT",
-                source_id=year_id,
-                target_id=str(c_data["id"]),
-            ))
+            nodes.append(
+                NeighborhoodNode(
+                    id=str(c_data["id"]),
+                    label="Complaint",
+                    properties={k: v for k, v in props.items() if v is not None},
+                )
+            )
+            edges.append(
+                NeighborhoodEdge(
+                    type="HAS_COMPLAINT",
+                    source_id=year_id,
+                    target_id=str(c_data["id"]),
+                )
+            )
 
             comp_props = props.get("component_normalized_name")
             if comp_props:
-                edges.append(NeighborhoodEdge(
-                    type="MENTIONS_COMPONENT",
-                    source_id=str(c_data["id"]),
-                    target_id=comp_props,
-                ))
+                edges.append(
+                    NeighborhoodEdge(
+                        type="MENTIONS_COMPONENT",
+                        source_id=str(c_data["id"]),
+                        target_id=comp_props,
+                    )
+                )
 
     # Add recall nodes and edges
-    for r_data in (result.get("recalls") or []):
+    for r_data in result.get("recalls") or []:
         if r_data and r_data.get("id"):
             props = r_data.get("properties") or {}
-            nodes.append(NeighborhoodNode(
-                id=str(r_data["id"]),
-                label="Recall",
-                properties={k: v for k, v in props.items() if v is not None},
-            ))
-            edges.append(NeighborhoodEdge(
-                type="AFFECTS",
-                source_id=str(r_data["id"]),
-                target_id=year_id,
-            ))
+            nodes.append(
+                NeighborhoodNode(
+                    id=str(r_data["id"]),
+                    label="Recall",
+                    properties={k: v for k, v in props.items() if v is not None},
+                )
+            )
+            edges.append(
+                NeighborhoodEdge(
+                    type="AFFECTS",
+                    source_id=str(r_data["id"]),
+                    target_id=year_id,
+                )
+            )
 
     # Add component nodes
-    for comp_data in (result.get("components") or []):
+    for comp_data in result.get("components") or []:
         if comp_data and comp_data.get("id"):
             props = comp_data.get("properties") or {}
             if props.get("normalized_name"):
                 components.append(props["normalized_name"])
-                nodes.append(NeighborhoodNode(
-                    id=props["normalized_name"],
-                    label="Component",
-                    properties={k: v for k, v in props.items() if v is not None},
-                ))
+                nodes.append(
+                    NeighborhoodNode(
+                        id=props["normalized_name"],
+                        label="Component",
+                        properties={k: v for k, v in props.items() if v is not None},
+                    )
+                )
 
     return VehicleNeighborhood(
         make=result["make_name"],
@@ -272,17 +293,19 @@ def get_recall_paths_for_vehicle(
         return None
 
     recalls: list[RecallNode] = []
-    for r_data in (result.get("recalls") or []):
+    for r_data in result.get("recalls") or []:
         if r_data and r_data.get("id"):
             props = r_data.get("properties") or {}
-            recalls.append(RecallNode(
-                campaign_number=str(r_data["id"]),
-                report_received_date=props.get("report_received_date"),
-                summary=props.get("summary"),
-                component=props.get("component"),
-                remedy=props.get("remedy"),
-                units_affected=props.get("units_affected"),
-            ))
+            recalls.append(
+                RecallNode(
+                    campaign_number=str(r_data["id"]),
+                    report_received_date=props.get("report_received_date"),
+                    summary=props.get("summary"),
+                    component=props.get("component"),
+                    remedy=props.get("remedy"),
+                    units_affected=props.get("units_affected"),
+                )
+            )
 
     return RecallPathResult(
         make=result["make_name"],

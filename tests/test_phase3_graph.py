@@ -27,11 +27,19 @@ from app.services.graph.graph_schema import (
 # Graph schema tests
 # =============================================================================
 
+
 class TestGraphSchema:
     def test_constraints_contain_required_labels(self):
         """All required node labels appear in constraint Cypher."""
         constraint_text = "\n".join(CONSTRAINTS)
-        for label in ["VehicleMake", "VehicleModel", "ModelYear", "Component", "Complaint", "Recall"]:
+        for label in [
+            "VehicleMake",
+            "VehicleModel",
+            "ModelYear",
+            "Component",
+            "Complaint",
+            "Recall",
+        ]:
             assert label in constraint_text, f"Missing label: {label}"
 
     def test_constraints_use_unique(self):
@@ -54,6 +62,7 @@ class TestGraphSchema:
 # =============================================================================
 # Graph queries tests
 # =============================================================================
+
 
 class TestIdentifierValidation:
     def test_valid_identifier_passthrough(self):
@@ -169,6 +178,7 @@ class TestRecallPathsQuery:
 # Graph models tests
 # =============================================================================
 
+
 class TestGraphBuildStats:
     def test_to_dict_includes_all_fields(self):
         stats = GraphBuildStats(
@@ -209,9 +219,15 @@ class TestVehicleNeighborhoodModel:
             NeighborhoodEdge(type="HAS_MODEL", source_id="ford", target_id="f-150"),
         ]
         nh = VehicleNeighborhood(
-            make="Ford", model="F-150", year=2020, vehicle_id="abc",
-            nodes=nodes, edges=edges,
-            complaint_count=5, recall_count=2, components=["SERVICE BRAKES"],
+            make="Ford",
+            model="F-150",
+            year=2020,
+            vehicle_id="abc",
+            nodes=nodes,
+            edges=edges,
+            complaint_count=5,
+            recall_count=2,
+            components=["SERVICE BRAKES"],
         )
         d = nh.to_dict()
         assert d["make"] == "Ford"
@@ -233,7 +249,10 @@ class TestRecallPathResult:
             ),
         ]
         result = RecallPathResult(
-            make="Ford", model="F-150", year=2020, vehicle_id="abc",
+            make="Ford",
+            model="F-150",
+            year=2020,
+            vehicle_id="abc",
             recalls=recalls,
             path_type="potentially related by shared vehicle/component",
         )
@@ -245,6 +264,7 @@ class TestRecallPathResult:
 # =============================================================================
 # Graph service tests (mocked)
 # =============================================================================
+
 
 class TestGraphServiceSetup:
     def test_setup_schema_returns_result(self):
@@ -258,6 +278,7 @@ class TestGraphServiceSetup:
             with patch("app.services.graph.graph_service.setup_schema") as mock_setup:
                 mock_setup.return_value = (6, 4, [])
                 from app.services.graph.graph_service import setup_graph_schema
+
                 result = setup_graph_schema()
                 assert result.constraints_created == 6
                 assert result.indexes_created == 4
@@ -275,6 +296,7 @@ class TestGraphServiceSetup:
             with patch("app.services.graph.graph_service.setup_schema") as mock_setup:
                 mock_setup.side_effect = Exception("Connection refused")
                 from app.services.graph.graph_service import setup_graph_schema
+
                 result = setup_graph_schema()
                 assert result.success is False
                 assert len(result.errors) > 0
@@ -288,7 +310,7 @@ class TestGraphServiceStatus:
             MockClient.return_value = mock_instance
             # execute_single called twice: first for node count, second for rel count
             mock_instance.execute_single.side_effect = [
-                {"count": 42},   # node count
+                {"count": 42},  # node count
                 {"count": 100},  # relationship count
             ]
             mock_instance.execute.return_value = [
@@ -299,10 +321,13 @@ class TestGraphServiceStatus:
 
             with patch("app.services.graph.graph_service._pg_counts") as mock_pg:
                 mock_pg.return_value = {
-                    "vehicles": 5, "complaints": 5,
-                    "recalls": 37, "components": 5,
+                    "vehicles": 5,
+                    "complaints": 5,
+                    "recalls": 37,
+                    "components": 5,
                 }
                 from app.services.graph.graph_service import get_graph_status
+
                 status = get_graph_status()
                 assert status.neo4j_connected is True
                 assert status.node_count == 42
@@ -312,6 +337,7 @@ class TestGraphServiceStatus:
 # =============================================================================
 # Graph builder tests (mocked Neo4j client)
 # =============================================================================
+
 
 class TestGraphBuilderDryRun:
     def test_dry_run_counts_without_writing(self):
@@ -339,16 +365,17 @@ class TestGraphBuilderDryRun:
                 mock_fv.return_value = iter([mock_vehicle])
                 mock_bcm.return_value = {
                     "SERVICE BRAKES": {
-                        "id": str(cid), "name": "SERVICE BRAKES",
-                        "normalized_name": "SERVICE BRAKES", "category": None,
+                        "id": str(cid),
+                        "name": "SERVICE BRAKES",
+                        "normalized_name": "SERVICE BRAKES",
+                        "category": None,
                     }
                 }
                 mock_neo4j = MagicMock()
 
                 from app.services.graph.graph_builder import build_graph
-                stats = build_graph(
-                    MagicMock(), mock_neo4j, dry_run=True, limit_vehicles=None
-                )
+
+                stats = build_graph(MagicMock(), mock_neo4j, dry_run=True, limit_vehicles=None)
 
                 assert stats.vehicle_models_seen >= 1
                 assert stats.components_seen == 1
@@ -381,6 +408,7 @@ class TestGraphBuilderHandlesMissingData:
                     mock_neo4j = MagicMock()
 
                     from app.services.graph.graph_builder import build_graph
+
                     stats = build_graph(
                         mock_session, mock_neo4j, dry_run=False, limit_vehicles=None
                     )
@@ -393,6 +421,7 @@ class TestGraphBuilderHandlesMissingData:
 # Import smoke tests
 # =============================================================================
 
+
 class TestImports:
     def test_graph_service_imports_clean(self):
         """All graph service modules import without errors."""
@@ -401,6 +430,7 @@ class TestImports:
             get_graph_status,
             setup_graph_schema,
         )
+
         # Verify symbols exist and are callable
         assert callable(setup_graph_schema)
         assert callable(build_graph_from_postgres)
@@ -409,6 +439,7 @@ class TestImports:
     def test_neo4j_client_imports_clean(self):
         """Neo4j client module imports cleanly."""
         from app.services.graph.neo4j_client import Neo4jClient, verify_connectivity
+
         assert Neo4jClient is not None
         assert callable(verify_connectivity)
 
@@ -418,5 +449,6 @@ class TestImports:
             GraphBuildStats,
             VehicleNeighborhood,
         )
+
         assert GraphBuildStats is not None
         assert VehicleNeighborhood is not None

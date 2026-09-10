@@ -94,6 +94,7 @@ class DeterministicTestProvider(EmbeddingProvider):
     def _normalize_text(self, text: str) -> str:
         """Lowercase, strip punctuation, collapse whitespace."""
         import re
+
         text = text.lower()
         text = re.sub(r"[^a-z0-9\s]", " ", text)
         text = re.sub(r"\s+", " ", text)
@@ -147,6 +148,7 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
                 from sentence_transformers import (  # type: ignore[import-not-found]
                     SentenceTransformer,
                 )
+
                 self._model = SentenceTransformer(self._model_name, device=self._device)
             except ImportError as exc:
                 raise ImportError(

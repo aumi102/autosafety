@@ -322,9 +322,7 @@ class ConversationService:
             record_keys = [c.source_record_key for c in guarded.citations[:max_citations]]
             first_seen = repo.prior_citation_turn_index(conversation.id, record_keys)
 
-            user_message = repo.add_message(
-                conversation.id, "user", question, MAX_QUESTION_CHARS
-            )
+            user_message = repo.add_message(conversation.id, "user", question, MAX_QUESTION_CHARS)
             assistant_message = repo.add_message(
                 conversation.id, "assistant", guarded.answer, answer_limit
             )

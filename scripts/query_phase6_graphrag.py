@@ -18,7 +18,9 @@ def main():
     parser.add_argument("--question", "-q", required=True, help="Question to retrieve evidence for")
     parser.add_argument("--top-k", type=int, default=5, help="Max chunks to retrieve (1-50)")
     parser.add_argument("--no-graph", action="store_true", help="Skip graph expansion")
-    parser.add_argument("--source-type", choices=["complaint", "recall"], default=None, help="Filter by source type")
+    parser.add_argument(
+        "--source-type", choices=["complaint", "recall"], default=None, help="Filter by source type"
+    )
     parser.add_argument("--make", default=None, help="Filter by vehicle make")
     parser.add_argument("--model", default=None, help="Filter by vehicle model")
     parser.add_argument("--model-year", type=int, default=None, help="Filter by vehicle year")

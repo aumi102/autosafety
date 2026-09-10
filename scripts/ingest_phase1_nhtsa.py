@@ -40,9 +40,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
-def _print_stats_phase1(
-    stats: IngestionStats, source_run_id: object, dry_run: bool
-) -> None:
+def _print_stats_phase1(stats: IngestionStats, source_run_id: object, dry_run: bool) -> None:
     print("\n" + "=" * 60)
     print("PHASE 1 INGESTION SUMMARY (API-based)")
     print("=" * 60)
@@ -100,11 +98,17 @@ def main():
     parser.add_argument("--complaints-only", action="store_true", help="Only ingest complaints")
     parser.add_argument("--recalls-only", action="store_true", help="Only ingest recalls")
     # Phase 1.5 flat-file options
-    parser.add_argument("--complaints-flat-file", default=None,
-                        help="Path to local complaints CSV file (Phase 1.5 flat-file mode)")
-    parser.add_argument("--complaints-source", default="auto",
-                        choices=["api", "flat-file", "auto"],
-                        help="Complaints source: api (Phase 1), flat-file (Phase 1.5), auto (prefer flat-file if --complaints-flat-file given)")
+    parser.add_argument(
+        "--complaints-flat-file",
+        default=None,
+        help="Path to local complaints CSV file (Phase 1.5 flat-file mode)",
+    )
+    parser.add_argument(
+        "--complaints-source",
+        default="auto",
+        choices=["api", "flat-file", "auto"],
+        help="Complaints source: api (Phase 1), flat-file (Phase 1.5), auto (prefer flat-file if --complaints-flat-file given)",
+    )
 
     args = parser.parse_args()
 
@@ -122,9 +126,7 @@ def main():
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
     if not db_url or "postgresql+asyncpg" in db_url:
-        db_url = (
-            db_url.replace("postgresql+asyncpg://", "postgresql://") if db_url else ""
-        )
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://") if db_url else ""
 
     if not db_url:
         logger.error("DATABASE_URL_SYNC not configured. Set in .env or environment.")
@@ -154,7 +156,9 @@ def main():
             if args.limit_vehicles:
                 logger.info(f"Limited to {args.limit_vehicles} vehicles")
             if args.recalls_only:
-                logger.warning("--recalls-only is ignored in flat-file mode (flat-file currently only supports complaints)")
+                logger.warning(
+                    "--recalls-only is ignored in flat-file mode (flat-file currently only supports complaints)"
+                )
 
             source_run_id, stats = run_complaints_flat_file_ingestion(
                 session=session,

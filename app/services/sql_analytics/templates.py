@@ -11,6 +11,7 @@ from enum import Enum
 
 class TemplateId(str, Enum):
     """Supported SQL template IDs."""
+
     TOP_COMPLAINT_COMPONENTS_BY_VEHICLE = "top_complaint_components_by_vehicle"
     COMPLAINT_COUNT_BY_VEHICLE = "complaint_count_by_vehicle"
     RECALLS_BY_VEHICLE = "recalls_by_vehicle"
@@ -22,6 +23,7 @@ class TemplateId(str, Enum):
 @dataclass
 class SqlTemplate:
     """A SQL query template with metadata."""
+
     id: TemplateId
     description: str
     sql: str

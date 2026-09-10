@@ -1,6 +1,5 @@
 """Graph API endpoints — Phase 3."""
 
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -101,6 +100,7 @@ def graph_health() -> GraphHealthResponse:
     Returns whether the graph database is reachable.
     """
     from app.services.graph.neo4j_client import verify_connectivity
+
     connected = verify_connectivity()
     return GraphHealthResponse(neo4j_connected=connected)
 
@@ -188,8 +188,7 @@ def graph_vehicle_neighborhood(vehicle_id: str) -> GraphNeighborhoodResponse:
     result = get_vehicle_neighborhood(vehicle_id)
     if result is None:
         raise HTTPException(
-            status_code=404,
-            detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
+            status_code=404, detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
         )
     return GraphNeighborhoodResponse(
         make=result.make,
@@ -197,7 +196,15 @@ def graph_vehicle_neighborhood(vehicle_id: str) -> GraphNeighborhoodResponse:
         year=result.year,
         vehicle_id=result.vehicle_id,
         nodes=[n.to_dict() for n in result.nodes],
-        edges=[{"type": e.type, "source_id": e.source_id, "target_id": e.target_id, "properties": e.properties} for e in result.edges],
+        edges=[
+            {
+                "type": e.type,
+                "source_id": e.source_id,
+                "target_id": e.target_id,
+                "properties": e.properties,
+            }
+            for e in result.edges
+        ],
         complaint_count=result.complaint_count,
         recall_count=result.recall_count,
         components=result.components,
@@ -217,8 +224,7 @@ def graph_recall_paths(vehicle_id: str) -> GraphRecallPathsResponse:
     result = get_vehicle_recall_paths(vehicle_id)
     if result is None:
         raise HTTPException(
-            status_code=404,
-            detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
+            status_code=404, detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
         )
     return GraphRecallPathsResponse(
         make=result.make,
@@ -246,8 +252,7 @@ def graph_component_evidence(vehicle_id: str) -> ComponentEvidenceResponse:
     evidence = get_vehicle_component_evidence(vehicle_id)
     if evidence is None:
         raise HTTPException(
-            status_code=404,
-            detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
+            status_code=404, detail=f"Vehicle {vehicle_id} not found in graph or PostgreSQL"
         )
     return ComponentEvidenceResponse(
         make=evidence.make,

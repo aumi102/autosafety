@@ -39,28 +39,30 @@ GRAPH_EVIDENCE_DEFINITION = ToolDefinition(
         "Returns neighborhood graphs, recall paths, and component-level links. "
         "Uses predefined Cypher — no arbitrary queries. No mutations."
     ),
-    input_schema=ToolInputSchema(fields={
-        "operation": ToolInputField(
-            type="enum",
-            description="Graph evidence operation",
-            required=True,
-            enum_values=SUPPORTED_OPERATIONS,
-        ),
-        "vehicle_id": ToolInputField(
-            type="string",
-            description="PostgreSQL vehicle UUID",
-            required=True,
-            max_length=40,
-        ),
-        "max_paths": ToolInputField(
-            type="integer",
-            description="Maximum graph paths to return (default 20, max 20)",
-            required=False,
-            default=20,
-            min_value=1,
-            max_value=20,
-        ),
-    }),
+    input_schema=ToolInputSchema(
+        fields={
+            "operation": ToolInputField(
+                type="enum",
+                description="Graph evidence operation",
+                required=True,
+                enum_values=SUPPORTED_OPERATIONS,
+            ),
+            "vehicle_id": ToolInputField(
+                type="string",
+                description="PostgreSQL vehicle UUID",
+                required=True,
+                max_length=40,
+            ),
+            "max_paths": ToolInputField(
+                type="integer",
+                description="Maximum graph paths to return (default 20, max 20)",
+                required=False,
+                default=20,
+                min_value=1,
+                max_value=20,
+            ),
+        }
+    ),
     read_only=True,
     max_result_items=20,
     timeout_seconds=15,
@@ -74,6 +76,7 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
     No direct session — reuses Phase 3-5 service functions that own
     their own session lifecycle internally.
     """
+
     def adapter(*, call_id: str, arguments: dict[str, Any]) -> ToolCallResult:
         operation = arguments.get("operation")
         vehicle_id = str(arguments.get("vehicle_id") or "")
@@ -94,7 +97,8 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
                 neighborhood = get_vehicle_neighborhood(vehicle_id)
                 if neighborhood is None:
                     return ToolCallResult.error(
-                        call_id, "graph_evidence_tool",
+                        call_id,
+                        "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
@@ -108,7 +112,8 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
                 recall_paths = get_vehicle_recall_paths(vehicle_id)
                 if recall_paths is None:
                     return ToolCallResult.error(
-                        call_id, "graph_evidence_tool",
+                        call_id,
+                        "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
@@ -122,7 +127,8 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
                 component_evidence = get_vehicle_component_evidence(vehicle_id)
                 if component_evidence is None:
                     return ToolCallResult.error(
-                        call_id, "graph_evidence_tool",
+                        call_id,
+                        "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
@@ -136,7 +142,8 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
                 shared_recalls = get_vehicle_shared_component_recalls(vehicle_id)
                 if shared_recalls is None:
                     return ToolCallResult.error(
-                        call_id, "graph_evidence_tool",
+                        call_id,
+                        "graph_evidence_tool",
                         "not_found",
                         f"Vehicle {vehicle_id} not found in graph",
                     )
@@ -147,24 +154,30 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
 
             else:
                 return ToolCallResult.validation_error(
-                    call_id, "graph_evidence_tool",
+                    call_id,
+                    "graph_evidence_tool",
                     f"Unknown operation: '{operation}'",
                 )
 
             return ToolCallResult.ok(
-                call_id, "graph_evidence_tool",
-                result_data, warnings, truncated=False,
+                call_id,
+                "graph_evidence_tool",
+                result_data,
+                warnings,
+                truncated=False,
             )
 
         except ImportError as e:
             return ToolCallResult.error(
-                call_id, "graph_evidence_tool",
+                call_id,
+                "graph_evidence_tool",
                 "import_error",
                 f"Graph service unavailable: {type(e).__name__}",
             )
         except Exception as e:
             return ToolCallResult.error(
-                call_id, "graph_evidence_tool",
+                call_id,
+                "graph_evidence_tool",
                 "adapter_error",
                 f"Graph evidence adapter error: {type(e).__name__}",
             )
@@ -194,14 +207,16 @@ def _recall_paths_to_dict(result: RecallPathResult, max_paths: int) -> dict:
     """Serialize RecallPathResult safely."""
     recalls = []
     for r in result.recalls[:max_paths]:
-        recalls.append({
-            "campaign_number": r.campaign_number,
-            "report_received_date": r.report_received_date,
-            "summary": (r.summary or "")[:500],
-            "component": r.component,
-            "remedy": (r.remedy or "")[:500],
-            "units_affected": r.units_affected,
-        })
+        recalls.append(
+            {
+                "campaign_number": r.campaign_number,
+                "report_received_date": r.report_received_date,
+                "summary": (r.summary or "")[:500],
+                "component": r.component,
+                "remedy": (r.remedy or "")[:500],
+                "units_affected": r.units_affected,
+            }
+        )
     return {
         "operation": "recall_paths_by_vehicle",
         "make": result.make,
@@ -219,11 +234,13 @@ def _component_evidence_to_dict(result: ComponentEvidence, max_paths: int) -> di
     """Serialize ComponentEvidence safely."""
     shared_recalls = []
     for r in (result.shared_recalls or [])[:max_paths]:
-        shared_recalls.append({
-            "campaign_number": r.get("campaign_number", ""),
-            "component": r.get("component", ""),
-            "summary": (r.get("summary", "") or "")[:500],
-        })
+        shared_recalls.append(
+            {
+                "campaign_number": r.get("campaign_number", ""),
+                "component": r.get("component", ""),
+                "summary": (r.get("summary", "") or "")[:500],
+            }
+        )
     return {
         "operation": result.path_type,
         "make": result.make,
@@ -244,11 +261,13 @@ def _serialize_nodes(nodes: Iterable[Any]) -> list[dict]:
     """Serialize neighborhood nodes safely."""
     result = []
     for n in nodes:
-        result.append({
-            "id": n.id,
-            "label": n.label,
-            "properties": _sanitize_dict(n.properties),
-        })
+        result.append(
+            {
+                "id": n.id,
+                "label": n.label,
+                "properties": _sanitize_dict(n.properties),
+            }
+        )
     return result
 
 
@@ -256,12 +275,14 @@ def _serialize_edges(edges: Iterable[Any]) -> list[dict]:
     """Serialize neighborhood edges safely."""
     result = []
     for e in edges:
-        result.append({
-            "type": e.type,
-            "source_id": e.source_id,
-            "target_id": e.target_id,
-            "properties": _sanitize_dict(e.properties),
-        })
+        result.append(
+            {
+                "type": e.type,
+                "source_id": e.source_id,
+                "target_id": e.target_id,
+                "properties": _sanitize_dict(e.properties),
+            }
+        )
     return result
 
 

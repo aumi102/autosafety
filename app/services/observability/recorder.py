@@ -152,13 +152,10 @@ class ExecutionAuditRecorder:
                 run.intent = _bounded(intent, 64)
                 run.synthesis_mode = _bounded(getattr(guarded, "synthesis_mode", None), 20)
                 run.provider = (
-                    _bounded(getattr(guarded, "provider", None), MAX_PROVIDER_CHARS)
-                    or run.provider
+                    _bounded(getattr(guarded, "provider", None), MAX_PROVIDER_CHARS) or run.provider
                 )
                 run.abstained = bool(getattr(guarded, "abstained", False))
-                run.abstention_reason = _bounded(
-                    getattr(guarded, "abstention_reason", None), 128
-                )
+                run.abstention_reason = _bounded(getattr(guarded, "abstention_reason", None), 128)
                 run.warnings = list(getattr(guarded, "warnings", []) or [])[:20]
                 if confidence is not None:
                     run.confidence_score = _score_to_int(getattr(confidence, "score", 0.0))

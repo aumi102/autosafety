@@ -17,6 +17,7 @@ from pathlib import Path
 
 # ─── Metrics ────────────────────────────────────────────────────────────────────
 
+
 def recall_at_k(
     retrieved_source_keys: list[str],
     expected_source_keys: list[str],
@@ -71,6 +72,7 @@ def _matches_any(retrieved: str, expected_list: list[str]) -> bool:
 
 # ─── Retrieval runner ─────────────────────────────────────────────────────────
 
+
 def run_retrieval(question: str, top_k: int, filters: dict) -> list[str]:
     """
     Run retrieval against the indexed corpus.
@@ -78,6 +80,7 @@ def run_retrieval(question: str, top_k: int, filters: dict) -> list[str]:
     """
     try:
         from app.services.graphrag import retrieve_graphrag_evidence
+
         result = retrieve_graphrag_evidence(
             question=question,
             top_k=top_k,
@@ -94,6 +97,7 @@ def run_retrieval(question: str, top_k: int, filters: dict) -> list[str]:
 
 
 # ─── Main ──────────────────────────────────────────────────────────────────────
+
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate Phase 6 GraphRAG retrieval")
@@ -198,7 +202,9 @@ def main():
 
     print()
     print("=== Caveats ===")
-    print("- Metrics reflect deterministic lexical embeddings (token overlap), not semantic understanding.")
+    print(
+        "- Metrics reflect deterministic lexical embeddings (token overlap), not semantic understanding."
+    )
     print("- Tiny local dataset — do not extrapolate to production quality.")
     print("- 5-query fixture is insufficient for statistical significance.")
 

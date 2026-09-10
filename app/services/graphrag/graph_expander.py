@@ -81,26 +81,30 @@ def expand_complaint_neighborhood(
         year = result.get("year") or "?"
 
         # Path: complaint -> component
-        paths.append(GraphRAGGraphPath(
-            path_text=f"{make} {model} {year} complaint {odi_number} mentions component {comp}",
-            relation_source="complaint_mentions_component",
-            source_type="complaint",
-            source_key=odi_number,
-            confidence=0.9,
-        ))
+        paths.append(
+            GraphRAGGraphPath(
+                path_text=f"{make} {model} {year} complaint {odi_number} mentions component {comp}",
+                relation_source="complaint_mentions_component",
+                source_type="complaint",
+                source_key=odi_number,
+                confidence=0.9,
+            )
+        )
 
         # Paths: recall -> related component (potential association)
         for recall in recalls[:5]:
             if not recall or not recall.get("recall_campaign"):
                 continue
             campaign = recall["recall_campaign"]
-            paths.append(GraphRAGGraphPath(
-                path_text=f"{make} {model} {year} recall {campaign} related to component {comp} (potential association)",
-                relation_source="potentially_related_by_shared_component",
-                source_type="recall",
-                source_key=campaign,
-                confidence=0.7,
-            ))
+            paths.append(
+                GraphRAGGraphPath(
+                    path_text=f"{make} {model} {year} recall {campaign} related to component {comp} (potential association)",
+                    relation_source="potentially_related_by_shared_component",
+                    source_type="recall",
+                    source_key=campaign,
+                    confidence=0.7,
+                )
+            )
 
     except Exception as e:
         logger.warning(f"Complaint graph expansion failed for {odi_number}: {e}")
@@ -133,36 +137,42 @@ def expand_recall_neighborhood(
         year = result.get("year") or "?"
 
         # Path: recall -> affects vehicle (official)
-        paths.append(GraphRAGGraphPath(
-            path_text=f"{make} {model} {year} recall {campaign_number} affects vehicle (official)",
-            relation_source="official_recall_affects_vehicle",
-            source_type="recall",
-            source_key=campaign_number,
-            confidence=0.95,
-        ))
+        paths.append(
+            GraphRAGGraphPath(
+                path_text=f"{make} {model} {year} recall {campaign_number} affects vehicle (official)",
+                relation_source="official_recall_affects_vehicle",
+                source_type="recall",
+                source_key=campaign_number,
+                confidence=0.95,
+            )
+        )
 
         # Path: recall -> related component
         if comp != "Unknown Component":
-            paths.append(GraphRAGGraphPath(
-                path_text=f"{make} {model} {year} recall {campaign_number} related to component {comp}",
-                relation_source="recall_related_to_component",
-                source_type="recall",
-                source_key=campaign_number,
-                confidence=0.8,
-            ))
+            paths.append(
+                GraphRAGGraphPath(
+                    path_text=f"{make} {model} {year} recall {campaign_number} related to component {comp}",
+                    relation_source="recall_related_to_component",
+                    source_type="recall",
+                    source_key=campaign_number,
+                    confidence=0.8,
+                )
+            )
 
         # Paths: potential complaint associations via shared component
         for complaint in complaints[:5]:
             if not complaint or not complaint.get("complaint_odi"):
                 continue
             odi = complaint["complaint_odi"]
-            paths.append(GraphRAGGraphPath(
-                path_text=f"{make} {model} {year} recall {campaign_number} potentially related to complaint {odi} via component {comp}",
-                relation_source="potentially_related_by_shared_component",
-                source_type="complaint",
-                source_key=odi,
-                confidence=0.6,
-            ))
+            paths.append(
+                GraphRAGGraphPath(
+                    path_text=f"{make} {model} {year} recall {campaign_number} potentially related to complaint {odi} via component {comp}",
+                    relation_source="potentially_related_by_shared_component",
+                    source_type="complaint",
+                    source_key=odi,
+                    confidence=0.6,
+                )
+            )
 
     except Exception as e:
         logger.warning(f"Recall graph expansion failed for {campaign_number}: {e}")

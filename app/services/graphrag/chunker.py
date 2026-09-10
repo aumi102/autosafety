@@ -21,6 +21,7 @@ def chunk_id(document_id: str, chunk_index: int, chunk_text: str) -> str:
 @dataclass
 class Chunk:
     """A single deterministic chunk of an evidence document."""
+
     chunk_id: str
     document_id: str
     chunk_index: int

@@ -157,9 +157,7 @@ def seeded_reader(monkeypatch):
 
     reader = ExecutionAuditReader(session_factory=factory)
     monkeypatch.setattr(audit_reader_module, "build_audit_reader", lambda **_: reader)
-    monkeypatch.setattr(
-        "app.api.v1.endpoints.agent_runs.build_audit_reader", lambda **_: reader
-    )
+    monkeypatch.setattr("app.api.v1.endpoints.agent_runs.build_audit_reader", lambda **_: reader)
     return reader, run_id, older_id
 
 
@@ -338,9 +336,7 @@ class TestAuditPrivacy:
         for body in bodies:
             assert marker not in body
 
-    def test_admin_token_never_appears_in_a_response_or_the_schema(
-        self, configured, seeded_reader
-    ):
+    def test_admin_token_never_appears_in_a_response_or_the_schema(self, configured, seeded_reader):
         with TestClient(app) as client:
             response = client.get("/v1/agent-runs", headers={ADMIN_TOKEN_HEADER: VALID_TOKEN})
         assert VALID_TOKEN not in response.text
@@ -373,9 +369,7 @@ class TestReadiness:
             "app.main.readiness",
             lambda: ReadinessReport(
                 ready=False,
-                dependencies=[
-                    DependencyStatus("postgresql", False, True, detail="unreachable")
-                ],
+                dependencies=[DependencyStatus("postgresql", False, True, detail="unreachable")],
             ),
         )
         with TestClient(app) as client:
@@ -458,9 +452,7 @@ class TestDiagnostics:
             ),
         )
         with TestClient(app) as client:
-            response = client.get(
-                "/v1/ops/diagnostics", headers={ADMIN_TOKEN_HEADER: VALID_TOKEN}
-            )
+            response = client.get("/v1/ops/diagnostics", headers={ADMIN_TOKEN_HEADER: VALID_TOKEN})
         assert response.status_code == 200
         assert response.json()["provider_credential_configured"] is True
         assert secret not in response.text

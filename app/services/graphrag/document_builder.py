@@ -32,6 +32,7 @@ class EvidenceDocument:
         metadata: additional fields
         content_hash: SHA-256 of full_text for idempotent upsert
     """
+
     document_id: str
     source_type: str
     source_entity_id: str

@@ -94,38 +94,65 @@ def _default_retrieval_fn(captured_calls: list | None = None):
         if captured_calls is not None:
             captured_calls.append(
                 dict(
-                    question=question, top_k=top_k, source_type=source_type,
-                    make=make, model=model, model_year=model_year, include_graph=include_graph,
+                    question=question,
+                    top_k=top_k,
+                    source_type=source_type,
+                    make=make,
+                    model=model,
+                    model_year=model_year,
+                    include_graph=include_graph,
                 )
             )
         chunk = _FakeChunk(
-            chunk_id="chunk-1", score=0.9, source_type="complaint",
-            source_record_key="11420001", title="Complaint", text="Brake pedal failure reported.",
+            chunk_id="chunk-1",
+            score=0.9,
+            source_type="complaint",
+            source_record_key="11420001",
+            title="Complaint",
+            text="Brake pedal failure reported.",
             citation_label="Complaint 11420001",
         )
         citation = _FakeCitation(
-            source_type="complaint", source_id="c1", source_key="11420001",
-            citation_label="Complaint 11420001", text_span="Brake pedal failure reported.", confidence=0.9,
+            source_type="complaint",
+            source_id="c1",
+            source_key="11420001",
+            citation_label="Complaint 11420001",
+            text_span="Brake pedal failure reported.",
+            confidence=0.9,
         )
         path = _FakePath(
             path_text="Ford F-150 2020 -> SERVICE BRAKES -> Recall 20V123000",
-            relation_source="official_recall_affects_vehicle", confidence=0.85,
-            source_type="recall", source_key="20V123000",
+            relation_source="official_recall_affects_vehicle",
+            confidence=0.85,
+            source_type="recall",
+            source_key="20V123000",
         )
         return _FakeGraphRAGResult(
-            retrieved_chunks=[chunk], citations=[citation], graph_paths=[path],
+            retrieved_chunks=[chunk],
+            citations=[citation],
+            graph_paths=[path],
             warnings=["Complaint volume alone does not prove a safety defect."],
-            confidence_label="high", confidence_score=0.9, confidence_reasons=["chunks>=1"],
-            total_chunks_returned=1, neo4j_available=True,
+            confidence_label="high",
+            confidence_score=0.9,
+            confidence_reasons=["chunks>=1"],
+            total_chunks_returned=1,
+            neo4j_available=True,
         )
+
     return fn
 
 
 def _empty_retrieval_fn(*, question, top_k, source_type, make, model, model_year, include_graph):
     return _FakeGraphRAGResult(
-        retrieved_chunks=[], citations=[], graph_paths=[], warnings=[],
-        confidence_label="low", confidence_score=0.0, confidence_reasons=[],
-        total_chunks_returned=0, neo4j_available=True,
+        retrieved_chunks=[],
+        citations=[],
+        graph_paths=[],
+        warnings=[],
+        confidence_label="low",
+        confidence_score=0.0,
+        confidence_reasons=[],
+        total_chunks_returned=0,
+        neo4j_available=True,
     )
 
 
@@ -137,25 +164,50 @@ def _failing_retrieval_fn(*, question, top_k, source_type, make, model, model_ye
 # Fake additional tools (sql_analytics_tool / graph_evidence_tool)
 # =============================================================================
 
-_FAKE_SQL_SCHEMA = ToolInputSchema(fields={
-    "operation": ToolInputField(
-        type="enum", description="op", required=True,
-        enum_values=["vehicles_by_complaint_count", "top_complaint_components_by_vehicle"],
-    ),
-    "limit": ToolInputField(type="integer", description="limit", required=False, default=10, min_value=1, max_value=50),
-})
+_FAKE_SQL_SCHEMA = ToolInputSchema(
+    fields={
+        "operation": ToolInputField(
+            type="enum",
+            description="op",
+            required=True,
+            enum_values=["vehicles_by_complaint_count", "top_complaint_components_by_vehicle"],
+        ),
+        "limit": ToolInputField(
+            type="integer",
+            description="limit",
+            required=False,
+            default=10,
+            min_value=1,
+            max_value=50,
+        ),
+    }
+)
 FAKE_SQL_DEFINITION = ToolDefinition(
-    name="sql_analytics_tool", description="fake sql tool", input_schema=_FAKE_SQL_SCHEMA,
-    read_only=True, max_result_items=50, timeout_seconds=10,
+    name="sql_analytics_tool",
+    description="fake sql tool",
+    input_schema=_FAKE_SQL_SCHEMA,
+    read_only=True,
+    max_result_items=50,
+    timeout_seconds=10,
 )
 
-_FAKE_GRAPH_SCHEMA = ToolInputSchema(fields={
-    "operation": ToolInputField(type="enum", description="op", required=True, enum_values=["recall_paths_by_vehicle"]),
-    "vehicle_id": ToolInputField(type="string", description="vehicle id", required=True, max_length=100),
-})
+_FAKE_GRAPH_SCHEMA = ToolInputSchema(
+    fields={
+        "operation": ToolInputField(
+            type="enum", description="op", required=True, enum_values=["recall_paths_by_vehicle"]
+        ),
+        "vehicle_id": ToolInputField(
+            type="string", description="vehicle id", required=True, max_length=100
+        ),
+    }
+)
 FAKE_GRAPH_DEFINITION = ToolDefinition(
-    name="graph_evidence_tool", description="fake graph tool", input_schema=_FAKE_GRAPH_SCHEMA,
-    read_only=True, max_result_items=20, timeout_seconds=10,
+    name="graph_evidence_tool",
+    description="fake graph tool",
+    input_schema=_FAKE_GRAPH_SCHEMA,
+    read_only=True,
+    max_result_items=20,
+    timeout_seconds=10,
 )
 
 
@@ -173,18 +225,33 @@ def _make_spy_adapter(tool_name: str, data: dict):
 def _registry_with_spies():
     """Build a registry and return (registry, sql_calls, graph_calls) so callers can assert on invocations."""
     registry = ToolRegistry()
-    registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn()))
+    registry.register(
+        GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn())
+    )
 
     sql_adapter, sql_calls = _make_spy_adapter(
         "sql_analytics_tool",
-        {"rows": [{"vehicle": "Ford F-150 2020", "count": 3}], "columns": ["vehicle", "count"], "operation": "x"},
+        {
+            "rows": [{"vehicle": "Ford F-150 2020", "count": 3}],
+            "columns": ["vehicle", "count"],
+            "operation": "x",
+        },
     )
     registry.register(FAKE_SQL_DEFINITION, sql_adapter)
 
     graph_adapter, graph_calls = _make_spy_adapter(
         "graph_evidence_tool",
-        {"recalls": [{"campaign_number": "20V123000", "component": "SERVICE BRAKES", "summary": "test recall"}],
-         "relation_basis": "official_recall_affects_vehicle", "operation": "recall_paths_by_vehicle"},
+        {
+            "recalls": [
+                {
+                    "campaign_number": "20V123000",
+                    "component": "SERVICE BRAKES",
+                    "summary": "test recall",
+                }
+            ],
+            "relation_basis": "official_recall_affects_vehicle",
+            "operation": "recall_paths_by_vehicle",
+        },
     )
     registry.register(FAKE_GRAPH_DEFINITION, graph_adapter)
 
@@ -246,7 +313,9 @@ class TestMandatoryBaseRetrieval:
     def test_correct_operation_selected_recalls_only(self):
         captured: list = []
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn(captured)))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn(captured))
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=FakeProvider())
         orch.orchestrate("what recall campaigns exist for this vehicle")
         assert captured[0]["source_type"] == "recall"
@@ -254,7 +323,9 @@ class TestMandatoryBaseRetrieval:
     def test_correct_operation_selected_complaints_only(self):
         captured: list = []
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn(captured)))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn(captured))
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=FakeProvider())
         orch.orchestrate("what complaints exist for this vehicle")
         assert captured[0]["source_type"] == "complaint"
@@ -262,7 +333,9 @@ class TestMandatoryBaseRetrieval:
     def test_correct_operation_selected_both(self):
         captured: list = []
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn(captured)))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn(captured))
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=FakeProvider())
         orch.orchestrate("what complaints and recalls exist for this vehicle")
         assert captured[0]["source_type"] is None
@@ -280,7 +353,9 @@ class TestMandatoryBaseRetrieval:
         orch.orchestrate("brake complaints for Ford F-150 2020")
         final_request = provider.synthesize_requests[-1]
         assert "cite-complaint-11420001" in final_request.evidence_bundle_text
-        assert any(c["citation_id"] == "cite-complaint-11420001" for c in final_request.citation_table)
+        assert any(
+            c["citation_id"] == "cite-complaint-11420001" for c in final_request.citation_table
+        )
 
     def test_provider_receives_bounded_evidence(self):
         registry, _, _ = _registry_with_spies()
@@ -301,7 +376,15 @@ class TestAdditionalToolCalls:
     def test_valid_allowlisted_call_executes(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         result = orch.orchestrate("how many complaints for Ford F-150 2020")
         assert len(sql_calls) == 1
@@ -310,7 +393,9 @@ class TestAdditionalToolCalls:
     def test_unknown_tool_rejected(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="delete_all_data_tool", arguments={})])
+        provider.queue_tool_calls(
+            [ProviderToolCall(call_id="p1", tool_name="delete_all_data_tool", arguments={})]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         result = orch.orchestrate("q")
         assert result.trace.tool_calls_rejected == 1
@@ -322,7 +407,9 @@ class TestAdditionalToolCalls:
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
         # missing required "operation" field
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"limit": 5})])
+        provider.queue_tool_calls(
+            [ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"limit": 5})]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         assert len(sql_calls) == 0  # adapter never invoked
@@ -330,7 +417,15 @@ class TestAdditionalToolCalls:
     def test_application_owned_call_ids_used(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="LLM-CHOSE-THIS-ID", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="LLM-CHOSE-THIS-ID",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         assert len(sql_calls) == 1
@@ -340,7 +435,15 @@ class TestAdditionalToolCalls:
     def test_returned_evidence_appended(self):
         registry, _, _ = _registry_with_spies()
         provider = _CapturingFakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         final_request = provider.synthesize_requests[-1]
@@ -368,7 +471,15 @@ class TestBudgets:
         provider = FakeProvider()
         # Queue more rounds worth of calls than max_tool_rounds allows.
         for i in range(5):
-            provider.queue_tool_calls([ProviderToolCall(call_id=f"p{i}", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count", "limit": i + 1})])
+            provider.queue_tool_calls(
+                [
+                    ProviderToolCall(
+                        call_id=f"p{i}",
+                        tool_name="sql_analytics_tool",
+                        arguments={"operation": "vehicles_by_complaint_count", "limit": i + 1},
+                    )
+                ]
+            )
         config = SynthesisConfig(max_tool_rounds=1, max_tool_calls=10)
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider, config=config)
         result = orch.orchestrate("q")
@@ -377,11 +488,23 @@ class TestBudgets:
     def test_maximum_calls_enforced(self):
         registry, sql_calls, graph_calls = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([
-            ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"}),
-            ProviderToolCall(call_id="p2", tool_name="graph_evidence_tool", arguments={"operation": "recall_paths_by_vehicle", "vehicle_id": "veh-1"}),
-        ])
-        config = SynthesisConfig(max_tool_calls=2, max_tool_rounds=2)  # base consumes 1, only 1 remains
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                ),
+                ProviderToolCall(
+                    call_id="p2",
+                    tool_name="graph_evidence_tool",
+                    arguments={"operation": "recall_paths_by_vehicle", "vehicle_id": "veh-1"},
+                ),
+            ]
+        )
+        config = SynthesisConfig(
+            max_tool_calls=2, max_tool_rounds=2
+        )  # base consumes 1, only 1 remains
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider, config=config)
         result = orch.orchestrate("q")
         assert result.trace.tool_calls_executed <= 2
@@ -390,19 +513,23 @@ class TestBudgets:
     def test_base_call_accounting_matches_design(self):
         registry, _, _ = _registry_with_spies()
         config = SynthesisConfig(max_tool_calls=4)
-        orch = SynthesisOrchestrator(registry=registry, primary_provider=FakeProvider(), config=config)
+        orch = SynthesisOrchestrator(
+            registry=registry, primary_provider=FakeProvider(), config=config
+        )
         result = orch.orchestrate("q")
         assert result.trace.tool_calls_executed == 1  # only mandatory base, no extra requested
 
     def test_duplicate_identical_calls_deduplicated(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
+
         def same_call(cid):
             return ProviderToolCall(
                 call_id=cid,
                 tool_name="sql_analytics_tool",
                 arguments={"operation": "vehicles_by_complaint_count"},
             )
+
         provider.queue_tool_calls([same_call("p1"), same_call("p2")])
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         result = orch.orchestrate("q")
@@ -414,7 +541,9 @@ class TestBudgets:
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
         for _ in range(20):
-            provider.queue_tool_calls([ProviderToolCall(call_id="p", tool_name="nonexistent_tool", arguments={})])
+            provider.queue_tool_calls(
+                [ProviderToolCall(call_id="p", tool_name="nonexistent_tool", arguments={})]
+            )
         config = SynthesisConfig(max_tool_rounds=2)
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider, config=config)
         start = time.time()
@@ -427,7 +556,15 @@ class TestBudgets:
         registry, sql_calls, graph_calls = _registry_with_spies()
         provider = FakeProvider()
         for i in range(10):
-            provider.queue_tool_calls([ProviderToolCall(call_id=f"p{i}", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+            provider.queue_tool_calls(
+                [
+                    ProviderToolCall(
+                        call_id=f"p{i}",
+                        tool_name="sql_analytics_tool",
+                        arguments={"operation": "vehicles_by_complaint_count"},
+                    )
+                ]
+            )
         config = SynthesisConfig(max_tool_calls=4, max_tool_rounds=2)
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider, config=config)
         result = orch.orchestrate("q")
@@ -436,10 +573,16 @@ class TestBudgets:
     def test_trace_records_executed_and_rejected_calls(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([
-            ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"}),
-            ProviderToolCall(call_id="p2", tool_name="unknown_tool", arguments={}),
-        ])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                ),
+                ProviderToolCall(call_id="p2", tool_name="unknown_tool", arguments={}),
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         result = orch.orchestrate("q")
         executed = [e for e in result.trace.tool_call_log if e.get("executed")]
@@ -464,7 +607,15 @@ class TestProviderBehavior:
     def test_provider_requests_one_tool(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         result = orch.orchestrate("q")
         assert result.trace.tool_calls_executed == 2
@@ -472,10 +623,20 @@ class TestProviderBehavior:
     def test_provider_requests_several_valid_tools(self):
         registry, sql_calls, graph_calls = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([
-            ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"}),
-            ProviderToolCall(call_id="p2", tool_name="graph_evidence_tool", arguments={"operation": "recall_paths_by_vehicle", "vehicle_id": "veh-1"}),
-        ])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                ),
+                ProviderToolCall(
+                    call_id="p2",
+                    tool_name="graph_evidence_tool",
+                    arguments={"operation": "recall_paths_by_vehicle", "vehicle_id": "veh-1"},
+                ),
+            ]
+        )
         config = SynthesisConfig(max_tool_calls=4)
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider, config=config)
         result = orch.orchestrate("q")
@@ -487,7 +648,15 @@ class TestProviderBehavior:
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
         for i in range(5):
-            provider.queue_tool_calls([ProviderToolCall(call_id=f"p{i}", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count", "limit": i + 1})])
+            provider.queue_tool_calls(
+                [
+                    ProviderToolCall(
+                        call_id=f"p{i}",
+                        tool_name="sql_analytics_tool",
+                        arguments={"operation": "vehicles_by_complaint_count", "limit": i + 1},
+                    )
+                ]
+            )
         config = SynthesisConfig(max_tool_calls=2, max_tool_rounds=5)
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider, config=config)
         result = orch.orchestrate("q")
@@ -497,7 +666,15 @@ class TestProviderBehavior:
     def test_synthesis_called_exactly_once_after_planning(self):
         registry, _, _ = _registry_with_spies()
         provider = _CapturingFakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         assert len(provider.synthesize_requests) == 1
@@ -513,7 +690,9 @@ class TestFallback:
         registry, _, _ = _registry_with_spies()
         primary = FakeProvider(config={"simulate_unavailable": True})
         fallback = DeterministicProvider()
-        orch = SynthesisOrchestrator(registry=registry, primary_provider=primary, deterministic_fallback=fallback)
+        orch = SynthesisOrchestrator(
+            registry=registry, primary_provider=primary, deterministic_fallback=fallback
+        )
         result = orch.orchestrate("brake complaints for Ford F-150 2020")
         assert result.trace.fallback_used is True
         assert result.provider_result.provider == "deterministic"
@@ -525,7 +704,13 @@ class TestFallback:
         result = orch.orchestrate("brake complaints for Ford F-150 2020")
         # Must not raise, must still produce a result, and must record the failure.
         assert result.provider_result is not None
-        assert any("plan_tool_calls" in w or "Round" in w or "round" in w for w in result.trace.warnings) or True
+        assert (
+            any(
+                "plan_tool_calls" in w or "Round" in w or "round" in w
+                for w in result.trace.warnings
+            )
+            or True
+        )
 
     def test_synthesis_timeout_falls_back(self):
         registry, _, _ = _registry_with_spies()
@@ -558,7 +743,9 @@ class TestFallback:
 
     def test_raw_exception_not_recorded(self):
         registry, _, _ = _registry_with_spies()
-        primary = _RaisingSynthesizeProvider(message="secret_password=hunter2 at /internal/path/file.py line 42")
+        primary = _RaisingSynthesizeProvider(
+            message="secret_password=hunter2 at /internal/path/file.py line 42"
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=primary)
         result = orch.orchestrate("q")
         full_text = str(result.trace.to_dict())
@@ -569,7 +756,9 @@ class TestFallback:
         registry, _, _ = _registry_with_spies()
         primary = _RaisingSynthesizeProvider()
         broken_fallback = _RaisingSynthesizeProvider(message="fallback also broke")
-        orch = SynthesisOrchestrator(registry=registry, primary_provider=primary, deterministic_fallback=broken_fallback)
+        orch = SynthesisOrchestrator(
+            registry=registry, primary_provider=primary, deterministic_fallback=broken_fallback
+        )
         result = orch.orchestrate("q")
         assert result.provider_result.abstain is True
         assert result.provider_result.error_code == "orchestration_error"
@@ -584,7 +773,9 @@ class TestFallback:
 class TestBaseRetrievalFailure:
     def test_safe_structured_result_on_base_failure(self):
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_failing_retrieval_fn))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_failing_retrieval_fn)
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=FakeProvider())
         result = orch.orchestrate("q")
         assert isinstance(result.provider_result, ProviderSynthesisResult)
@@ -593,7 +784,9 @@ class TestBaseRetrievalFailure:
 
     def test_base_failure_does_not_leak_internal_error_detail(self):
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_failing_retrieval_fn))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_failing_retrieval_fn)
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=FakeProvider())
         result = orch.orchestrate("q")
         assert "hunter2" not in str(result.trace.to_dict())
@@ -601,7 +794,9 @@ class TestBaseRetrievalFailure:
 
     def test_no_uncontrolled_synthesis_from_empty_evidence(self):
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_empty_retrieval_fn))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_empty_retrieval_fn)
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=DeterministicProvider())
         result = orch.orchestrate("q")
         assert result.provider_result.abstain is True
@@ -609,7 +804,9 @@ class TestBaseRetrievalFailure:
 
     def test_result_marked_structural_not_final(self):
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_empty_retrieval_fn))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_empty_retrieval_fn)
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=DeterministicProvider())
         result = orch.orchestrate("q")
         d = result.to_dict()
@@ -630,14 +827,22 @@ class TestSecurity:
         orch.orchestrate("q")
         for req in provider.synthesize_requests + provider.plan_requests:
             for f in dataclasses.fields(req):
-                assert isinstance(getattr(req, f.name), (str, int, float, bool, list, dict, type(None)))
+                assert isinstance(
+                    getattr(req, f.name), (str, int, float, bool, list, dict, type(None))
+                )
 
     def test_no_raw_sql_or_cypher_in_evidence(self):
         registry, sql_calls, graph_calls = _registry_with_spies()
         provider = _CapturingFakeProvider()
-        provider.queue_tool_calls([
-            ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"}),
-        ])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                ),
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         evidence = provider.synthesize_requests[-1].evidence_bundle_text
@@ -646,20 +851,34 @@ class TestSecurity:
 
     def test_no_credentials_in_evidence_even_if_adapter_leaks_them(self):
         registry = ToolRegistry()
-        registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn()))
+        registry.register(
+            GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn())
+        )
 
         def leaky_adapter(*, call_id, arguments):
-            return ToolCallResult.ok(call_id, "sql_analytics_tool", {
-                "rows": [{"vehicle": "Ford F-150"}],
-                "columns": ["vehicle"],
-                "operation": "x",
-                "api_key": "sk-should-not-leak",
-                "database_url": "postgresql://user:pass@host/db",
-            })
+            return ToolCallResult.ok(
+                call_id,
+                "sql_analytics_tool",
+                {
+                    "rows": [{"vehicle": "Ford F-150"}],
+                    "columns": ["vehicle"],
+                    "operation": "x",
+                    "api_key": "sk-should-not-leak",
+                    "database_url": "postgresql://user:pass@host/db",
+                },
+            )
 
         registry.register(FAKE_SQL_DEFINITION, leaky_adapter)
         provider = _CapturingFakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="p1", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="p1",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         evidence = provider.synthesize_requests[-1].evidence_bundle_text
@@ -678,16 +897,26 @@ class TestSecurity:
         registry, _, _ = _registry_with_spies()
         primary = _RaisingSynthesizeProvider(message="boom")
         broken_fallback = _RaisingSynthesizeProvider(message="boom2")
-        orch = SynthesisOrchestrator(registry=registry, primary_provider=primary, deterministic_fallback=broken_fallback)
+        orch = SynthesisOrchestrator(
+            registry=registry, primary_provider=primary, deterministic_fallback=broken_fallback
+        )
         result = orch.orchestrate("q")
         full_text = str(result.to_dict())
         assert "Traceback (most recent call last)" not in full_text
-        assert ".py\", line" not in full_text
+        assert '.py", line' not in full_text
 
     def test_adapters_only_invoked_through_registry_with_app_owned_ids(self):
         registry, sql_calls, _ = _registry_with_spies()
         provider = FakeProvider()
-        provider.queue_tool_calls([ProviderToolCall(call_id="attacker-controlled-id", tool_name="sql_analytics_tool", arguments={"operation": "vehicles_by_complaint_count"})])
+        provider.queue_tool_calls(
+            [
+                ProviderToolCall(
+                    call_id="attacker-controlled-id",
+                    tool_name="sql_analytics_tool",
+                    arguments={"operation": "vehicles_by_complaint_count"},
+                )
+            ]
+        )
         orch = SynthesisOrchestrator(registry=registry, primary_provider=provider)
         orch.orchestrate("q")
         assert len(sql_calls) == 1
@@ -710,6 +939,7 @@ class TestPhaseBoundary:
 
     def test_no_citation_semantic_validator_module_used(self):
         import app.services.answer_synthesis.orchestrator as orch_module
+
         assert not hasattr(orch_module, "validate_citations")
         assert not hasattr(orch_module, "CitationValidator")
 

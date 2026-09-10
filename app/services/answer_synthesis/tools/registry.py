@@ -169,6 +169,7 @@ def build_default_tool_registry(
             SQL_ANALYTICS_DEFINITION,
             build_sql_analytics_adapter,
         )
+
         adapter = build_sql_analytics_adapter(sql_session_factory)
         registry.register(SQL_ANALYTICS_DEFINITION, adapter)
 
@@ -178,6 +179,7 @@ def build_default_tool_registry(
             GRAPH_EVIDENCE_DEFINITION,
             build_graph_evidence_adapter,
         )
+
         adapter = build_graph_evidence_adapter()
         registry.register(GRAPH_EVIDENCE_DEFINITION, adapter)
 
@@ -187,6 +189,7 @@ def build_default_tool_registry(
             GRAPHRAG_RETRIEVAL_DEFINITION,
             build_graphrag_adapter,
         )
+
         adapter = build_graphrag_adapter(graphrag_retrieval_fn)
         registry.register(GRAPHRAG_RETRIEVAL_DEFINITION, adapter)
 
@@ -195,6 +198,7 @@ def build_default_tool_registry(
         VEHICLE_RESOLUTION_DEFINITION,
         build_vehicle_resolution_adapter,
     )
+
     adapter = build_vehicle_resolution_adapter(sql_session_factory)
     registry.register(VEHICLE_RESOLUTION_DEFINITION, adapter)
 

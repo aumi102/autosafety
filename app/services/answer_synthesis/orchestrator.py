@@ -249,13 +249,15 @@ class SynthesisOrchestrator:
             },
         )
 
-        trace.tool_call_log.append({
-            "tool_name": request.tool_name,
-            "arguments": {"operation": operation, "top_k": 5},
-            "executed": False,
-            "round": 0,
-            "note": "mandatory_base",
-        })
+        trace.tool_call_log.append(
+            {
+                "tool_name": request.tool_name,
+                "arguments": {"operation": operation, "top_k": 5},
+                "executed": False,
+                "round": 0,
+                "note": "mandatory_base",
+            }
+        )
 
         try:
             result = self._registry.execute(request)
@@ -263,13 +265,17 @@ class SynthesisOrchestrator:
             # Defensive: ToolRegistry.execute() already catches adapter exceptions
             # internally and returns a failed ToolCallResult, but guard here too.
             logger.warning(f"Mandatory base retrieval failed: {e}")
-            trace.warnings.append("Mandatory GraphRAG base retrieval failed — continuing without base evidence")
+            trace.warnings.append(
+                "Mandatory GraphRAG base retrieval failed — continuing without base evidence"
+            )
             trace.tool_call_log[-1]["rejected_reason"] = str(type(e).__name__)
             return None
 
         if not result.success:
             logger.warning(f"Mandatory base retrieval returned error: {result.error_code}")
-            trace.warnings.append("Mandatory GraphRAG base retrieval failed — continuing without base evidence")
+            trace.warnings.append(
+                "Mandatory GraphRAG base retrieval failed — continuing without base evidence"
+            )
             trace.tool_call_log[-1]["rejected_reason"] = result.error_code or "unknown_error"
             return None
 
@@ -285,12 +291,14 @@ class SynthesisOrchestrator:
         tool_name = call.tool_name
 
         # Log the attempt
-        trace.tool_call_log.append({
-            "tool_name": tool_name,
-            "arguments": call.arguments,
-            "executed": False,
-            "round": trace.tool_rounds,
-        })
+        trace.tool_call_log.append(
+            {
+                "tool_name": tool_name,
+                "arguments": call.arguments,
+                "executed": False,
+                "round": trace.tool_rounds,
+            }
+        )
 
         # Check registration
         if not self._registry.is_registered(tool_name):
@@ -317,7 +325,9 @@ class SynthesisOrchestrator:
             result = self._registry.execute(request)
             trace.tool_call_log[-1]["executed"] = result.success
             if not result.success:
-                trace.tool_call_log[-1]["rejected_reason"] = f"Tool returned error: {result.error_code}"
+                trace.tool_call_log[-1]["rejected_reason"] = (
+                    f"Tool returned error: {result.error_code}"
+                )
             return result
         except Exception as e:
             logger.warning(f"Tool execution failed for {tool_name}: {e}")
@@ -338,10 +348,25 @@ class SynthesisOrchestrator:
 
         # Strip forbidden keys from arguments
         forbidden = {
-            "sql", "query_sql", "cypher", "raw_query", "raw_sql",
-            "database_url", "password", "api_key", "secret", "token",
-            "credential", "n4ey", "auth", "connection", "driver",
-            "session", "execute", "eval", "exec",
+            "sql",
+            "query_sql",
+            "cypher",
+            "raw_query",
+            "raw_sql",
+            "database_url",
+            "password",
+            "api_key",
+            "secret",
+            "token",
+            "credential",
+            "n4ey",
+            "auth",
+            "connection",
+            "driver",
+            "session",
+            "execute",
+            "eval",
+            "exec",
         }
 
         sanitized_args: dict[str, Any] = {}
@@ -374,7 +399,9 @@ class SynthesisOrchestrator:
             trace.warnings.append(f"Primary provider error: {result.error_code} — using fallback")
         except Exception as e:
             logger.warning(f"Primary provider synthesize failed: {e}")
-            trace.warnings.append(f"Primary provider exception: {type(e).__name__} — using fallback")
+            trace.warnings.append(
+                f"Primary provider exception: {type(e).__name__} — using fallback"
+            )
 
         # Fallback
         trace.fallback_used = True

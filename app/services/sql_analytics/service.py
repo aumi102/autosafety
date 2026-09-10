@@ -54,13 +54,15 @@ DEFAULT_LIMIT = 10
 
 # Intents whose SQL templates bind make, model, and model year. `parse_question`
 # guarantees a fully specified vehicle for each of these.
-VEHICLE_SCOPED_INTENTS = frozenset({
-    "top_complaint_components_by_vehicle",
-    "complaint_count_by_vehicle",
-    "recalls_by_vehicle",
-    "recall_count_by_vehicle",
-    "complaint_count_by_component_for_vehicle",
-})
+VEHICLE_SCOPED_INTENTS = frozenset(
+    {
+        "top_complaint_components_by_vehicle",
+        "complaint_count_by_vehicle",
+        "recalls_by_vehicle",
+        "recall_count_by_vehicle",
+        "complaint_count_by_component_for_vehicle",
+    }
+)
 
 
 class SqlAnalyticsService:
@@ -88,22 +90,20 @@ class SqlAnalyticsService:
             return self._build_unknown_response(run_id, question, start_time)
 
         if parsed.intent == "clarification_needed":
-            return self._build_clarification_response(
-                run_id, parsed, start_time, tool_calls
-            )
+            return self._build_clarification_response(run_id, parsed, start_time, tool_calls)
 
         # Step 3: Select and build SQL template
         tool_calls += 1
         sql, params, template_id = self._build_template_sql(parsed)
 
         if sql is None:
-            return self._build_clarification_response(
-                run_id, parsed, start_time, tool_calls
-            )
+            return self._build_clarification_response(run_id, parsed, start_time, tool_calls)
 
         # Validate the generated SQL
         tool_calls += 1
-        execution = execute_readonly_sql(self.session, sql, params, max_rows=parsed.limit or DEFAULT_LIMIT)
+        execution = execute_readonly_sql(
+            self.session, sql, params, max_rows=parsed.limit or DEFAULT_LIMIT
+        )
 
         # Step 4: Build answer
         return self._build_answer_response(
@@ -117,9 +117,7 @@ class SqlAnalyticsService:
             tool_calls=tool_calls,
         )
 
-    def _build_template_sql(
-        self, parsed: ParsedQuestion
-    ) -> tuple[str | None, dict, str | None]:
+    def _build_template_sql(self, parsed: ParsedQuestion) -> tuple[str | None, dict, str | None]:
         """Select and parameterize the appropriate SQL template."""
         intent = parsed.intent
         vehicle = parsed.vehicle
@@ -220,8 +218,9 @@ class SqlAnalyticsService:
 
         # Build summary
         confidence_label: ConfidenceLabel
-        summary, sections, warnings, confidence_score, confidence_label = \
-            self._summarize_result(question, parsed, execution)
+        summary, sections, warnings, confidence_score, confidence_label = self._summarize_result(
+            question, parsed, execution
+        )
 
         # Determine confidence
         if execution.row_count == 0:
@@ -298,11 +297,13 @@ class SqlAnalyticsService:
                 top_comp = top.get("component", "unknown")
                 top_cnt = top.get("complaint_count", 0)
                 summary = f"Top complaint component for {vehicle_desc} is **{top_comp}** with {top_cnt} complaints."
-                sections.append(AnswerSection(
-                    title="Top Components",
-                    content=self._format_table(rows, ["component", "complaint_count"]),
-                    type="table_summary",
-                ))
+                sections.append(
+                    AnswerSection(
+                        title="Top Components",
+                        content=self._format_table(rows, ["component", "complaint_count"]),
+                        type="table_summary",
+                    )
+                )
             confidence_score = 0.8
 
         elif intent == "complaint_count_by_vehicle":
@@ -318,14 +319,16 @@ class SqlAnalyticsService:
                 summary = f"No recalls found for {vehicle_desc} in the current database."
             else:
                 summary = f"Found **{n}** recall(s) for {vehicle_desc}."
-                sections.append(AnswerSection(
-                    title="Recalls",
-                    content=self._format_table(
-                        rows,
-                        ["campaign_number", "component", "summary", "remedy"],
-                    ),
-                    type="table_summary",
-                ))
+                sections.append(
+                    AnswerSection(
+                        title="Recalls",
+                        content=self._format_table(
+                            rows,
+                            ["campaign_number", "component", "summary", "remedy"],
+                        ),
+                        type="table_summary",
+                    )
+                )
             warnings.append(CAVEAT_RECALL_CAUSALITY)
             confidence_score = 0.9
 
@@ -344,11 +347,15 @@ class SqlAnalyticsService:
             else:
                 make_filter = f" for {parsed.make_filter}" if parsed.make_filter else ""
                 summary = f"Top {min(n, 5)} vehicles{make_filter} by complaint count:"
-                sections.append(AnswerSection(
-                    title="Vehicle Complaint Rankings",
-                    content=self._format_table(rows, ["make", "model", "model_year", "complaint_count"]),
-                    type="table_summary",
-                ))
+                sections.append(
+                    AnswerSection(
+                        title="Vehicle Complaint Rankings",
+                        content=self._format_table(
+                            rows, ["make", "model", "model_year", "complaint_count"]
+                        ),
+                        type="table_summary",
+                    )
+                )
             warnings.append(CAVEAT_COMPLAINT_VOLUME)
 
         elif intent == "complaint_count_by_component_for_vehicle":
@@ -356,14 +363,16 @@ class SqlAnalyticsService:
                 summary = f"No complaints found for {vehicle_desc} in the current database."
             else:
                 summary = f"Complaint breakdown by component for {vehicle_desc}:"
-                sections.append(AnswerSection(
-                    title="Component Breakdown",
-                    content=self._format_table(
-                        rows,
-                        ["component", "complaint_count", "crash_count", "injury_count"],
-                    ),
-                    type="table_summary",
-                ))
+                sections.append(
+                    AnswerSection(
+                        title="Component Breakdown",
+                        content=self._format_table(
+                            rows,
+                            ["component", "complaint_count", "crash_count", "injury_count"],
+                        ),
+                        type="table_summary",
+                    )
+                )
             warnings.append(CAVEAT_COMPLAINT_VOLUME)
             confidence_score = 0.8
 
@@ -373,11 +382,13 @@ class SqlAnalyticsService:
 
         # Add caveat warning section
         if warnings:
-            sections.append(AnswerSection(
-                title="Important Caveats",
-                content=" ".join(warnings),
-                type="caveat",
-            ))
+            sections.append(
+                AnswerSection(
+                    title="Important Caveats",
+                    content=" ".join(warnings),
+                    type="caveat",
+                )
+            )
 
         return summary, sections, warnings, confidence_score, confidence_label
 

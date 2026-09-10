@@ -35,7 +35,4 @@ def hybrid_query(data: HybridQueryRequest) -> dict:
         result = answer_hybrid_question(data.question)
         return result
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Hybrid query failed: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Hybrid query failed: {e}")

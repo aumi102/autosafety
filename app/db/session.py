@@ -13,9 +13,11 @@ AsyncSessionLocal = async_sessionmaker(async_engine, class_=AsyncSession, expire
 
 sync_engine = create_engine(settings.DATABASE_URL_SYNC, echo=False)
 
+
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
+
 
 def get_sync_engine() -> Engine:
     return sync_engine

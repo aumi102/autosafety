@@ -92,8 +92,14 @@ class TestPhase5GraphBuilder:
 
         with patch("app.services.graph.graph_builder._fetch_vehicles") as mock_fv:
             with patch("app.services.graph.graph_builder._build_component_map") as mock_bcm:
-                with patch("app.services.graph.graph_builder._upsert_all_components", side_effect=track_upsert_all_components):
-                    with patch("app.services.graph.graph_builder._process_vehicle", side_effect=track_process_vehicle):
+                with patch(
+                    "app.services.graph.graph_builder._upsert_all_components",
+                    side_effect=track_upsert_all_components,
+                ):
+                    with patch(
+                        "app.services.graph.graph_builder._process_vehicle",
+                        side_effect=track_process_vehicle,
+                    ):
                         mock_fv.return_value = iter([mock_vehicle])
                         mock_bcm.return_value = {
                             "SERVICE BRAKES": {
@@ -182,8 +188,7 @@ class TestPhase5GraphBuilder:
         # No MENTIONS_COMPONENT should be emitted; skip counted for unmatched
         # (when original_component exists but doesn't match any known component)
         mentions_cypher = [
-            c for c in mock_neo4j.execute.call_args_list
-            if "MENTIONS_COMPONENT" in (c[0][0] or "")
+            c for c in mock_neo4j.execute.call_args_list if "MENTIONS_COMPONENT" in (c[0][0] or "")
         ]
         assert len(mentions_cypher) == 0
 
@@ -212,7 +217,9 @@ class TestPhase5GraphBuilder:
 
         _upsert_complaint(mock_complaint, mock_neo4j, year_key, comp_map, stats)
 
-        mentions_cypher = [c for c in mock_neo4j.execute.call_args_list if "MENTIONS_COMPONENT" in (c[0][0] or "")]
+        mentions_cypher = [
+            c for c in mock_neo4j.execute.call_args_list if "MENTIONS_COMPONENT" in (c[0][0] or "")
+        ]
         assert len(mentions_cypher) == 0, "No MENTIONS_COMPONENT when component unknown"
         assert stats.component_links_skipped >= 1
 
@@ -239,12 +246,11 @@ class TestPhase5GraphBuilder:
         mock_neo4j = MagicMock()
         stats = GraphBuildStats()
 
-        _upsert_recall_and_affects(
-            recall_data, "F-150:2020", comp_map, mock_neo4j, stats
-        )
+        _upsert_recall_and_affects(recall_data, "F-150:2020", comp_map, mock_neo4j, stats)
 
         related_cypher = [
-            c for c in mock_neo4j.execute.call_args_list
+            c
+            for c in mock_neo4j.execute.call_args_list
             if "RELATED_TO_COMPONENT" in (c[0][0] or "")
         ]
         assert len(related_cypher) >= 1, "RELATED_TO_COMPONENT should be emitted"
@@ -267,12 +273,11 @@ class TestPhase5GraphBuilder:
         mock_neo4j = MagicMock()
         stats = GraphBuildStats()
 
-        _upsert_recall_and_affects(
-            recall_data, "F-150:2020", comp_map, mock_neo4j, stats
-        )
+        _upsert_recall_and_affects(recall_data, "F-150:2020", comp_map, mock_neo4j, stats)
 
         related_cypher = [
-            c for c in mock_neo4j.execute.call_args_list
+            c
+            for c in mock_neo4j.execute.call_args_list
             if "RELATED_TO_COMPONENT" in (c[0][0] or "")
         ]
         assert len(related_cypher) == 0, "No RELATED_TO_COMPONENT when recall has no component"
@@ -308,9 +313,7 @@ class TestPhase5GraphBuilder:
                 mock_neo4j = MagicMock()
                 mock_pg = MagicMock()
 
-                stats = build_graph(
-                    mock_pg, mock_neo4j, dry_run=True, limit_vehicles=None
-                )
+                stats = build_graph(mock_pg, mock_neo4j, dry_run=True, limit_vehicles=None)
 
                 assert stats.component_nodes_merged >= 1
                 # Neo4j should NOT be called for MERGE operations in dry run
@@ -403,14 +406,10 @@ class TestComponentEvidenceModel:
             model="F-150",
             year=2020,
             vehicle_id="ford:f-150:2020",
-            complaint_components=[
-                {"id": "comp1", "name": "SERVICE BRAKES", "count": 5}
-            ],
+            complaint_components=[{"id": "comp1", "name": "SERVICE BRAKES", "count": 5}],
             components=["SERVICE BRAKES"],
             complaint_count=5,
-            shared_recalls=[
-                {"id": "20V-123", "name": "Brake recall", "complaint_count": 3}
-            ],
+            shared_recalls=[{"id": "20V-123", "name": "Brake recall", "complaint_count": 3}],
             recall_count=1,
             path_type="complaint_mentions_component",
         )

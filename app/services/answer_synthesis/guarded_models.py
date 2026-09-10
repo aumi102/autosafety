@@ -33,6 +33,7 @@ def _bound(text: str | None, limit: int) -> str:
 @dataclass
 class GuardedClaim:
     """A single application-validated factual claim in the final answer."""
+
     claim_id: str
     text: str
     claim_type: str
@@ -58,6 +59,7 @@ class GuardedClaim:
 @dataclass
 class GuardedCitation:
     """A single application-owned citation available to back claims."""
+
     citation_id: str
     source_type: str
     source_record_key: str
@@ -87,6 +89,7 @@ class GuardedCitation:
 @dataclass
 class CitationValidationResult:
     """Outcome of application-owned claim/citation validation."""
+
     valid: bool
     factual_claim_count: int = 0
     cited_claim_count: int = 0
@@ -116,6 +119,7 @@ class CitationValidationResult:
 @dataclass
 class EvidenceSufficiencyResult:
     """Deterministic evidence sufficiency classification."""
+
     status: str  # sufficient | partial | insufficient
     reasons: list[str] = field(default_factory=list)
     evidence_count: int = 0
@@ -141,6 +145,7 @@ class EvidenceSufficiencyResult:
 @dataclass
 class ConfidenceResult:
     """Deterministic, application-computed confidence in evidence support."""
+
     score: float
     level: str  # low | medium | high
     reasons: list[str] = field(default_factory=list)
@@ -174,6 +179,7 @@ class RetrievalSummary:
 @dataclass
 class GuardedTrace:
     """Audit trace for Phase 7D decisions. No raw prompt, no API key, no traceback."""
+
     original_provider: str
     provider_available: bool
     fallback_used: bool
@@ -213,12 +219,15 @@ class GuardedAnswerResult:
     The application is the final authority: this result reflects only
     validated, citation-backed claims or a deterministic abstention.
     """
+
     query: str
     answer: str
     claims: list[GuardedClaim] = field(default_factory=list)
     citations: list[GuardedCitation] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    confidence: ConfidenceResult = field(default_factory=lambda: ConfidenceResult(score=0.0, level="low"))
+    confidence: ConfidenceResult = field(
+        default_factory=lambda: ConfidenceResult(score=0.0, level="low")
+    )
     abstained: bool = False
     abstention_reason: str | None = None
     synthesis_mode: str = "abstention"  # llm | deterministic | fallback | repaired | abstention

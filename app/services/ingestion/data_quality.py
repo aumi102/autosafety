@@ -19,6 +19,7 @@ from app.db.models.domain import (
 @dataclass
 class DataQualitySummary:
     """Data quality metrics for Phase 1."""
+
     vehicle_count: int = 0
     component_count: int = 0
     complaint_count: int = 0
@@ -75,27 +76,27 @@ def get_data_quality_summary(session: Session) -> DataQualitySummary:
     summary.recall_vehicle_link_count = session.query(RecallVehicleLink).count()
 
     # Missing keys
-    summary.complaints_missing_odi = session.query(Complaint).filter(
-        Complaint.odi_number.is_(None)
-    ).count()
+    summary.complaints_missing_odi = (
+        session.query(Complaint).filter(Complaint.odi_number.is_(None)).count()
+    )
 
-    summary.recalls_missing_campaign = session.query(Recall).filter(
-        Recall.campaign_number.is_(None)
-    ).count()
+    summary.recalls_missing_campaign = (
+        session.query(Recall).filter(Recall.campaign_number.is_(None)).count()
+    )
 
     # Missing component
-    summary.complaints_missing_component = session.query(Complaint).filter(
-        Complaint.component_id.is_(None)
-    ).count()
+    summary.complaints_missing_component = (
+        session.query(Complaint).filter(Complaint.component_id.is_(None)).count()
+    )
 
-    summary.recalls_missing_component = session.query(Recall).filter(
-        Recall.component_id.is_(None)
-    ).count()
+    summary.recalls_missing_component = (
+        session.query(Recall).filter(Recall.component_id.is_(None)).count()
+    )
 
     # Complaints missing vehicle link (all complaints should have vehicle_id)
-    summary.complaints_missing_vehicle_link = session.query(Complaint).filter(
-        Complaint.vehicle_id.is_(None)
-    ).count()
+    summary.complaints_missing_vehicle_link = (
+        session.query(Complaint).filter(Complaint.vehicle_id.is_(None)).count()
+    )
 
     # Duplicate ODI candidates: same ODI number appears on multiple complaints
     # (odi_number is UNIQUE so this is 0, but we track for transparency)
@@ -109,13 +110,15 @@ def get_data_quality_summary(session: Session) -> DataQualitySummary:
     summary.complaints_flat_file_runs = []
     for run in source_runs:
         if run.source_name == "nhtsa_complaints_flat_file_phase1_5":
-            summary.complaints_flat_file_runs.append({
-                "id": str(run.id),
-                "status": run.status,
-                "row_count": run.row_count,
-                "started_at": run.started_at.isoformat() if run.started_at else None,
-                "finished_at": run.finished_at.isoformat() if run.finished_at else None,
-            })
+            summary.complaints_flat_file_runs.append(
+                {
+                    "id": str(run.id),
+                    "status": run.status,
+                    "row_count": run.row_count,
+                    "started_at": run.started_at.isoformat() if run.started_at else None,
+                    "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+                }
+            )
     for run in source_runs:
         if run.status == "success":
             summary.successful_runs += 1

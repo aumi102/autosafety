@@ -48,6 +48,7 @@ MAX_RAW_RESPONSE_CHARS = 50_000
 # Abstract interface
 # =============================================================================
 
+
 class SynthesisProvider(ABC):
     """
     Abstract synthesis provider.
@@ -106,6 +107,7 @@ class SynthesisProvider(ABC):
 # Deterministic Provider
 # =============================================================================
 
+
 class DeterministicProvider(SynthesisProvider):
     """
     Template-based synthesis without network.
@@ -158,43 +160,73 @@ class DeterministicProvider(SynthesisProvider):
 
         # Rule: vehicle resolution needed
         if not evidence_has_vehicle_id:
-            has_make = any(k in question_lower for k in ["ford", "honda", "toyota", "chevy", "nissan"])
-            has_model = any(k in question_lower for k in ["f-150", "accord", "camry", "tacoma", "silverado"])
+            has_make = any(
+                k in question_lower for k in ["ford", "honda", "toyota", "chevy", "nissan"]
+            )
+            has_model = any(
+                k in question_lower for k in ["f-150", "accord", "camry", "tacoma", "silverado"]
+            )
             has_year = any(str(y) in question_lower for y in range(2015, 2027))
             if has_make and has_model and has_year:
-                return [ProviderToolCall(
-                    call_id="det-call-veh-1",
-                    tool_name="vehicle_resolution_tool",
-                    arguments={"make": self._extract_make(request.question),
-                              "model": self._extract_model(request.question),
-                              "model_year": self._extract_year(request.question)},
-                )]
+                return [
+                    ProviderToolCall(
+                        call_id="det-call-veh-1",
+                        tool_name="vehicle_resolution_tool",
+                        arguments={
+                            "make": self._extract_make(request.question),
+                            "model": self._extract_model(request.question),
+                            "model_year": self._extract_year(request.question),
+                        },
+                    )
+                ]
 
         # Rule: SQL analytics for aggregate questions
         if not self._has_sql_evidence(request):
-            is_aggregate = any(k in question_lower for k in [
-                "how many", "count", "top", "number of", "total", "ranking",
-            ])
+            is_aggregate = any(
+                k in question_lower
+                for k in [
+                    "how many",
+                    "count",
+                    "top",
+                    "number of",
+                    "total",
+                    "ranking",
+                ]
+            )
             if is_aggregate and budget >= 1:
-                return [ProviderToolCall(
-                    call_id="det-call-sql-1",
-                    tool_name="sql_analytics_tool",
-                    arguments={"operation": "vehicles_by_complaint_count", "limit": 10},
-                )]
+                return [
+                    ProviderToolCall(
+                        call_id="det-call-sql-1",
+                        tool_name="sql_analytics_tool",
+                        arguments={"operation": "vehicles_by_complaint_count", "limit": 10},
+                    )
+                ]
 
         # Rule: graph for recall/component questions
         if not evidence_has_graph and budget >= 1:
-            is_graph_question = any(k in question_lower for k in [
-                "recall", "campaign", "component", "affects", "linked to",
-            ])
+            is_graph_question = any(
+                k in question_lower
+                for k in [
+                    "recall",
+                    "campaign",
+                    "component",
+                    "affects",
+                    "linked to",
+                ]
+            )
             if is_graph_question:
                 vehicle_id = self._get_vehicle_id(request)
                 if vehicle_id:
-                    return [ProviderToolCall(
-                        call_id="det-call-graph-1",
-                        tool_name="graph_evidence_tool",
-                        arguments={"operation": "recall_paths_by_vehicle", "vehicle_id": vehicle_id},
-                    )]
+                    return [
+                        ProviderToolCall(
+                            call_id="det-call-graph-1",
+                            tool_name="graph_evidence_tool",
+                            arguments={
+                                "operation": "recall_paths_by_vehicle",
+                                "vehicle_id": vehicle_id,
+                            },
+                        )
+                    ]
 
         return []
 
@@ -229,7 +261,9 @@ class DeterministicProvider(SynthesisProvider):
             )
 
         # Template answer
-        lines = ["Based on the retrieved evidence, here is what I found for your question about vehicle safety:"]
+        lines = [
+            "Based on the retrieved evidence, here is what I found for your question about vehicle safety:"
+        ]
         lines.append("")
         lines.append("Evidence Summary:")
         lines.append(f"- Evidence items retrieved: {len(citations)}")
@@ -247,8 +281,10 @@ class DeterministicProvider(SynthesisProvider):
         for c in citations[:10]:
             lines.append(f"  [{c.get('citation_id', '?')}] {c.get('label', 'Unknown')}")
         lines.append("")
-        lines.append("Note: This answer was generated by deterministic template synthesis. "
-                     "LLM-backed synthesis is available when configured.")
+        lines.append(
+            "Note: This answer was generated by deterministic template synthesis. "
+            "LLM-backed synthesis is available when configured."
+        )
 
         answer = "\n".join(lines)
 
@@ -256,11 +292,13 @@ class DeterministicProvider(SynthesisProvider):
         claims = []
         if has_citations:
             for c in citations[:3]:
-                claims.append(ProviderClaim(
-                    text=f"Evidence from {c.get('label', 'source')} was retrieved.",
-                    claim_type="complaint_observation",
-                    citation_ids=[c.get("citation_id", "")],
-                ))
+                claims.append(
+                    ProviderClaim(
+                        text=f"Evidence from {c.get('label', 'source')} was retrieved.",
+                        claim_type="complaint_observation",
+                        citation_ids=[c.get("citation_id", "")],
+                    )
+                )
 
         return ProviderSynthesisResult(
             answer=answer,
@@ -278,7 +316,9 @@ class DeterministicProvider(SynthesisProvider):
 
     def _has_graph_evidence(self, request: ProviderSynthesisRequest) -> bool:
         text = request.evidence_bundle_text.lower()
-        return any(k in text for k in ["recall_path", "graph_evidence_tool", "campaign_number", "affects"])
+        return any(
+            k in text for k in ["recall_path", "graph_evidence_tool", "campaign_number", "affects"]
+        )
 
     def _has_sql_evidence(self, request: ProviderSynthesisRequest) -> bool:
         text = request.evidence_bundle_text.lower()
@@ -287,7 +327,10 @@ class DeterministicProvider(SynthesisProvider):
     def _get_vehicle_id(self, request: ProviderSynthesisRequest) -> str | None:
         """Extract vehicle_id from evidence text if present."""
         import re
-        match = re.search(r"vehicle_id['\"]?:\s*['\"]?([a-f0-9-]{36})", request.evidence_bundle_text)
+
+        match = re.search(
+            r"vehicle_id['\"]?:\s*['\"]?([a-f0-9-]{36})", request.evidence_bundle_text
+        )
         return match.group(1) if match else None
 
     def _extract_make(self, question: str) -> str:
@@ -320,6 +363,7 @@ class DeterministicProvider(SynthesisProvider):
 
     def _extract_year(self, question: str) -> int:
         import re
+
         match = re.search(r"\b(201[5-9]|202[0-7])\b", question)
         return int(match.group(1)) if match else 2020
 
@@ -327,6 +371,7 @@ class DeterministicProvider(SynthesisProvider):
 # =============================================================================
 # Fake Provider
 # =============================================================================
+
 
 class FakeProvider(SynthesisProvider):
     """
@@ -461,6 +506,7 @@ class FakeProvider(SynthesisProvider):
 # =============================================================================
 # Real LLM Provider — OpenAI Compatible
 # =============================================================================
+
 
 class OpenAICompatibleProvider(SynthesisProvider):
     """
@@ -796,13 +842,15 @@ Answer the question using only the evidence and citation table. Cite every factu
         claims = []
         for c in parsed.get("claims", [])[:50]:
             if isinstance(c, dict) and "text" in c:
-                claims.append(ProviderClaim(
-                    text=str(c["text"])[:500],
-                    claim_type=str(c.get("claim_type", "complaint_observation"))[:50],
-                    citation_ids=[str(cid) for cid in c.get("citation_ids", []) if cid][:20],
-                    unsupported=bool(c.get("unsupported", False)),
-                    warning=str(c["warning"]) if c.get("warning") else None,
-                ))
+                claims.append(
+                    ProviderClaim(
+                        text=str(c["text"])[:500],
+                        claim_type=str(c.get("claim_type", "complaint_observation"))[:50],
+                        citation_ids=[str(cid) for cid in c.get("citation_ids", []) if cid][:20],
+                        unsupported=bool(c.get("unsupported", False)),
+                        warning=str(c["warning"]) if c.get("warning") else None,
+                    )
+                )
 
         # Parse requested tool calls (bounded — orchestrator enforces the real budget)
         requested_tool_calls = []
@@ -811,11 +859,13 @@ Answer the question using only the evidence and citation table. Cite every factu
             for i, tc in enumerate(raw_calls[:10]):
                 if isinstance(tc, dict) and "tool_name" in tc:
                     arguments = tc.get("arguments", {})
-                    requested_tool_calls.append(ProviderToolCall(
-                        call_id=f"llm-req-{i}",
-                        tool_name=str(tc["tool_name"])[:100],
-                        arguments=arguments if isinstance(arguments, dict) else {},
-                    ))
+                    requested_tool_calls.append(
+                        ProviderToolCall(
+                            call_id=f"llm-req-{i}",
+                            tool_name=str(tc["tool_name"])[:100],
+                            arguments=arguments if isinstance(arguments, dict) else {},
+                        )
+                    )
 
         return ProviderSynthesisResult(
             answer=str(parsed.get("answer", ""))[:2000],
@@ -830,6 +880,7 @@ Answer the question using only the evidence and citation table. Cite every factu
 # =============================================================================
 # Provider factory
 # =============================================================================
+
 
 def build_synthesis_provider(
     config: dict[str, Any],
@@ -866,7 +917,9 @@ def build_synthesis_provider(
 
     if provider_type == "openai_compatible":
         if not allow_external:
-            logger.warning("openai_compatible provider requested but allow_external=false — using deterministic fallback")
+            logger.warning(
+                "openai_compatible provider requested but allow_external=false — using deterministic fallback"
+            )
             return DeterministicProvider(config)
 
         api_key = config.get("api_key", "")
@@ -875,11 +928,15 @@ def build_synthesis_provider(
         timeout = config.get("timeout_seconds", 30)
 
         if not api_key or api_key in ("", "changeme"):
-            logger.warning("openai_compatible provider missing API key — using deterministic fallback")
+            logger.warning(
+                "openai_compatible provider missing API key — using deterministic fallback"
+            )
             return DeterministicProvider(config)
 
         if not model:
-            logger.warning("openai_compatible provider missing model — using deterministic fallback")
+            logger.warning(
+                "openai_compatible provider missing model — using deterministic fallback"
+            )
             return DeterministicProvider(config)
 
         return OpenAICompatibleProvider(
@@ -898,6 +955,7 @@ def build_synthesis_provider(
 # =============================================================================
 # Helpers
 # =============================================================================
+
 
 def truncate(text: str, max_chars: int) -> str:
     """Truncate text safely."""

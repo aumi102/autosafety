@@ -43,9 +43,7 @@ def _parse(path: Path) -> tuple[str, str | None]:
 
 
 def _git(*args: str) -> str:
-    result = subprocess.run(
-        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=False
-    )
+    result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False)
     return result.stdout
 
 

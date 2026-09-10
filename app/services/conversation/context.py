@@ -129,7 +129,7 @@ def resolve_context(
     question = (question or "").strip()
     current = extract_entities(question)
 
-    window = list(prior_entities)[-max(max_context_turns, 0):] if max_context_turns > 0 else []
+    window = list(prior_entities)[-max(max_context_turns, 0) :] if max_context_turns > 0 else []
     turns_considered = len(window)
 
     make = current.make

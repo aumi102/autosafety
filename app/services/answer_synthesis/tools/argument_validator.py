@@ -40,6 +40,7 @@ FORBIDDEN_KEYS: set[str] = {
 
 class ValidationError:
     """Structured validation failure."""
+
     def __init__(self, field: str, message: str):
         self.field = field
         self.message = message

@@ -28,6 +28,7 @@ from sqlalchemy.orm import sessionmaker
 # Test fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def in_memory_db():
     """Create an in-memory SQLite DB for testing."""
@@ -78,6 +79,7 @@ def complaints_csv():
 # Model normalization tests
 # =============================================================================
 
+
 class TestModelNormalization:
     """F-150 / F150 / F 150 equivalence."""
 
@@ -115,13 +117,16 @@ class TestModelNormalization:
 # Source record key tests
 # =============================================================================
 
+
 class TestSourceRecordKey:
     def test_odi_number_key(self):
         key = _build_source_record_key("11420001", {})
         assert key == "nhtsa_complaint:11420001"
 
     def test_fallback_hash_key(self):
-        key = _build_source_record_key(None, {"ODIURL": "https://api.nhtsa.gov/complaints/complaint?odi=123"})
+        key = _build_source_record_key(
+            None, {"ODIURL": "https://api.nhtsa.gov/complaints/complaint?odi=123"}
+        )
         assert key.startswith("nhtsa_complaint:hash:")
         assert len(key) > len("nhtsa_complaint:hash:")
 
@@ -129,6 +134,7 @@ class TestSourceRecordKey:
 # =============================================================================
 # Flat-file parser tests (dry-run)
 # =============================================================================
+
 
 class TestFlatFileParser:
     def test_parses_valid_rows(self, in_memory_db, seed_csv, complaints_csv):
@@ -193,6 +199,7 @@ class TestFlatFileParser:
 # Live ingestion tests
 # =============================================================================
 
+
 class TestLiveFlatFileIngestion:
     def test_inserts_complaints(self, in_memory_db, seed_csv, complaints_csv):
         source_run_id, stats = run_complaints_flat_file_ingestion(
@@ -251,9 +258,11 @@ class TestLiveFlatFileIngestion:
             complaints_csv_path=complaints_csv,
             dry_run=False,
         )
-        raw_rows = in_memory_db.query(RawSourceRow).filter(
-            RawSourceRow.source_name == "nhtsa_complaints_flat_file_phase1_5"
-        ).all()
+        raw_rows = (
+            in_memory_db.query(RawSourceRow)
+            .filter(RawSourceRow.source_name == "nhtsa_complaints_flat_file_phase1_5")
+            .all()
+        )
         assert len(raw_rows) == 5
 
     def test_source_run_created(self, in_memory_db, seed_csv, complaints_csv):
@@ -287,6 +296,7 @@ class TestLiveFlatFileIngestion:
 # Data quality tests
 # =============================================================================
 
+
 class TestDataQualityUpdates:
     def test_complaints_flat_file_runs_tracked(self, in_memory_db, seed_csv, complaints_csv):
         run_complaints_flat_file_ingestion(
@@ -316,8 +326,11 @@ class TestDataQualityUpdates:
     def test_complaints_missing_odi_counted(self, in_memory_db, seed_csv):
         # Create a complaint without ODI
         vehicle = Vehicle(
-            make="Ford", model="F-150", model_year=2020,
-            normalized_make="FORD", normalized_model="F-150",
+            make="Ford",
+            model="F-150",
+            model_year=2020,
+            normalized_make="FORD",
+            normalized_model="F-150",
         )
         in_memory_db.add(vehicle)
         in_memory_db.flush()
@@ -337,6 +350,7 @@ class TestDataQualityUpdates:
 # =============================================================================
 # Stats class tests
 # =============================================================================
+
 
 class TestComplaintsFlatFileStats:
     def test_to_dict(self):

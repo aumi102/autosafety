@@ -111,9 +111,7 @@ class AuditQuery:
             fallback_used=self.fallback_used,
             abstained=self.abstained,
             since_hours=(
-                None
-                if self.since_hours is None
-                else max(1, min(int(self.since_hours), max_hours))
+                None if self.since_hours is None else max(1, min(int(self.since_hours), max_hours))
             ),
         )
 
@@ -234,9 +232,7 @@ class ExecutionAuditReader:
         bounded = (query or AuditQuery()).bounded()
         with self._session_factory() as session:
             statement = self._filtered(bounded)
-            total = session.scalar(
-                select(func.count()).select_from(statement.subquery())
-            )
+            total = session.scalar(select(func.count()).select_from(statement.subquery()))
             rows = session.scalars(
                 statement.order_by(AgentRun.started_at.desc(), AgentRun.id.desc())
                 .offset(bounded.offset)

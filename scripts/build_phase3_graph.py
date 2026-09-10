@@ -28,6 +28,7 @@ if env_path.exists():
 def setup_schema_cmd() -> int:
     """Run schema setup."""
     from app.services.graph import setup_graph_schema
+
     print("Setting up Neo4j schema (constraints + indexes)...")
     result = setup_graph_schema()
     print(f"  Constraints created: {result.constraints_created}")
@@ -43,6 +44,7 @@ def setup_schema_cmd() -> int:
 def build_cmd(dry_run: bool, limit_vehicles: int | None) -> int:
     """Run graph build."""
     from app.services.graph import build_graph_from_postgres
+
     mode = "DRY RUN" if dry_run else "LIVE BUILD"
     limit_str = f" (limit: {limit_vehicles} vehicles)" if limit_vehicles else ""
     print(f"Graph {mode}{limit_str}...")
@@ -113,16 +115,19 @@ def status_cmd() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Phase 3 Graph Build CLI")
-    parser.add_argument("--setup-schema", action="store_true",
-                        help="Setup Neo4j constraints and indexes")
-    parser.add_argument("--build", action="store_true",
-                        help="Build graph projection from PostgreSQL to Neo4j")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Count records without writing to Neo4j")
-    parser.add_argument("--limit-vehicles", type=int, default=None,
-                        help="Limit number of vehicles to process")
-    parser.add_argument("--status", action="store_true",
-                        help="Check graph status")
+    parser.add_argument(
+        "--setup-schema", action="store_true", help="Setup Neo4j constraints and indexes"
+    )
+    parser.add_argument(
+        "--build", action="store_true", help="Build graph projection from PostgreSQL to Neo4j"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Count records without writing to Neo4j"
+    )
+    parser.add_argument(
+        "--limit-vehicles", type=int, default=None, help="Limit number of vehicles to process"
+    )
+    parser.add_argument("--status", action="store_true", help="Check graph status")
 
     args = parser.parse_args()
 
@@ -147,6 +152,7 @@ def main() -> int:
     except Exception as e:
         print(f"FATAL: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 2
 

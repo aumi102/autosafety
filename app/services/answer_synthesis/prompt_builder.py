@@ -22,9 +22,25 @@ from app.services.answer_synthesis.tools.base import (
 # Defense-in-depth: prompt_builder must never emit these regardless of what
 # upstream evidence-bundle sanitization already stripped.
 _METADATA_FORBIDDEN_SUBSTRINGS = (
-    "password", "api_key", "secret", "token", "credential", "database_url",
-    "db_url", "connection_string", "neo4j", "bolt_uri", "http_uri", "redis_url",
-    "uri", "url", "private_key", "bearer", "authorization", "embedding", "vector",
+    "password",
+    "api_key",
+    "secret",
+    "token",
+    "credential",
+    "database_url",
+    "db_url",
+    "connection_string",
+    "neo4j",
+    "bolt_uri",
+    "http_uri",
+    "redis_url",
+    "uri",
+    "url",
+    "private_key",
+    "bearer",
+    "authorization",
+    "embedding",
+    "vector",
 )
 
 
@@ -190,10 +206,7 @@ def build_tool_planning_prompt(
     Returns a text prompt for providers that don't use structured tool-calling.
     """
     citation_table = _build_citation_table(evidence_bundle)
-    tool_list = "\n".join(
-        f"- {t.name}: {t.description[:200]}"
-        for t in available_tools
-    )
+    tool_list = "\n".join(f"- {t.name}: {t.description[:200]}" for t in available_tools)
 
     return f"""Based on the question and current evidence, should additional tools be called?
 

@@ -54,15 +54,9 @@ def _pg_session() -> Session:
 logger = logging.getLogger(__name__)
 
 # Required safety caveats for GraphRAG responses
-CAVEAT_RETRIEVAL = (
-    "Retrieved complaint records are public reports and may be noisy."
-)
-CAVEAT_SIMILARITY = (
-    "Semantic similarity does not prove a safety defect or official causality."
-)
-CAVEAT_SHARED_COMPONENT = (
-    "Shared component paths are potential associations, not causality."
-)
+CAVEAT_RETRIEVAL = "Retrieved complaint records are public reports and may be noisy."
+CAVEAT_SIMILARITY = "Semantic similarity does not prove a safety defect or official causality."
+CAVEAT_SHARED_COMPONENT = "Shared component paths are potential associations, not causality."
 CAVEAT_OFFICIAL_RECALL = (
     "Official recall applicability is represented by Recall -> AFFECTS -> ModelYear."
 )
@@ -106,11 +100,15 @@ def index_graphrag_documents(
 
             # Index complaints
             if source_type is None or source_type == "complaint":
-                _index_complaints(session, vector_store, provider, stats, dry_run, limit, force_reembed, errors)
+                _index_complaints(
+                    session, vector_store, provider, stats, dry_run, limit, force_reembed, errors
+                )
 
             # Index recalls
             if source_type is None or source_type == "recall":
-                _index_recalls(session, vector_store, provider, stats, dry_run, limit, force_reembed, errors)
+                _index_recalls(
+                    session, vector_store, provider, stats, dry_run, limit, force_reembed, errors
+                )
 
             if not dry_run:
                 session.commit()
@@ -189,7 +187,8 @@ def _index_complaints(
             for c in chunks:
                 emb = provider.embed_text(c.text)
                 vector_store.set_chunk_embedding(
-                    c.chunk_id, emb,
+                    c.chunk_id,
+                    emb,
                     embedding_model=provider.model_name,
                     embedding_dimension=provider.dimension,
                 )
@@ -230,9 +229,11 @@ def _index_recalls(
         stats.recalls_seen += 1
         try:
             # Get first linked vehicle for document construction
-            links = session.query(RecallVehicleLink).filter(
-                RecallVehicleLink.recall_id == recall.id
-            ).all()
+            links = (
+                session.query(RecallVehicleLink)
+                .filter(RecallVehicleLink.recall_id == recall.id)
+                .all()
+            )
             if not links:
                 stats.documents_skipped += 1
                 continue
@@ -273,7 +274,8 @@ def _index_recalls(
             for c in chunks:
                 emb = provider.embed_text(c.text)
                 vector_store.set_chunk_embedding(
-                    c.chunk_id, emb,
+                    c.chunk_id,
+                    emb,
                     embedding_model=provider.model_name,
                     embedding_dimension=provider.dimension,
                 )
@@ -367,7 +369,9 @@ def retrieve_graphrag_evidence(
             logger.warning(f"Graph expansion failed: {e}")
 
     # ─── Confidence assessment ───────────────────────────────────────────────
-    confidence_label, confidence_score, confidence_reasons = _assess_confidence(chunks, graph_paths, neo4j_available)
+    confidence_label, confidence_score, confidence_reasons = _assess_confidence(
+        chunks, graph_paths, neo4j_available
+    )
 
     # ─── Safety caveats ───────────────────────────────────────────────────────
     if chunks:
@@ -422,7 +426,9 @@ def _assess_confidence(
         score += 0.1
 
     if neo4j_available and graph_paths:
-        official_paths = [p for p in graph_paths if p.relation_source == "official_recall_affects_vehicle"]
+        official_paths = [
+            p for p in graph_paths if p.relation_source == "official_recall_affects_vehicle"
+        ]
         if official_paths:
             reasons.append("Official recall paths confirmed")
             score += 0.2
@@ -458,6 +464,7 @@ def get_graphrag_status() -> GraphRAGStatus:
         # Detect active backend
         if _pgvector_available is None:
             from app.services.graphrag.vector_store import _check_pgvector_available
+
             is_pg = _check_pgvector_available(session)
             backend = "pgvector" if is_pg else "jsonb_fallback"
         elif _pgvector_available:

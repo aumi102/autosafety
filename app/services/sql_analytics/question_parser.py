@@ -25,8 +25,9 @@ from app.services.ingestion.normalization import normalize_make, normalize_model
 @dataclass
 class VehicleEntity:
     """Extracted vehicle from question."""
-    make: str          # Original as written in question
-    model: str         # Original as written in question
+
+    make: str  # Original as written in question
+    model: str  # Original as written in question
     normalized_make: str
     normalized_model: str
     model_year: int | None = None
@@ -55,6 +56,7 @@ QuestionIntent = Literal[
 @dataclass
 class ParsedQuestion:
     """Result of parsing a natural language question."""
+
     intent: QuestionIntent
     vehicle: VehicleEntity | None = None
     limit: int | None = None
@@ -96,7 +98,7 @@ def _extract_make(text: str) -> str | None:
     """Extract and normalize make from text."""
     text_lower = text.lower()
     for alias, canonical in MAKE_ALIASES.items():
-        pattern = r'\b' + re.escape(alias) + r'\b'
+        pattern = r"\b" + re.escape(alias) + r"\b"
         if re.search(pattern, text_lower):
             return canonical
     return None
@@ -108,24 +110,24 @@ def _extract_model(text: str) -> str | None:
 
     # F-150 variants
     for variant in KNOWN_F150_VARIANTS:
-        pattern = r'\bf-? ?150\b'
+        pattern = r"\bf-? ?150\b"
         if re.search(pattern, text_lower):
             return "F-150"
 
     # Accord
-    if re.search(r'\baccord\b', text_lower):
+    if re.search(r"\baccord\b", text_lower):
         return "Accord"
 
     # Camry
-    if re.search(r'\bcamry\b', text_lower):
+    if re.search(r"\bcamry\b", text_lower):
         return "Camry"
 
     # Tacoma
-    if re.search(r'\btacoma\b', text_lower):
+    if re.search(r"\btacoma\b", text_lower):
         return "Tacoma"
 
     # Silverado
-    if re.search(r'\bsilverado\b', text_lower):
+    if re.search(r"\bsilverado\b", text_lower):
         return "Silverado"
 
     return None
@@ -134,13 +136,29 @@ def _extract_model(text: str) -> str | None:
 def _extract_year(text: str) -> int | None:
     """Extract model year (4-digit year 1990-2030)."""
     # Look for 4-digit year in context near vehicle info
-    for match in re.finditer(r'\b(19[9]\d|20[0-2]\d|2030)\b', text):
+    for match in re.finditer(r"\b(19[9]\d|20[0-2]\d|2030)\b", text):
         year = int(match.group(1))
         # Verify it's near vehicle keywords by looking around the year
         # Extend window both before year end and after
         end = min(len(text), match.end() + 20)
-        context = text[max(0, end - 60):end].lower()
-        if any(kw in context for kw in ['ford', 'honda', 'toyota', 'chevy', 'tacoma', 'camry', 'accord', 'f-150', 'f150', 'vehicle', 'model', 'year']):
+        context = text[max(0, end - 60) : end].lower()
+        if any(
+            kw in context
+            for kw in [
+                "ford",
+                "honda",
+                "toyota",
+                "chevy",
+                "tacoma",
+                "camry",
+                "accord",
+                "f-150",
+                "f150",
+                "vehicle",
+                "model",
+                "year",
+            ]
+        ):
             return year
     return None
 
@@ -148,14 +166,14 @@ def _extract_year(text: str) -> int | None:
 def _extract_limit(text: str) -> int | None:
     """Extract LIMIT hint from question."""
     # "top 5", "top 10", "list top 3"
-    match = re.search(r'\btop\s+(\d+)\b', text, re.IGNORECASE)
+    match = re.search(r"\btop\s+(\d+)\b", text, re.IGNORECASE)
     if match:
         limit = int(match.group(1))
         if 1 <= limit <= 100:
             return limit
 
     # "show me 20", "list 15"
-    match = re.search(r'\b(list|show|return)\s+(\d+)\b', text, re.IGNORECASE)
+    match = re.search(r"\b(list|show|return)\s+(\d+)\b", text, re.IGNORECASE)
     if match:
         limit = int(match.group(2))
         if 1 <= limit <= 100:
@@ -168,34 +186,56 @@ def _classify_intent(text: str, vehicle: VehicleEntity | None) -> QuestionIntent
     text_lower = text.lower()
 
     # Recall patterns (check before complaint to avoid overlap)
-    if any(kw in text_lower for kw in ['recall', 'campaign']):
-        if any(kw in text_lower for kw in ['how many', 'count', 'number of recall']):
+    if any(kw in text_lower for kw in ["recall", "campaign"]):
+        if any(kw in text_lower for kw in ["how many", "count", "number of recall"]):
             return "recall_count_by_vehicle"
         return "recalls_by_vehicle"
 
     # "Which vehicles have the most complaints" type — check first to avoid
     # "complaint component" matching "vehicles" containing "component"
-    if any(kw in text_lower for kw in ['most complaint', 'complaint ranking', 'vehicles with most', 'most complaints', 'complaints overall', 'vehicles with highest']):
+    if any(
+        kw in text_lower
+        for kw in [
+            "most complaint",
+            "complaint ranking",
+            "vehicles with most",
+            "most complaints",
+            "complaints overall",
+            "vehicles with highest",
+        ]
+    ):
         return "vehicles_by_complaint_count"
 
     # Specific complaint patterns by vehicle
-    if any(kw in text_lower for kw in ['top complaint', 'complaint component']):
+    if any(kw in text_lower for kw in ["top complaint", "complaint component"]):
         return "top_complaint_components_by_vehicle"
 
     # "by component" takes priority over generic complaint count
-    if any(kw in text_lower for kw in ['by component', 'component breakdown', 'group by component', 'per component']):
+    if any(
+        kw in text_lower
+        for kw in ["by component", "component breakdown", "group by component", "per component"]
+    ):
         if vehicle:
             return "complaint_count_by_component_for_vehicle"
         return "vehicles_by_complaint_count"
 
-    if any(kw in text_lower for kw in ['how many complaint', 'number of complaint', 'total complaint', 'complaint count', 'how many complaints']):
+    if any(
+        kw in text_lower
+        for kw in [
+            "how many complaint",
+            "number of complaint",
+            "total complaint",
+            "complaint count",
+            "how many complaints",
+        ]
+    ):
         if vehicle:
             return "complaint_count_by_vehicle"
         return "vehicles_by_complaint_count"
 
-    if any(kw in text_lower for kw in ['complaint', 'recall']):
+    if any(kw in text_lower for kw in ["complaint", "recall"]):
         if vehicle:
-            if 'recall' in text_lower:
+            if "recall" in text_lower:
                 return "recalls_by_vehicle"
             return "top_complaint_components_by_vehicle"
         return "vehicles_by_complaint_count"
@@ -242,9 +282,13 @@ def parse_question(text: str) -> ParsedQuestion:
     intent = _classify_intent(raw, vehicle)
 
     # Validation: certain intents require vehicle with full make+model+year
-    if intent in ("top_complaint_components_by_vehicle", "complaint_count_by_vehicle",
-                   "recalls_by_vehicle", "recall_count_by_vehicle",
-                   "complaint_count_by_component_for_vehicle"):
+    if intent in (
+        "top_complaint_components_by_vehicle",
+        "complaint_count_by_vehicle",
+        "recalls_by_vehicle",
+        "recall_count_by_vehicle",
+        "complaint_count_by_component_for_vehicle",
+    ):
         if not vehicle or not vehicle.model_year:
             intent = "clarification_needed"
     elif intent == "vehicles_by_complaint_count":

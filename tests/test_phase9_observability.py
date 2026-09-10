@@ -46,9 +46,7 @@ from app.services.observability.context import AuditRecorder
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-ABSTENTION_TEXT = (
-    "I cannot provide a reliable answer to this question based on available evidence."
-)
+ABSTENTION_TEXT = "I cannot provide a reliable answer to this question based on available evidence."
 
 # =============================================================================
 # Fixtures
@@ -288,9 +286,7 @@ def _registry(fail: bool = False) -> ToolRegistry:
     def adapter(*, call_id: str, arguments: dict) -> ToolCallResult:
         if fail:
             return ToolCallResult.error(call_id, "echo_tool", "adapter_error", "boom")
-        return ToolCallResult.ok(
-            call_id, "echo_tool", {"items": [{"a": 1}, {"b": 2}], "note": "x"}
-        )
+        return ToolCallResult.ok(call_id, "echo_tool", {"items": [{"a": 1}, {"b": 2}], "note": "x"})
 
     registry.register(_echo_definition(), adapter)
     return registry

@@ -1,6 +1,5 @@
 """Tests for Phase 4 hybrid SQL + graph answers."""
 
-
 from app.services.hybrid.answer_composer import (
     CAVEAT_COMPLAINT_VOLUME,
     CAVEAT_POTENTIAL_RELATION,
@@ -20,6 +19,7 @@ from app.services.hybrid.hybrid_parser import (
 # =============================================================================
 # Hybrid parser tests
 # =============================================================================
+
 
 class TestHybridParser:
     def test_detects_top_complaint_with_related_recalls(self):
@@ -103,6 +103,7 @@ class TestGraphRequestDetection:
 # Hybrid models tests
 # =============================================================================
 
+
 class TestHybridModels:
     def test_hybrid_intents_set_defined(self):
         assert "top_complaint_component_with_related_recalls" in HYBRID_INTENTS
@@ -143,6 +144,7 @@ class TestHybridModels:
 # =============================================================================
 # Answer composer tests
 # =============================================================================
+
 
 class TestAnswerComposer:
     def test_compose_includes_sql_result(self):
@@ -217,9 +219,20 @@ class TestAnswerComposer:
         assert len(response.warnings) > 0
 
     def test_compose_confidence_high_when_sql_and_graph(self):
-        sql_resp = {"sql": {"row_count": 5, "query": "SELECT *", "columns": [], "rows": [{}], "execution_ms": 10, "validated": True}}
+        sql_resp = {
+            "sql": {
+                "row_count": 5,
+                "query": "SELECT *",
+                "columns": [],
+                "rows": [{}],
+                "execution_ms": 10,
+                "validated": True,
+            }
+        }
         item = GraphEvidenceItem(path_type="potentially related", recall_campaigns=["22V"])
-        result = HybridAnswerResult(sql_response=sql_resp, graph_evidence=[item], neo4j_available=True)
+        result = HybridAnswerResult(
+            sql_response=sql_resp, graph_evidence=[item], neo4j_available=True
+        )
         response = compose_hybrid_answer(result, "complaints and recalls")
         assert response.confidence.label == "high"
 
@@ -230,7 +243,14 @@ class TestAnswerComposer:
 
     def test_compose_answer_has_sections(self):
         sql_resp = {
-            "sql": {"row_count": 1, "query": "SELECT 1", "columns": ["x"], "rows": [{"x": 1}], "execution_ms": 5, "validated": True},
+            "sql": {
+                "row_count": 1,
+                "query": "SELECT 1",
+                "columns": ["x"],
+                "rows": [{"x": 1}],
+                "execution_ms": 5,
+                "validated": True,
+            },
             "answer": {"summary": "test"},
         }
         result = HybridAnswerResult(sql_response=sql_resp, graph_evidence=[])
@@ -242,9 +262,11 @@ class TestAnswerComposer:
 # Hybrid service tests
 # =============================================================================
 
+
 class TestHybridServiceRouting:
     def test_is_hybrid_question_wrapper(self):
         from app.services.hybrid.hybrid_service import is_hybrid_question_wrapper
+
         assert is_hybrid_question_wrapper("complaints and recalls for Ford F-150 2020") is True
         assert is_hybrid_question_wrapper("how many complaints") is False
 
@@ -253,17 +275,21 @@ class TestHybridServiceRouting:
 # Import smoke tests
 # =============================================================================
 
+
 class TestImports:
     def test_hybrid_package_imports_clean(self):
         from app.services.hybrid import answer_hybrid_question
         from app.services.hybrid.hybrid_parser import parse_hybrid_question
+
         assert callable(answer_hybrid_question)
         assert callable(parse_hybrid_question)
 
     def test_hybrid_endpoint_imports_clean(self):
         from app.api.v1.endpoints.hybrid import hybrid_query
+
         assert callable(hybrid_query)
 
     def test_chat_endpoint_imports_clean(self):
         from app.api.v1.endpoints.chat import send_message
+
         assert callable(send_message)

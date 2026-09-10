@@ -74,9 +74,7 @@ def answer_hybrid_question(question: str) -> dict:
 
     if intent.hybrid_type in HYBRID_INTENTS and intent.vehicle_extracted:
         tool_calls += 1
-        graph_evidence, neo4j_available, neo4j_error = _run_graph_retrieval(
-            intent
-        )
+        graph_evidence, neo4j_available, neo4j_error = _run_graph_retrieval(intent)
 
     # Step 4: compose answer
     tool_calls += 1
@@ -195,7 +193,11 @@ def _run_graph_retrieval(
                 path_type=shared_result.path_type,
                 nodes=[],
                 relationships=[],
-                recall_campaigns=[r.get("campaign_number", "") for r in shared_result.shared_recalls if r.get("campaign_number")],
+                recall_campaigns=[
+                    r.get("campaign_number", "")
+                    for r in shared_result.shared_recalls
+                    if r.get("campaign_number")
+                ],
                 relation_basis="potentially_related_by_shared_component",
                 summary=_summarize_shared_component_recalls(shared_result),
             )
@@ -214,11 +216,16 @@ def _find_vehicle_id(make: str, model: str, year: int) -> str | None:
         session = _get_pg_session()
         try:
             from app.db.models.domain import Vehicle
-            row = session.query(Vehicle).filter(
-                Vehicle.normalized_make == make,
-                Vehicle.normalized_model == model,
-                Vehicle.model_year == year,
-            ).first()
+
+            row = (
+                session.query(Vehicle)
+                .filter(
+                    Vehicle.normalized_make == make,
+                    Vehicle.normalized_model == model,
+                    Vehicle.model_year == year,
+                )
+                .first()
+            )
             if row:
                 return str(row.id)
         finally:
@@ -257,7 +264,11 @@ def _summarize_shared_component_recalls(shared_result: ComponentEvidence) -> str
     if not shared_result.shared_recalls:
         return "No recalls linked via shared components in the graph."
     count = shared_result.recall_count
-    recalls = [r.get("campaign_number", "") for r in shared_result.shared_recalls[:5] if r.get("campaign_number")]
+    recalls = [
+        r.get("campaign_number", "")
+        for r in shared_result.shared_recalls[:5]
+        if r.get("campaign_number")
+    ]
     parts = [f"{count} recall(s) potentially related by shared component."]
     if recalls:
         parts.append(f"Campaigns: {', '.join(recalls)}")

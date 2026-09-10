@@ -106,9 +106,19 @@ def _check_claim_type_support(
     if claim_type == "complaint_component_observation":
         complaint_citations = [c for c in citations if c.source_type == "complaint"]
         if not complaint_citations:
-            return False, ["complaint_component_observation requires a complaint citation"], None, "none"
+            return (
+                False,
+                ["complaint_component_observation requires a complaint citation"],
+                None,
+                "none",
+            )
         if not any(c.text_span for c in complaint_citations):
-            return False, ["complaint_component_observation requires component evidence"], None, "none"
+            return (
+                False,
+                ["complaint_component_observation requires component evidence"],
+                None,
+                "none",
+            )
         return True, [], None, "none"
 
     if claim_type == "official_recall":
@@ -121,15 +131,18 @@ def _check_claim_type_support(
         if not recall_citations:
             return False, ["official_recall_applicability requires a recall citation"], None, "none"
         affects_keys = {
-            c.source_record_key for c in citations
+            c.source_record_key
+            for c in citations
             if c.relation_basis == "official_recall_affects_vehicle"
         }
         matched = any(c.source_record_key in affects_keys for c in recall_citations)
         if not matched:
             return (
                 True,
-                ["downgraded official_recall_applicability to official_recall — no matching "
-                 "official_recall_affects_vehicle relation in cited evidence"],
+                [
+                    "downgraded official_recall_applicability to official_recall — no matching "
+                    "official_recall_affects_vehicle relation in cited evidence"
+                ],
                 "official_recall",
                 "existence",
             )
@@ -139,7 +152,9 @@ def _check_claim_type_support(
         if "complaint" not in types_present or "recall" not in types_present:
             return (
                 False,
-                ["potential_shared_component_association requires both complaint and recall citations"],
+                [
+                    "potential_shared_component_association requires both complaint and recall citations"
+                ],
                 None,
                 "none",
             )
@@ -154,7 +169,14 @@ def _check_claim_type_support(
         numbers_in_evidence = set(re.findall(r"\d+", combined_text))
         unmatched = numbers_in_claim - numbers_in_evidence
         if unmatched:
-            return False, [f"sql_fact contains figures not present in cited SQL evidence: {sorted(unmatched)}"], None, "none"
+            return (
+                False,
+                [
+                    f"sql_fact contains figures not present in cited SQL evidence: {sorted(unmatched)}"
+                ],
+                None,
+                "none",
+            )
         return True, [], None, "none"
 
     if claim_type == "data_limitation":
@@ -249,13 +271,18 @@ def validate_and_build_claims(
         )
         claim_messages.extend(type_messages)
         if not ok:
-            messages.append(f"{claim_id}: rejected — {'; '.join(type_messages) if type_messages else 'insufficient supporting evidence'}")
+            messages.append(
+                f"{claim_id}: rejected — {'; '.join(type_messages) if type_messages else 'insufficient supporting evidence'}"
+            )
             unsupported_claim_ids.append(claim_id)
             continue
         if remapped_type and remapped_type != claim_type:
             previous_claim_type = claim_type
             claim_type = remapped_type
-            if previous_claim_type == "official_recall_applicability" and claim_type == "official_recall":
+            if (
+                previous_claim_type == "official_recall_applicability"
+                and claim_type == "official_recall"
+            ):
                 recall_key = next(
                     (c.source_record_key for c in cited_citations if c.source_type == "recall"),
                     "unknown",
@@ -279,23 +306,27 @@ def validate_and_build_claims(
         validation_status = "repaired" if claim_messages else "accepted"
         support_level = "supported" if (seen_cids or not is_factual) else "partial"
 
-        guarded_claims.append(GuardedClaim(
-            claim_id=claim_id,
-            text=text,
-            claim_type=claim_type,
-            citation_ids=seen_cids,
-            support_level=support_level,
-            official_status=official_status,
-            validation_status=validation_status,
-            validation_messages=claim_messages,
-        ))
+        guarded_claims.append(
+            GuardedClaim(
+                claim_id=claim_id,
+                text=text,
+                claim_type=claim_type,
+                citation_ids=seen_cids,
+                support_level=support_level,
+                official_status=official_status,
+                validation_status=validation_status,
+                validation_messages=claim_messages,
+            )
+        )
 
     guarded_claims = guarded_claims[:MAX_OUTPUT_CLAIMS]
 
     valid_citation_count = len({cid for cl in guarded_claims for cid in cl.citation_ids})
     invalid_citation_count = len(set(invalid_citation_ids_seen))
-    citation_coverage = (cited_claim_count / factual_claim_count) if factual_claim_count else (
-        1.0 if guarded_claims else 0.0
+    citation_coverage = (
+        (cited_claim_count / factual_claim_count)
+        if factual_claim_count
+        else (1.0 if guarded_claims else 0.0)
     )
 
     result = CitationValidationResult(

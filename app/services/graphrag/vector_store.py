@@ -37,10 +37,12 @@ def _pg_vector_literal(vector: list[float]) -> str:
 def _check_pgvector_available(session: Session) -> bool:
     """Check if pgvector column exists and is usable."""
     try:
-        result = session.execute(text(
-            "SELECT COUNT(*) FROM information_schema.columns "
-            "WHERE table_name = 'evidence_chunks' AND column_name = 'embedding_vector'"
-        )).scalar()
+        result = session.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                "WHERE table_name = 'evidence_chunks' AND column_name = 'embedding_vector'"
+            )
+        ).scalar()
         return bool(result)
     except Exception:
         return False
@@ -55,6 +57,7 @@ def _init_pgvector_flag(session: Session) -> None:
 @dataclass
 class VectorSearchResult:
     """A vector similarity search result."""
+
     chunk_id: str
     chunk_text: str
     score: float
@@ -93,9 +96,11 @@ class VectorStore:
             status: "created" | "updated" | "unchanged" | "skipped"
         """
         # Check if document exists
-        existing = self.session.query(EvidenceDocument).filter(
-            EvidenceDocument.document_id == document.document_id
-        ).first()
+        existing = (
+            self.session.query(EvidenceDocument)
+            .filter(EvidenceDocument.document_id == document.document_id)
+            .first()
+        )
 
         if existing:
             # Check if content changed
@@ -110,9 +115,11 @@ class VectorStore:
             existing.source_url = document.source_url
 
             # Delete existing chunks (will be re-inserted)
-            deleted = self.session.query(EvidenceChunk).filter(
-                EvidenceChunk.document_id == existing.id
-            ).delete()
+            deleted = (
+                self.session.query(EvidenceChunk)
+                .filter(EvidenceChunk.document_id == existing.id)
+                .delete()
+            )
             status = "updated"
         else:
             # Create new document
@@ -186,16 +193,17 @@ class VectorStore:
                 },
             )
         else:
-            self.session.query(EvidenceChunk).filter(
-                EvidenceChunk.chunk_id == chunk_id
-            ).update({
-                EvidenceChunk.embedding_vector_id: uuid.uuid4(),
-                EvidenceChunk.metadata_json: {
-                    "embedding": embedding,
-                    "embedding_model": embedding_model,
-                    "embedding_dimension": embedding_dimension,
+            self.session.query(EvidenceChunk).filter(EvidenceChunk.chunk_id == chunk_id).update(
+                {
+                    EvidenceChunk.embedding_vector_id: uuid.uuid4(),
+                    EvidenceChunk.metadata_json: {
+                        "embedding": embedding,
+                        "embedding_model": embedding_model,
+                        "embedding_dimension": embedding_dimension,
+                    },
                 },
-            }, synchronize_session=False)
+                synchronize_session=False,
+            )
 
     def search_similar(
         self,
@@ -218,9 +226,13 @@ class VectorStore:
         limit = min(top_k, 100)
 
         if _pgvector_available:
-            return self._search_pgvector(query_embedding, limit, source_type, make, model, model_year)
+            return self._search_pgvector(
+                query_embedding, limit, source_type, make, model, model_year
+            )
         else:
-            return self._search_jsonb_fallback(query_embedding, limit, source_type, make, model, model_year, min_score)
+            return self._search_jsonb_fallback(
+                query_embedding, limit, source_type, make, model, model_year, min_score
+            )
 
     def _search_pgvector(
         self,
@@ -278,28 +290,32 @@ class VectorStore:
             rows = self.session.execute(text(sql), params).fetchall()
             for row in rows:
                 doc_meta: dict = row.doc_metadata or {}
-                results.append(VectorSearchResult(
-                    chunk_id=row.chunk_id,
-                    chunk_text=row.chunk_text,
-                    score=max(0.0, min(1.0, float(row.score or 0.0))),
-                    source_type=row.source_type,
-                    source_record_key=row.source_record_key,
-                    document_id=row.document_id,
-                    metadata_json={
-                        "title": row.title,
-                        "source_url": row.source_url,
-                        "make": doc_meta.get("make"),
-                        "model": doc_meta.get("model"),
-                        "model_year": doc_meta.get("model_year"),
-                        "component": doc_meta.get("component"),
-                        **doc_meta,
-                    },
-                ))
+                results.append(
+                    VectorSearchResult(
+                        chunk_id=row.chunk_id,
+                        chunk_text=row.chunk_text,
+                        score=max(0.0, min(1.0, float(row.score or 0.0))),
+                        source_type=row.source_type,
+                        source_record_key=row.source_record_key,
+                        document_id=row.document_id,
+                        metadata_json={
+                            "title": row.title,
+                            "source_url": row.source_url,
+                            "make": doc_meta.get("make"),
+                            "model": doc_meta.get("model"),
+                            "model_year": doc_meta.get("model_year"),
+                            "component": doc_meta.get("component"),
+                            **doc_meta,
+                        },
+                    )
+                )
         except Exception as e:
             logger.warning(f"pgvector search failed: {e}, falling back to JSONB")
             global _pgvector_available
             _pgvector_available = False
-            return self._search_jsonb_fallback(query_embedding, limit, source_type, make, model, model_year, 0.0)
+            return self._search_jsonb_fallback(
+                query_embedding, limit, source_type, make, model, model_year, 0.0
+            )
 
         return results
 
@@ -381,23 +397,25 @@ class VectorStore:
                 else:
                     emb_list = []
                 computed_score = max(0.0, min(1.0, _cosine_similarity(emb_list, query_embedding)))
-                results.append(VectorSearchResult(
-                    chunk_id=row.chunk_id,
-                    chunk_text=row.chunk_text,
-                    score=computed_score,
-                    source_type=row.source_type,
-                    source_record_key=row.source_record_key,
-                    document_id=row.document_id,
-                    metadata_json={
-                        "title": row.title,
-                        "source_url": row.source_url,
-                        "make": doc_meta.get("make"),
-                        "model": doc_meta.get("model"),
-                        "model_year": doc_meta.get("model_year"),
-                        "component": doc_meta.get("component"),
-                        **doc_meta,
-                    },
-                ))
+                results.append(
+                    VectorSearchResult(
+                        chunk_id=row.chunk_id,
+                        chunk_text=row.chunk_text,
+                        score=computed_score,
+                        source_type=row.source_type,
+                        source_record_key=row.source_record_key,
+                        document_id=row.document_id,
+                        metadata_json={
+                            "title": row.title,
+                            "source_url": row.source_url,
+                            "make": doc_meta.get("make"),
+                            "model": doc_meta.get("model"),
+                            "model_year": doc_meta.get("model_year"),
+                            "component": doc_meta.get("component"),
+                            **doc_meta,
+                        },
+                    )
+                )
         except Exception as e:
             logger.warning(f"JSONB fallback search failed: {e}")
             return []
@@ -412,20 +430,25 @@ class VectorStore:
         """Count total embedded chunks."""
         _init_pgvector_flag(self.session)
         if _pgvector_available:
-            return self.session.query(EvidenceChunk).filter(
-                EvidenceChunk.embedding_vector_id.isnot(None)
-            ).count()
+            return (
+                self.session.query(EvidenceChunk)
+                .filter(EvidenceChunk.embedding_vector_id.isnot(None))
+                .count()
+            )
         else:
-            return self.session.query(EvidenceChunk).filter(
-                EvidenceChunk.metadata_json.op("?")("embedding")
-            ).count()
+            return (
+                self.session.query(EvidenceChunk)
+                .filter(EvidenceChunk.metadata_json.op("?")("embedding"))
+                .count()
+            )
 
     def get_document_counts_by_type(self) -> dict[str, int]:
         """Count documents by source_type."""
-        rows = self.session.query(
-            EvidenceDocument.source_type,
-            func.count(EvidenceDocument.id)
-        ).group_by(EvidenceDocument.source_type).all()
+        rows = (
+            self.session.query(EvidenceDocument.source_type, func.count(EvidenceDocument.id))
+            .group_by(EvidenceDocument.source_type)
+            .all()
+        )
         return {row[0]: row[1] for row in rows}
 
 

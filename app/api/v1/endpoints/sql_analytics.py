@@ -1,6 +1,5 @@
 """Direct SQL Analytics API endpoint."""
 
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import create_engine

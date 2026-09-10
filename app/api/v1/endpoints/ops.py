@@ -117,9 +117,7 @@ def ops_diagnostics() -> DiagnosticsResponse:
         admin_protection_enabled=admin_protection_enabled(settings),
         synthesis_provider=getattr(settings, "PHASE7_SYNTHESIS_PROVIDER", None),
         synthesis_model=getattr(settings, "PHASE7_SYNTHESIS_MODEL", None) or None,
-        external_provider_allowed=bool(
-            getattr(settings, "PHASE7_SYNTHESIS_ALLOW_EXTERNAL", False)
-        ),
+        external_provider_allowed=bool(getattr(settings, "PHASE7_SYNTHESIS_ALLOW_EXTERNAL", False)),
         # Presence only. The value is never read into a response.
         provider_credential_configured=bool(credential),
         deterministic_fallback_available=True,

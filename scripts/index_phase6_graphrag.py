@@ -36,7 +36,9 @@ def main():
     if args.status:
         status = get_graphrag_status()
         print("GraphRAG Index Status")
-        print(f"  Vector backend: {'available' if status.vector_backend_available else 'unavailable'}")
+        print(
+            f"  Vector backend: {'available' if status.vector_backend_available else 'unavailable'}"
+        )
         print(f"  Embedding model: {status.embedding_model}")
         print(f"  Embedding dimension: {status.embedding_dimension}")
         print(f"  Documents: {status.document_count}")

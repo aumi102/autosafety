@@ -180,7 +180,9 @@ class TestAnswerResponse:
                     )
                 ],
             ),
-            warnings=["Complaint volume alone does not prove a safety defect or official causality."],
+            warnings=[
+                "Complaint volume alone does not prove a safety defect or official causality."
+            ],
             confidence=Confidence(
                 label="medium",
                 score=0.71,
@@ -204,9 +206,7 @@ class TestAnswerResponse:
             "intent": "sql",
             "answer": {
                 "summary": "5 recalls found",
-                "sections": [
-                    {"title": "Recalls", "content": "5 recalls", "type": "table_summary"}
-                ],
+                "sections": [{"title": "Recalls", "content": "5 recalls", "type": "table_summary"}],
             },
             "sql": {
                 "used": True,

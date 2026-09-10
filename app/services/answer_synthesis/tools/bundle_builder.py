@@ -158,10 +158,12 @@ class EvidenceBundleBuilder:
                 evidence_type="graph_path",
                 source_record_key=source_key or "graph",
                 text=self._safe_truncate(path.get("path_text", "")),
-                metadata=_sanitize({
-                    "relation_source": relation,
-                    "confidence": path.get("confidence", 1.0),
-                }),
+                metadata=_sanitize(
+                    {
+                        "relation_source": relation,
+                        "confidence": path.get("confidence", 1.0),
+                    }
+                ),
                 relation_basis=relation,
                 score=path.get("confidence", 1.0),
             )
@@ -186,11 +188,13 @@ class EvidenceBundleBuilder:
             evidence_type="sql_result",
             source_record_key=operation,
             text=self._safe_truncate(table_text),
-            metadata=_sanitize({
-                "operation": operation,
-                "columns": columns,
-                "row_count": len(rows),
-            }),
+            metadata=_sanitize(
+                {
+                    "operation": operation,
+                    "columns": columns,
+                    "row_count": len(rows),
+                }
+            ),
             relation_basis="sql_analytics",
             score=1.0,
         )
@@ -217,15 +221,15 @@ class EvidenceBundleBuilder:
                 tool_name="graph_evidence_tool",
                 evidence_type="recall",
                 source_record_key=campaign,
-                text=self._safe_truncate(
-                    f"Recall {campaign}: {recall.get('summary', '')}"
+                text=self._safe_truncate(f"Recall {campaign}: {recall.get('summary', '')}"),
+                metadata=_sanitize(
+                    {
+                        "component": recall.get("component"),
+                        "remedy": recall.get("remedy", "")[:500],
+                        "report_date": recall.get("report_received_date"),
+                        "units_affected": recall.get("units_affected"),
+                    }
                 ),
-                metadata=_sanitize({
-                    "component": recall.get("component"),
-                    "remedy": recall.get("remedy", "")[:500],
-                    "report_date": recall.get("report_received_date"),
-                    "units_affected": recall.get("units_affected"),
-                }),
                 relation_basis=relation_basis,
                 score=1.0,
                 citation_id=citation_id,
@@ -247,10 +251,12 @@ class EvidenceBundleBuilder:
                 evidence_type="recall",
                 source_record_key=campaign,
                 text=self._safe_truncate(recall.get("summary", "")),
-                metadata=_sanitize({
-                    "component": recall.get("component"),
-                    "relation": "shared_component",
-                }),
+                metadata=_sanitize(
+                    {
+                        "component": recall.get("component"),
+                        "relation": "shared_component",
+                    }
+                ),
                 relation_basis="potentially_related_by_shared_component",
                 score=0.7,
             )
@@ -269,19 +275,23 @@ class EvidenceBundleBuilder:
             evidence_id=EvidenceItem.make_id("vehicle", data.get("normalized_make", "unknown")),
             tool_name="vehicle_resolution_tool",
             evidence_type="vehicle_resolution",
-            source_record_key=data.get("normalized_make", "") + ":" + str(data.get("model_year", "")),
+            source_record_key=data.get("normalized_make", "")
+            + ":"
+            + str(data.get("model_year", "")),
             source_entity_id=vid,
             text=self._safe_truncate(
                 f"Vehicle resolution: {data.get('normalized_make', '')} {data.get('normalized_model', '')} {data.get('model_year', '')} — {status}"
             ),
-            metadata=_sanitize({
-                "resolved": data.get("resolved"),
-                "status": status,
-                "vehicle_id": vid,
-                "normalized_make": data.get("normalized_make"),
-                "normalized_model": data.get("normalized_model"),
-                "model_year": data.get("model_year"),
-            }),
+            metadata=_sanitize(
+                {
+                    "resolved": data.get("resolved"),
+                    "status": status,
+                    "vehicle_id": vid,
+                    "normalized_make": data.get("normalized_make"),
+                    "normalized_model": data.get("normalized_model"),
+                    "model_year": data.get("model_year"),
+                }
+            ),
             relation_basis="vehicle_resolution",
             score=1.0,
         )
@@ -343,10 +353,7 @@ def _sanitize(d: dict[str, Any]) -> dict[str, Any]:
         if isinstance(v, dict):
             result[k] = _sanitize(v)
         elif isinstance(v, list):
-            result[k] = [
-                _sanitize(i) if isinstance(i, dict) else i
-                for i in v
-            ]
+            result[k] = [_sanitize(i) if isinstance(i, dict) else i for i in v]
         else:
             result[k] = v
     return result

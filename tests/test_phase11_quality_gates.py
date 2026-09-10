@@ -81,10 +81,7 @@ def _workflow_source() -> str:
 
 def _all_run_commands(workflow: dict) -> str:
     return "\n".join(
-        step["run"]
-        for job in workflow["jobs"].values()
-        for step in job["steps"]
-        if "run" in step
+        step["run"] for job in workflow["jobs"].values() for step in job["steps"] if "run" in step
     )
 
 
@@ -112,16 +109,10 @@ class TestCheckGate:
 
     def test_check_does_not_depend_on_docker_or_a_live_provider(self):
         """A developer must be able to run the gate with nothing running."""
-        recipes = "\n".join(
-            line
-            for line in _makefile_text().splitlines()
-            if line.startswith("\t")
-        )
+        recipes = "\n".join(line for line in _makefile_text().splitlines() if line.startswith("\t"))
         gate_targets = ("lint", "typecheck", "test", "evaluate")
         for target in gate_targets:
-            body = re.search(
-                rf"^{target}:[^\n]*\n((?:\t[^\n]*\n)*)", _makefile_text(), re.M
-            )
+            body = re.search(rf"^{target}:[^\n]*\n((?:\t[^\n]*\n)*)", _makefile_text(), re.M)
             assert body
             assert "docker" not in body.group(1)
         assert recipes  # sanity
@@ -158,9 +149,7 @@ class TestTypecheckConfiguration:
         """A bare `# type: ignore` suppresses everything on the line."""
         bare = []
         for path in (REPO_ROOT / "app").rglob("*.py"):
-            for number, line in enumerate(
-                path.read_text(encoding="utf-8").splitlines(), start=1
-            ):
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
                 if "type: ignore" in line and "type: ignore[" not in line:
                     bare.append(f"{path.relative_to(REPO_ROOT)}:{number}")
         assert not bare, f"bare type: ignore comments: {bare}"
@@ -170,9 +159,7 @@ class TestTypecheckConfiguration:
         ignores = [
             f"{path.relative_to(REPO_ROOT)}:{number}"
             for path in (REPO_ROOT / "app").rglob("*.py")
-            for number, line in enumerate(
-                path.read_text(encoding="utf-8").splitlines(), start=1
-            )
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1)
             if "type: ignore[" in line
         ]
         assert len(ignores) <= 3, f"unexpected growth in suppressions: {ignores}"
@@ -276,7 +263,7 @@ class TestContinuousIntegrationSecurity:
 
     def test_workflow_does_not_enable_an_external_provider(self):
         text = _workflow_source()
-        assert "PHASE7_SYNTHESIS_ALLOW_EXTERNAL: \"true\"" not in text
+        assert 'PHASE7_SYNTHESIS_ALLOW_EXTERNAL: "true"' not in text
         assert "api.openai.com" not in text
 
     def test_workflow_permissions_are_read_only(self):

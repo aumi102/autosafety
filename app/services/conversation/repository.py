@@ -93,9 +93,7 @@ class ConversationRepository:
 
     def count_turns(self, conversation_id: uuid.UUID) -> int:
         stmt = (
-            select(func.count())
-            .select_from(ChatTurn)
-            .where(ChatTurn.session_id == conversation_id)
+            select(func.count()).select_from(ChatTurn).where(ChatTurn.session_id == conversation_id)
         )
         return int(self._session.execute(stmt).scalar_one() or 0)
 
@@ -190,9 +188,7 @@ class ConversationRepository:
         rows = list(self._session.execute(stmt).all())
         rows.reverse()
         return [
-            ConversationEntities(
-                make=row[0], model=row[1], model_year=row[2], component=row[3]
-            )
+            ConversationEntities(make=row[0], model=row[1], model_year=row[2], component=row[3])
             for row in rows
         ]
 

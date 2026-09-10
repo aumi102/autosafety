@@ -116,7 +116,4 @@ def has_recall_component_relation(citations: list[GuardedCitation]) -> bool:
     limitation: RELATED_TO_COMPONENT = 0) — surfaced as a warning trigger,
     not treated as an error.
     """
-    return any(
-        c.relation_basis in ("recall_related_to_component",)
-        for c in citations
-    )
+    return any(c.relation_basis in ("recall_related_to_component",) for c in citations)

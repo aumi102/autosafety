@@ -183,8 +183,7 @@ def get_graph_status() -> GraphStatus:
     pg_counts = _pg_counts()
 
     node_labels = [
-        GraphNodeStats(label=row["label"], count=row["count"])
-        for row in node_label_rows
+        GraphNodeStats(label=row["label"], count=row["count"]) for row in node_label_rows
     ]
     relationship_types = [
         GraphRelStats(

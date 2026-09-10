@@ -245,17 +245,13 @@ def _check_turn(
 
     if expected.get("stale_citation_rejected"):
         prior_keys = {
-            c.source_record_key
-            for prior in prior_turns
-            for c in prior.result.guarded.citations
+            c.source_record_key for prior in prior_turns for c in prior.result.guarded.citations
         }
         reused = prior_keys & {
             key
             for claim in guarded.claims
             for cid in claim.citation_ids
-            for key in (
-                c.source_record_key for c in guarded.citations if c.citation_id == cid
-            )
+            for key in (c.source_record_key for c in guarded.citations if c.citation_id == cid)
         }
         if reused:
             failures.append(f"stale prior-turn evidence backed a claim: {sorted(reused)}")
@@ -411,9 +407,7 @@ def evaluate_fixture(fixture: dict[str, Any]) -> dict[str, Any]:
 
     metrics = {
         "case_pass_rate": _rate(sum(1 for o in outcomes if o.passed), len(outcomes)),
-        "citation_validity_rate": _rate(
-            totals["valid_citation_claims"], totals["factual_claims"]
-        ),
+        "citation_validity_rate": _rate(totals["valid_citation_claims"], totals["factual_claims"]),
         "citation_coverage": _rate(totals["covered_claims"], totals["factual_claims"]),
         "conversation_isolation_rate": _rate(
             sum(1 for o in outcomes if o.isolation_ok), len(outcomes)
@@ -430,9 +424,7 @@ def evaluate_fixture(fixture: dict[str, Any]) -> dict[str, Any]:
         "official_applicability_semantic_accuracy": _rate(
             sum(1 for o in applicability_cases if o.passed), len(applicability_cases)
         ),
-        "deterministic_stability_rate": _rate(
-            sum(1 for o in outcomes if o.stable), len(outcomes)
-        ),
+        "deterministic_stability_rate": _rate(sum(1 for o in outcomes if o.stable), len(outcomes)),
     }
 
     gates: dict[str, Any] = {}

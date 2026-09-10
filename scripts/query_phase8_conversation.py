@@ -33,9 +33,7 @@ from app.services.conversation.models import (
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Query Phase 8 guarded multi-turn conversation"
-    )
+    parser = argparse.ArgumentParser(description="Query Phase 8 guarded multi-turn conversation")
     parser.add_argument(
         "--question",
         "-q",

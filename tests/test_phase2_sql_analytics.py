@@ -28,6 +28,7 @@ from sqlalchemy.orm import sessionmaker
 # Question parser tests
 # =============================================================================
 
+
 class TestExtractMake:
     def test_ford(self):
         assert _extract_make("Ford F-150 2020") == "Ford"
@@ -161,6 +162,7 @@ class TestParseQuestion:
 # SQL template tests
 # =============================================================================
 
+
 class TestTemplates:
     def test_all_templates_registered(self):
         ids = list(TemplateId)
@@ -194,6 +196,7 @@ class TestTemplates:
 # SQL safety tests for templates
 # =============================================================================
 
+
 class TestTemplateSafety:
     def test_all_templates_pass_validation(self):
         for tid, template in TEMPLATES.items():
@@ -220,6 +223,7 @@ class TestTemplateSafety:
 # =============================================================================
 # Executor tests
 # =============================================================================
+
 
 @pytest.fixture
 def in_memory_db():
@@ -320,6 +324,7 @@ class TestExecutor:
 # Analytics service tests
 # =============================================================================
 
+
 class TestSqlAnalyticsService:
     def test_top_components_ford_f150_2020(self, in_memory_db):
         service = SqlAnalyticsService(in_memory_db)
@@ -400,11 +405,11 @@ class TestSqlAnalyticsService:
 # Convenience function tests
 # =============================================================================
 
+
 class TestAnswerFunction:
     def test_answer_sql_analytics_question(self, in_memory_db):
         result = answer_sql_analytics_question(
-            in_memory_db,
-            "Top complaint components for Ford F-150 2020"
+            in_memory_db, "Top complaint components for Ford F-150 2020"
         )
         assert result.intent == "sql"
         assert result.run_id is not None

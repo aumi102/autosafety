@@ -49,9 +49,7 @@ from scripts import query_phase8_conversation as cli
 from sqlalchemy.orm import Session
 
 CONVERSATION_ID = "11111111-2222-3333-4444-555555555555"
-ABSTENTION_TEXT = (
-    "I cannot provide a reliable answer to this question based on available evidence."
-)
+ABSTENTION_TEXT = "I cannot provide a reliable answer to this question based on available evidence."
 
 # =============================================================================
 # Fakes
@@ -333,9 +331,12 @@ class TestConversationApiContract:
             {"question": "hi", "tools": ["sql_analytics_tool"]},
             {"question": "hi", "max_tool_calls": 99},
         ):
-            assert client.post(
-                f"/v1/conversations/{CONVERSATION_ID}/messages", json=payload
-            ).status_code == 422
+            assert (
+                client.post(
+                    f"/v1/conversations/{CONVERSATION_ID}/messages", json=payload
+                ).status_code
+                == 422
+            )
 
     def test_list_turns_returns_bounded_scoped_turns(self, client_factory):
         client = client_factory(FakeConversationService())

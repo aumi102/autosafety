@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel
 
 
@@ -7,11 +6,13 @@ class VehicleBase(BaseModel):
     model: str
     model_year: int
 
+
 class VehicleResponse(VehicleBase):
     id: str
 
     class Config:
         from_attributes = True
+
 
 class VehicleSearchResponse(BaseModel):
     vehicles: list[VehicleResponse]

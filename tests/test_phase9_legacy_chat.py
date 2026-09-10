@@ -45,9 +45,7 @@ from app.services.conversation.models import (
 from fastapi.testclient import TestClient
 
 SESSION_ID = "11111111-2222-3333-4444-555555555555"
-ABSTENTION_TEXT = (
-    "I cannot provide a reliable answer to this question based on available evidence."
-)
+ABSTENTION_TEXT = "I cannot provide a reliable answer to this question based on available evidence."
 
 
 def _guarded(*, abstained: bool = False, with_sql: bool = False) -> GuardedAnswerResult:
@@ -381,9 +379,7 @@ class TestDeprecation:
         """Raising HTTPException discards the injected Response, so errors must
         set the headers explicitly or clients only see them on success."""
         client = client_factory(FakeConversationService(missing=True))
-        response = client.post(
-            f"/v1/chat/sessions/{SESSION_ID}/messages", json={"content": "hi"}
-        )
+        response = client.post(f"/v1/chat/sessions/{SESSION_ID}/messages", json={"content": "hi"})
         assert response.status_code == 404
         assert response.headers["Deprecation"] == "true"
         assert "/v1/conversations" in response.headers["Link"]
@@ -427,9 +423,7 @@ class TestLegacySafety:
 
     def test_unknown_session_returns_404(self, client_factory):
         client = client_factory(FakeConversationService(missing=True))
-        response = client.post(
-            f"/v1/chat/sessions/{SESSION_ID}/messages", json={"content": "hi"}
-        )
+        response = client.post(f"/v1/chat/sessions/{SESSION_ID}/messages", json={"content": "hi"})
         assert response.status_code == 404
         assert response.json()["detail"]["error"]["code"] == "CHAT_SESSION_NOT_FOUND"
 

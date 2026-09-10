@@ -11,6 +11,7 @@ from app.services.graphrag.embedding_provider import DeterministicTestProvider
 
 # ─── Chunker tests ─────────────────────────────────────────────────────────────
 
+
 class TestTextChunker:
     def test_short_document_returns_one_chunk(self):
         """Short text stays as one chunk."""
@@ -92,6 +93,7 @@ class TestTextChunker:
 
 # ─── Embedding provider tests ──────────────────────────────────────────────────
 
+
 class TestDeterministicProvider:
     def test_deterministic_same_vector(self):
         """Same text always produces same vector."""
@@ -109,6 +111,7 @@ class TestDeterministicProvider:
     def test_normalized_vector(self):
         """Vector is L2-normalized."""
         import math
+
         provider = DeterministicTestProvider(dimension=128)
         vec = provider.embed_text("service brakes complaint")
         magnitude = math.sqrt(sum(x * x for x in vec))
@@ -157,6 +160,7 @@ class TestDeterministicProvider:
 
 # ─── Document builder tests ─────────────────────────────────────────────────────
 
+
 class TestDocumentBuilder:
     def test_complaint_document_deterministic(self):
         """Same complaint always produces same document."""
@@ -167,8 +171,11 @@ class TestDocumentBuilder:
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
-            make="Ford", model="F-150", model_year=2020,
-            normalized_make="ford", normalized_model="f-150",
+            make="Ford",
+            model="F-150",
+            model_year=2020,
+            normalized_make="ford",
+            normalized_model="f-150",
         )
         complaint = Complaint(
             id="00000000-0000-0000-0000-000000000002",
@@ -200,8 +207,11 @@ class TestDocumentBuilder:
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
-            make="Toyota", model="Camry", model_year=2022,
-            normalized_make="toyota", normalized_model="camry",
+            make="Toyota",
+            model="Camry",
+            model_year=2022,
+            normalized_make="toyota",
+            normalized_model="camry",
         )
         complaint = Complaint(
             id="00000000-0000-0000-0000-000000000002",
@@ -231,8 +241,11 @@ class TestDocumentBuilder:
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
-            make="Honda", model="Civic", model_year=2019,
-            normalized_make="honda", normalized_model="civic",
+            make="Honda",
+            model="Civic",
+            model_year=2019,
+            normalized_make="honda",
+            normalized_model="civic",
         )
         recall = Recall(
             id="00000000-0000-0000-0000-000000000002",
@@ -262,8 +275,11 @@ class TestDocumentBuilder:
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
-            make="Ford", model="Focus", model_year=2021,
-            normalized_make="ford", normalized_model="focus",
+            make="Ford",
+            model="Focus",
+            model_year=2021,
+            normalized_make="ford",
+            normalized_model="focus",
         )
         complaint = Complaint(
             id="00000000-0000-0000-0000-000000000002",
@@ -290,8 +306,11 @@ class TestDocumentBuilder:
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
-            make="Ford", model="F-150", model_year=2020,
-            normalized_make="ford", normalized_model="f-150",
+            make="Ford",
+            model="F-150",
+            model_year=2020,
+            normalized_make="ford",
+            normalized_model="f-150",
         )
         complaint = Complaint(
             id="00000000-0000-0000-0000-000000000002",
@@ -315,8 +334,11 @@ class TestDocumentBuilder:
 
         vehicle = Vehicle(
             id="00000000-0000-0000-0000-000000000001",
-            make="Ford", model="F-150", model_year=2020,
-            normalized_make="ford", normalized_model="f-150",
+            make="Ford",
+            model="F-150",
+            model_year=2020,
+            normalized_make="ford",
+            normalized_model="f-150",
         )
         complaint = Complaint(
             id="00000000-0000-0000-0000-000000000002",
@@ -338,6 +360,7 @@ class TestDocumentBuilder:
 
 
 # ─── Service / retrieval tests ─────────────────────────────────────────────────
+
 
 class TestServiceCitationLabel:
     def test_citation_label_no_unknown(self):
@@ -364,17 +387,27 @@ class TestServiceCitationLabel:
 
 # ─── Models tests ──────────────────────────────────────────────────────────────
 
+
 class TestGraphRAGModels:
     def test_stats_to_dict_complete(self):
         """GraphRAGIndexStats.to_dict includes all fields."""
         from app.services.graphrag.models import GraphRAGIndexStats
 
         stats = GraphRAGIndexStats(
-            complaints_seen=10, recalls_seen=5,
-            documents_created=3, documents_updated=2, documents_unchanged=8,
-            documents_skipped=2, chunks_created=15, chunks_updated=4,
-            chunks_deleted=1, chunks_unchanged=20, embeddings_generated=40,
-            errors_count=1, errors=["test error"], duration_ms=500,
+            complaints_seen=10,
+            recalls_seen=5,
+            documents_created=3,
+            documents_updated=2,
+            documents_unchanged=8,
+            documents_skipped=2,
+            chunks_created=15,
+            chunks_updated=4,
+            chunks_deleted=1,
+            chunks_unchanged=20,
+            embeddings_generated=40,
+            errors_count=1,
+            errors=["test error"],
+            duration_ms=500,
             dry_run=False,
         )
         d = stats.to_dict()
@@ -389,15 +422,25 @@ class TestGraphRAGModels:
         from app.services.graphrag.models import GraphRAGRetrievalResult, RetrievedChunk
 
         chunk = RetrievedChunk(
-            chunk_id="c1", score=0.85, source_type="complaint",
-            source_entity_id="e1", source_record_key="123",
-            title="Test", text="Test text", source_url=None,
-            make="Ford", model="F-150", model_year=2020,
-            component="Brakes", citation_label="Complaint 123",
+            chunk_id="c1",
+            score=0.85,
+            source_type="complaint",
+            source_entity_id="e1",
+            source_record_key="123",
+            title="Test",
+            text="Test text",
+            source_url=None,
+            make="Ford",
+            model="F-150",
+            model_year=2020,
+            component="Brakes",
+            citation_label="Complaint 123",
         )
         result = GraphRAGRetrievalResult(
-            query="brake issues", retrieved_chunks=[chunk],
-            warnings=["Test warning"], total_chunks_returned=1,
+            query="brake issues",
+            retrieved_chunks=[chunk],
+            warnings=["Test warning"],
+            total_chunks_returned=1,
             execution_ms=50,
         )
         d = result.to_dict()
@@ -411,8 +454,10 @@ class TestGraphRAGModels:
         from app.services.graphrag.models import GraphRAGStatus
 
         status = GraphRAGStatus(
-            vector_backend_available=True, vector_backend="pgvector",
-            embedding_model="test", embedding_dimension=384,
+            vector_backend_available=True,
+            vector_backend="pgvector",
+            embedding_model="test",
+            embedding_dimension=384,
         )
         d = status.to_dict()
         assert "vector_backend" in d
@@ -420,6 +465,7 @@ class TestGraphRAGModels:
 
 
 # ─── Safety caveat tests ────────────────────────────────────────────────────────
+
 
 class TestSafetyCaveats:
     def test_no_causality_claim(self):
@@ -438,6 +484,7 @@ class TestSafetyCaveats:
 
 # ─── Regression — no arbitrary SQL/Cypher endpoints ──────────────────────────
 
+
 class TestNoArbitraryMutation:
     def test_no_arbitrary_sql_or_cypher(self):
         """Verify no endpoints accept arbitrary SQL or Cypher."""
@@ -452,4 +499,6 @@ class TestNoArbitraryMutation:
                 params = list(sig.parameters.keys())
                 assert "sql" not in params, f"{name} has raw sql param"
                 assert "cypher" not in params, f"{name} has raw cypher param"
-                assert "query" not in params or "question" in params, f"{name} has ambiguous query param"
+                assert "query" not in params or "question" in params, (
+                    f"{name} has ambiguous query param"
+                )

@@ -86,8 +86,12 @@ class TestRecallNodeSerialization:
         """The inline copy is gone, so the two can no longer drift apart."""
         node = RecallNode(campaign_number="22V176000", component="SERVICE BRAKES")
         result = RecallPathResult(
-            make="Ford", model="F-150", year=2020, vehicle_id="v1",
-            recalls=[node], path_type="potentially related",
+            make="Ford",
+            model="F-150",
+            year=2020,
+            vehicle_id="v1",
+            recalls=[node],
+            path_type="potentially related",
         )
         assert result.to_dict()["recalls"] == [node.to_dict()]
         assert "campaign_number" not in inspect.getsource(RecallPathResult.to_dict)

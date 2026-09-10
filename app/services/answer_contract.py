@@ -17,6 +17,7 @@ from typing import Literal
 @dataclass
 class CitationItem:
     """A single citation from source data."""
+
     source_type: str  # "complaint" | "recall" | "investigation" | "manufacturer_communication"
     source_id: str
     source_key: str | None = None
@@ -44,8 +45,11 @@ RelationSource = Literal["source_record", "normalized_join", "semantic_similarit
 @dataclass
 class GraphPath:
     """A graph traversal path for evidence."""
+
     path_text: str
-    relation_source: Literal["source_record", "normalized_join", "semantic_similarity"] = "source_record"
+    relation_source: Literal["source_record", "normalized_join", "semantic_similarity"] = (
+        "source_record"
+    )
     confidence: float = 1.0
 
     def to_dict(self) -> dict:
@@ -59,6 +63,7 @@ class GraphPath:
 @dataclass
 class AnswerSection:
     """A section of the answer."""
+
     title: str
     content: str
     type: Literal["text", "table_summary", "evidence_summary", "caveat"] = "text"
@@ -74,6 +79,7 @@ class AnswerSection:
 @dataclass
 class Answer:
     """The answer body."""
+
     summary: str
     sections: list[AnswerSection] = field(default_factory=list)
 
@@ -87,6 +93,7 @@ class Answer:
 @dataclass
 class SqlResult:
     """SQL query execution result."""
+
     used: bool = False
     query: str | None = None
     columns: list[str] | None = None
@@ -110,6 +117,7 @@ class SqlResult:
 @dataclass
 class Evidence:
     """Evidence including citations and graph paths."""
+
     citations: list[CitationItem] = field(default_factory=list)
     graph_paths: list[GraphPath] = field(default_factory=list)
 
@@ -123,6 +131,7 @@ class Evidence:
 @dataclass
 class Confidence:
     """Confidence assessment."""
+
     label: Literal["low", "medium", "high"]
     score: float  # 0.0 to 1.0
     reasons: list[str] = field(default_factory=list)
@@ -142,6 +151,7 @@ class AnswerResponse:
 
     This is the primary response shape for chat messages.
     """
+
     run_id: str
     intent: Literal["sql", "graph_rag", "hybrid", "safety", "clarification"]
     answer: Answer
@@ -226,6 +236,7 @@ class AnswerResponse:
 
 
 # Convenience factory functions
+
 
 def make_safety_response(
     summary: str,

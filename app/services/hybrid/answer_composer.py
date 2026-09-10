@@ -108,7 +108,8 @@ def compose_hybrid_answer(
         warnings.append(CAVEAT_POTENTIAL_RELATION)
         # Check for component recall evidence gap
         component_recall_items = [
-            item for item in graph_items
+            item
+            for item in graph_items
             if item.relation_basis == "potentially_related_by_shared_component"
         ]
         if component_recall_items:
@@ -145,37 +146,45 @@ def compose_hybrid_answer(
 
     # Summary section
     summary_text = _build_summary(question, sql_row_count, graph_items, result)
-    sections.append(AnswerSection(
-        title="Answer",
-        content=summary_text,
-        type="text",
-    ))
+    sections.append(
+        AnswerSection(
+            title="Answer",
+            content=summary_text,
+            type="text",
+        )
+    )
 
     # SQL table section if data exists
     if sql_rows and sql_columns:
         table_content = _format_table(sql_rows, sql_columns)
-        sections.append(AnswerSection(
-            title="SQL Results",
-            content=table_content,
-            type="table_summary",
-        ))
+        sections.append(
+            AnswerSection(
+                title="SQL Results",
+                content=table_content,
+                type="table_summary",
+            )
+        )
 
     # Graph evidence section if available
     if graph_items:
         evidence_text = _build_graph_evidence_text(graph_items)
-        sections.append(AnswerSection(
-            title="Graph Evidence",
-            content=evidence_text,
-            type="evidence_summary",
-        ))
+        sections.append(
+            AnswerSection(
+                title="Graph Evidence",
+                content=evidence_text,
+                type="evidence_summary",
+            )
+        )
 
     # Caveats section
     if warnings:
-        sections.append(AnswerSection(
-            title="Important Caveats",
-            content=" ".join(warnings),
-            type="caveat",
-        ))
+        sections.append(
+            AnswerSection(
+                title="Important Caveats",
+                content=" ".join(warnings),
+                type="caveat",
+            )
+        )
 
     # Build evidence object
     citations: list = []
@@ -184,11 +193,15 @@ def compose_hybrid_answer(
     for item in graph_items:
         # Build path text from nodes
         path_text = _build_path_text(item, sql_rows)
-        graph_paths.append(GraphPath(
-            path_text=path_text,
-            relation_source=_relation_source(item.relation_basis),
-            confidence=0.7 if item.relation_basis == "potentially_related_by_shared_component" else 0.9,
-        ))
+        graph_paths.append(
+            GraphPath(
+                path_text=path_text,
+                relation_source=_relation_source(item.relation_basis),
+                confidence=0.7
+                if item.relation_basis == "potentially_related_by_shared_component"
+                else 0.9,
+            )
+        )
 
     # Build final response
     return AnswerResponse(

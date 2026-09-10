@@ -95,9 +95,13 @@ def list_source_runs(limit: int = 20, offset: int = 0) -> SourceRunListResponse:
     session = _get_sync_session()
     try:
         total = session.query(SourceRun).count()
-        runs = session.query(SourceRun).order_by(
-            SourceRun.started_at.desc()
-        ).offset(offset).limit(limit).all()
+        runs = (
+            session.query(SourceRun)
+            .order_by(SourceRun.started_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
 
         return SourceRunListResponse(
             source_runs=[

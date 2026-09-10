@@ -60,7 +60,9 @@ def compose_answer(
         if c.relation_basis == "official_recall_affects_vehicle"
     }
     official_recall_keys = set(official_relations)
-    shared_citations = [c for c in recall_citations if c.relation_basis == "potentially_related_by_shared_component"]
+    shared_citations = [
+        c for c in recall_citations if c.relation_basis == "potentially_related_by_shared_component"
+    ]
 
     claims: list[ProviderClaim] = []
     lines: list[str] = []
@@ -73,15 +75,28 @@ def compose_answer(
         return True
 
     for c in recall_citations:
-        is_applicable = c.source_record_key in official_recall_keys and c.relation_basis != "potentially_related_by_shared_component"
+        is_applicable = (
+            c.source_record_key in official_recall_keys
+            and c.relation_basis != "potentially_related_by_shared_component"
+        )
         if is_applicable:
             text = f"Official recall {c.source_record_key} applies to this vehicle per NHTSA records: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
             relation_citation = official_relations[c.source_record_key]
             citation_ids = list(dict.fromkeys([c.citation_id, relation_citation.citation_id]))
-            add(ProviderClaim(text=text, claim_type="official_recall_applicability", citation_ids=citation_ids), text)
+            add(
+                ProviderClaim(
+                    text=text, claim_type="official_recall_applicability", citation_ids=citation_ids
+                ),
+                text,
+            )
         elif c.relation_basis != "potentially_related_by_shared_component":
             text = f"Recall record {c.source_record_key} exists in public NHTSA data: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
-            add(ProviderClaim(text=text, claim_type="official_recall", citation_ids=[c.citation_id]), text)
+            add(
+                ProviderClaim(
+                    text=text, claim_type="official_recall", citation_ids=[c.citation_id]
+                ),
+                text,
+            )
 
     for c in complaint_citations:
         if _contains_untrusted_instruction(c.text_span):
@@ -91,10 +106,15 @@ def compose_answer(
             )
         else:
             text = f"A complaint record ({c.source_record_key}) reports: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
-        add(ProviderClaim(text=text, claim_type="complaint_observation", citation_ids=[c.citation_id]), text)
+        add(
+            ProviderClaim(
+                text=text, claim_type="complaint_observation", citation_ids=[c.citation_id]
+            ),
+            text,
+        )
 
     for c in sql_citations:
-        text = f"SQL analytics result ({c.source_record_key}): {c.text_span[:MAX_SNIPPET_CHARS + 100]}".strip()
+        text = f"SQL analytics result ({c.source_record_key}): {c.text_span[: MAX_SNIPPET_CHARS + 100]}".strip()
         add(ProviderClaim(text=text, claim_type="sql_fact", citation_ids=[c.citation_id]), text)
 
     if shared_citations and complaint_citations and len(claims) < MAX_COMPOSED_CLAIMS:

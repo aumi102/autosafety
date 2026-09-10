@@ -27,6 +27,7 @@ from app.db.base import Base
 
 # ─── Enums ────────────────────────────────────────────────────────────────────
 
+
 class SourceType(str, Enum):
     COMPLAINT = "complaint"
     RECALL = "recall"
@@ -34,9 +35,11 @@ class SourceType(str, Enum):
 
 # ─── Pydantic/dataclass response types ────────────────────────────────────────
 
+
 @dataclass
 class GraphRAGIndexStats:
     """Statistics from a GraphRAG indexing run."""
+
     complaints_seen: int = 0
     recalls_seen: int = 0
     documents_created: int = 0
@@ -76,6 +79,7 @@ class GraphRAGIndexStats:
 @dataclass
 class RetrievedChunk:
     """A single retrieved semantic chunk."""
+
     chunk_id: str
     score: float
     source_type: str  # "complaint" | "recall"
@@ -113,6 +117,7 @@ class RetrievedChunk:
 @dataclass
 class GraphRAGCitation:
     """A citation derived from a retrieved chunk."""
+
     source_type: str
     source_id: str
     source_key: str
@@ -134,6 +139,7 @@ class GraphRAGCitation:
 @dataclass
 class GraphRAGGraphPath:
     """A graph path from Neo4j expansion."""
+
     path_text: str
     relation_source: str  # complaint_mentions_component | official_recall_affects_vehicle | etc.
     source_type: str
@@ -153,6 +159,7 @@ class GraphRAGGraphPath:
 @dataclass
 class GraphRAGRetrievalResult:
     """Result of a GraphRAG retrieval query."""
+
     query: str
     retrieval_mode: str = "graphrag"
     retrieved_chunks: list[RetrievedChunk] = field(default_factory=list)
@@ -192,6 +199,7 @@ class GraphRAGRetrievalResult:
 @dataclass
 class GraphRAGStatus:
     """Status of the GraphRAG index."""
+
     vector_backend_available: bool
     embedding_model: str
     embedding_dimension: int
@@ -219,6 +227,7 @@ class GraphRAGStatus:
 
 # ─── SQLAlchemy persistence models ──────────────────────────────────────────────
 
+
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 
@@ -228,20 +237,13 @@ class EvidenceDocument(Base):
     Canonical evidence document for a single source entity (complaint or recall).
     One document per ODI number (complaint) or campaign number (recall).
     """
+
     __tablename__ = "evidence_documents"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    document_id: Mapped[str] = mapped_column(
-        String(64), unique=True, nullable=False, index=True
-    )
-    source_type: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # "complaint" | "recall"
-    source_entity_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "complaint" | "recall"
+    source_entity_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     source_record_key: Mapped[str] = mapped_column(
         String(128), nullable=False, index=True
     )  # ODI number or campaign number
@@ -272,25 +274,19 @@ class EvidenceChunk(Base):
     A deterministically chunked piece of an evidence document.
     Each chunk is embedded for semantic similarity search.
     """
+
     __tablename__ = "evidence_chunks"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    chunk_id: Mapped[str] = mapped_column(
-        String(64), unique=True, nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chunk_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     document_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("evidence_documents.id", ondelete="CASCADE"),
-        nullable=False
+        UUID(as_uuid=True), ForeignKey("evidence_documents.id", ondelete="CASCADE"), nullable=False
     )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     # pgvector column — type registered at migration time
-    embedding_vector_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    embedding_vector_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     embedding_dimension: Mapped[int | None] = mapped_column(Integer, nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
@@ -301,9 +297,7 @@ class EvidenceChunk(Base):
         DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow
     )
 
-    document: Mapped[EvidenceDocument] = relationship(
-        "EvidenceDocument", back_populates="chunks"
-    )
+    document: Mapped[EvidenceDocument] = relationship("EvidenceDocument", back_populates="chunks")
 
     __table_args__ = (
         UniqueConstraint("document_id", "chunk_index", name="uq_chunk_doc_index"),
@@ -312,6 +306,7 @@ class EvidenceChunk(Base):
 
 
 # ─── Hash utilities ────────────────────────────────────────────────────────────
+
 
 def content_hash(text: str) -> str:
     """Stable SHA-256 hash of text content."""

@@ -28,13 +28,16 @@ async def safe_request_validation_error(
     ]
     return JSONResponse(status_code=422, content={"detail": safe_errors})
 
+
 @app.get("/")
 def root() -> dict:
     return {"message": "AutoSafety GraphQL Copilot", "version": "0.1.0", "phase": "phase_10"}
 
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {"status": "ok"}
+
 
 # response_model=None: the handler returns either a plain dict or a
 # JSONResponse (503), and FastAPI cannot build a response model from that

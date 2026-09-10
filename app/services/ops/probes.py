@@ -82,9 +82,7 @@ def _classify(exc: BaseException) -> str:
     return "error"
 
 
-def _timed(
-    name: str, required: bool, probe: Callable[[], None]
-) -> DependencyStatus:
+def _timed(name: str, required: bool, probe: Callable[[], None]) -> DependencyStatus:
     """Run one probe, converting any failure into a safe status."""
     started = time.monotonic()
     try:

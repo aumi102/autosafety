@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 @dataclass
 class SynthesisConfig:
     """Configuration for the synthesis orchestrator."""
+
     provider: str = "deterministic"  # deterministic | fake | openai_compatible
     model: str = ""
     allow_external: bool = False
@@ -50,6 +51,7 @@ class SynthesisConfig:
 @dataclass
 class ProviderToolCall:
     """A structured tool call request from a provider."""
+
     call_id: str
     tool_name: str
     arguments: dict[str, Any]
@@ -65,8 +67,11 @@ class ProviderToolCall:
 @dataclass
 class ProviderClaim:
     """A factual claim extracted from synthesis output."""
+
     text: str
-    claim_type: str  # complaint_observation | official_recall | shared_component_association | sql_fact
+    claim_type: (
+        str  # complaint_observation | official_recall | shared_component_association | sql_fact
+    )
     citation_ids: list[str] = field(default_factory=list)
     unsupported: bool = False
     warning: str | None = None
@@ -84,6 +89,7 @@ class ProviderClaim:
 @dataclass
 class ProviderSynthesisRequest:
     """Request sent to a synthesis provider."""
+
     question: str
     evidence_bundle_text: str
     citation_table: list[dict[str, Any]]
@@ -105,6 +111,7 @@ class ProviderSynthesisRequest:
 @dataclass
 class ProviderSynthesisResult:
     """Structured output from a synthesis provider."""
+
     answer: str = ""
     claims: list[ProviderClaim] = field(default_factory=list)
     requested_tool_calls: list[ProviderToolCall] = field(default_factory=list)
@@ -145,6 +152,7 @@ class ProviderSynthesisResult:
 @dataclass
 class OrchestrationTrace:
     """Execution trace for debugging and audit."""
+
     provider: str
     model: str
     tool_rounds: int = 0
@@ -181,6 +189,7 @@ class OrchestrationResult:
 
     Phase = phase_7c until Phase 7D semantic validation completes.
     """
+
     question: str
     provider_result: ProviderSynthesisResult
     trace: OrchestrationTrace

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 @dataclass
 class ColumnDef:
     """Definition of an allowed column."""
+
     name: str
     description: str
     nullable: bool = True
@@ -20,6 +21,7 @@ class ColumnDef:
 @dataclass
 class TableDef:
     """Definition of an allowed table."""
+
     name: str
     description: str
     columns: list[ColumnDef]
@@ -62,7 +64,9 @@ TABLES: dict[str, TableDef] = {
             ColumnDef("id", "UUID primary key", is_uuid=True),
             ColumnDef("odi_number", "NHTSA ODI complaint number (unique)"),
             ColumnDef("vehicle_id", "FK to vehicles.id", is_uuid=True),
-            ColumnDef("component_id", "FK to components.id (nullable)", is_uuid=True, nullable=True),
+            ColumnDef(
+                "component_id", "FK to components.id (nullable)", is_uuid=True, nullable=True
+            ),
             ColumnDef("source_run_id", "FK to source_runs.id", is_uuid=True),
             ColumnDef("source_record_key", "Unique source record identifier"),
             ColumnDef("received_date", "Date complaint was received (YYYY-MM-DD)"),
@@ -86,7 +90,9 @@ TABLES: dict[str, TableDef] = {
         columns=[
             ColumnDef("id", "UUID primary key", is_uuid=True),
             ColumnDef("campaign_number", "NHTSA campaign number"),
-            ColumnDef("component_id", "FK to components.id (nullable)", is_uuid=True, nullable=True),
+            ColumnDef(
+                "component_id", "FK to components.id (nullable)", is_uuid=True, nullable=True
+            ),
             ColumnDef("source_run_id", "FK to source_runs.id", is_uuid=True),
             ColumnDef("source_record_key", "Unique source record identifier"),
             ColumnDef("report_received_date", "Date recall was reported"),

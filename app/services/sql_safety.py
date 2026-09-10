@@ -11,23 +11,34 @@ from dataclasses import dataclass
 
 # Unsafe SQL keywords that should never appear in user-generated queries
 BLOCKED_KEYWORDS = {
-    "DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "TRUNCATE",
-    "CREATE", "GRANT", "REVOKE", "COPY", "MERGE", "CALL", "EXECUTE",
+    "DROP",
+    "DELETE",
+    "UPDATE",
+    "INSERT",
+    "ALTER",
+    "TRUNCATE",
+    "CREATE",
+    "GRANT",
+    "REVOKE",
+    "COPY",
+    "MERGE",
+    "CALL",
+    "EXECUTE",
     "INTO",  # INSERT INTO, COPY INTO
 }
 
 # Patterns that indicate multiple statements or injection attempts
 BLOCKED_PATTERNS = [
-    r";",                    # Statement terminator (possible multi-statement)
-    r"--",                   # SQL comment (could hide keywords)
-    r"/\*",                  # Block comment
+    r";",  # Statement terminator (possible multi-statement)
+    r"--",  # SQL comment (could hide keywords)
+    r"/\*",  # Block comment
     r"\*/",
-    r"xp_",                  # SQL Server extended procedures
-    r"sp_executesql",        # SQL Server dynamic SQL
-    r"exec\s*\(",            # SQL Server execute
-    r"eval\s*\(",            # Code injection attempt
-    r"__import__",           # Python injection
-    r"os\.system",           # OS command injection
+    r"xp_",  # SQL Server extended procedures
+    r"sp_executesql",  # SQL Server dynamic SQL
+    r"exec\s*\(",  # SQL Server execute
+    r"eval\s*\(",  # Code injection attempt
+    r"__import__",  # Python injection
+    r"os\.system",  # OS command injection
 ]
 
 # Allowed SQL statement prefixes
@@ -56,32 +67,22 @@ def validate_sql(query: str) -> ValidationResult:
     - warning: caution if valid but needs attention
     """
     if not query or not query.strip():
-        return ValidationResult(
-            valid=False,
-            query=query or "",
-            reason="Empty query"
-        )
+        return ValidationResult(valid=False, query=query or "", reason="Empty query")
 
     # Check for blocked patterns first
     for pattern in BLOCKED_PATTERNS:
         if re.search(pattern, query, re.IGNORECASE):
             return ValidationResult(
-                valid=False,
-                query=query,
-                reason=f"Blocked pattern detected: {pattern}"
+                valid=False, query=query, reason=f"Blocked pattern detected: {pattern}"
             )
 
     # Check for blocked keywords (excluding those in allowed contexts)
     query_upper = query.upper()
     for keyword in BLOCKED_KEYWORDS:
         # Use word boundary matching to avoid false positives
-        pattern = r'\b' + keyword + r'\b'
+        pattern = r"\b" + keyword + r"\b"
         if re.search(pattern, query_upper):
-            return ValidationResult(
-                valid=False,
-                query=query,
-                reason=f"Blocked keyword: {keyword}"
-            )
+            return ValidationResult(valid=False, query=query, reason=f"Blocked keyword: {keyword}")
 
     # Check that query starts with allowed statement type
     first_word = query_upper.strip().split()[0]
@@ -89,38 +90,26 @@ def validate_sql(query: str) -> ValidationResult:
         return ValidationResult(
             valid=False,
             query=query,
-            reason=f"Only SELECT/WITH queries are allowed. Got: {first_word}"
+            reason=f"Only SELECT/WITH queries are allowed. Got: {first_word}",
         )
 
     # Check for subqueries with write operations
     # This is a simplified check - a proper implementation would parse the AST
-    subquery_blocked = re.findall(
-        r'\(([^)]*(?:INSERT|UPDATE|DELETE|DROP)[^)]*)\)',
-        query_upper
-    )
+    subquery_blocked = re.findall(r"\(([^)]*(?:INSERT|UPDATE|DELETE|DROP)[^)]*)\)", query_upper)
     if subquery_blocked:
         return ValidationResult(
-            valid=False,
-            query=query,
-            reason="Query contains write operation in subquery"
+            valid=False, query=query, reason="Query contains write operation in subquery"
         )
 
     # Add warning for queries without LIMIT
-    has_limit = bool(re.search(r'\bLIMIT\b', query_upper))
-    has_aggregate = bool(re.search(
-        r'\b(COUNT|SUM|AVG|MIN|MAX|GROUP BY)\b',
-        query_upper
-    ))
+    has_limit = bool(re.search(r"\bLIMIT\b", query_upper))
+    has_aggregate = bool(re.search(r"\b(COUNT|SUM|AVG|MIN|MAX|GROUP BY)\b", query_upper))
 
     warning = None
     if not has_limit and not has_aggregate:
         warning = "Query has no LIMIT - consider adding LIMIT 100 for safety"
 
-    return ValidationResult(
-        valid=True,
-        query=query,
-        warning=warning
-    )
+    return ValidationResult(valid=True, query=query, warning=warning)
 
 
 def enforce_limit(query: str, default_limit: int = 100, hard_limit: int = 500) -> str:
@@ -134,16 +123,16 @@ def enforce_limit(query: str, default_limit: int = 100, hard_limit: int = 500) -
     query_upper = query.upper()
 
     # Check if LIMIT already exists with a concrete integer value
-    limit_match = re.search(r'\bLIMIT\s+(\d+)', query_upper)
+    limit_match = re.search(r"\bLIMIT\s+(\d+)", query_upper)
     if limit_match:
         existing_limit = int(limit_match.group(1))
         if existing_limit > hard_limit:
             # Replace excessive LIMIT with hard limit
-            return re.sub(r'\bLIMIT\s+\d+', f'LIMIT {hard_limit}', query, flags=re.IGNORECASE)
+            return re.sub(r"\bLIMIT\s+\d+", f"LIMIT {hard_limit}", query, flags=re.IGNORECASE)
         return query
 
     # Skip if LIMIT is a parameter placeholder (e.g. LIMIT :limit)
-    if re.search(r'\bLIMIT\s+:', query_upper):
+    if re.search(r"\bLIMIT\s+:", query_upper):
         return query
 
     # Add LIMIT

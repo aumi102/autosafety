@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     # Observability only. Audit failures never fail a user request.
     PHASE9_AUDIT_ENABLED: bool = True
 
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

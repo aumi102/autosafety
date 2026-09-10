@@ -126,14 +126,10 @@ def graphrag_index(data: GraphRAGIndexRequest) -> GraphRAGIndexResponse:
     """
     if data.source_type not in (None, "complaint", "recall"):
         raise HTTPException(
-            status_code=400,
-            detail="source_type must be 'complaint', 'recall', or omitted"
+            status_code=400, detail="source_type must be 'complaint', 'recall', or omitted"
         )
     if data.limit is not None and data.limit < 1:
-        raise HTTPException(
-            status_code=400,
-            detail="limit must be a positive integer"
-        )
+        raise HTTPException(status_code=400, detail="limit must be a positive integer")
 
     start = time.time()
     stats = index_graphrag_documents(
@@ -166,19 +162,12 @@ def graphrag_retrieve(data: GraphRAGRetrieveRequest) -> GraphRAGRetrieveResponse
     Shared component paths are potential associations, not causality.
     """
     if not data.question or not data.question.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="question cannot be empty"
-        )
+        raise HTTPException(status_code=400, detail="question cannot be empty")
     if data.top_k < 1 or data.top_k > 50:
-        raise HTTPException(
-            status_code=400,
-            detail="top_k must be between 1 and 50"
-        )
+        raise HTTPException(status_code=400, detail="top_k must be between 1 and 50")
     if data.source_type not in (None, "complaint", "recall"):
         raise HTTPException(
-            status_code=400,
-            detail="source_type must be 'complaint', 'recall', or omitted"
+            status_code=400, detail="source_type must be 'complaint', 'recall', or omitted"
         )
 
     result = retrieve_graphrag_evidence(

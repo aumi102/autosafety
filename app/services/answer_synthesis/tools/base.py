@@ -23,19 +23,21 @@ class ToolName(str, Enum):
 @dataclass
 class ToolInputField:
     """Schema definition for a single input field."""
+
     type: str  # "string" | "integer" | "boolean" | "enum"
     description: str
     required: bool = True
     default: Any = None
     max_length: int | None = None  # for strings
-    min_value: int | None = None   # for integers
-    max_value: int | None = None    # for integers
+    min_value: int | None = None  # for integers
+    max_value: int | None = None  # for integers
     enum_values: list[str] | None = None  # for enum type
 
 
 @dataclass
 class ToolInputSchema:
     """Full input schema for a tool."""
+
     fields: dict[str, ToolInputField]
 
     def to_dict(self) -> dict:
@@ -62,6 +64,7 @@ class ToolDefinition:
     Contains only schema metadata — no callable objects,
     no credentials, no internal state.
     """
+
     name: str
     description: str
     input_schema: ToolInputSchema
@@ -83,6 +86,7 @@ class ToolDefinition:
 @dataclass
 class ToolCallRequest:
     """A structured tool call from an LLM or orchestrator."""
+
     call_id: str
     tool_name: str
     arguments: dict[str, Any]
@@ -96,7 +100,9 @@ class ToolCallRequest:
 
     @classmethod
     def make(cls, tool_name: str, arguments: dict[str, Any]) -> ToolCallRequest:
-        return cls(call_id=f"call-{uuid.uuid4().hex[:12]}", tool_name=tool_name, arguments=arguments)
+        return cls(
+            call_id=f"call-{uuid.uuid4().hex[:12]}", tool_name=tool_name, arguments=arguments
+        )
 
 
 @dataclass
@@ -106,6 +112,7 @@ class ToolCallResult:
 
     Error codes are stable strings. No raw tracebacks.
     """
+
     call_id: str
     tool_name: str
     success: bool
@@ -130,30 +137,45 @@ class ToolCallResult:
         }
 
     @classmethod
-    def ok(cls, call_id: str, tool_name: str, data: dict[str, Any],
-          warnings: list[str] | None = None, truncated: bool = False) -> ToolCallResult:
+    def ok(
+        cls,
+        call_id: str,
+        tool_name: str,
+        data: dict[str, Any],
+        warnings: list[str] | None = None,
+        truncated: bool = False,
+    ) -> ToolCallResult:
         return cls(
-            call_id=call_id, tool_name=tool_name, success=True,
-            data=data, warnings=warnings or [], truncated=truncated, duration_ms=0,
+            call_id=call_id,
+            tool_name=tool_name,
+            success=True,
+            data=data,
+            warnings=warnings or [],
+            truncated=truncated,
+            duration_ms=0,
         )
 
     @classmethod
-    def error(cls, call_id: str, tool_name: str, error_code: str,
-              error_message: str) -> ToolCallResult:
+    def error(
+        cls, call_id: str, tool_name: str, error_code: str, error_message: str
+    ) -> ToolCallResult:
         return cls(
-            call_id=call_id, tool_name=tool_name, success=False,
-            error_code=error_code, error_message=error_message,
+            call_id=call_id,
+            tool_name=tool_name,
+            success=False,
+            error_code=error_code,
+            error_message=error_message,
         )
 
     @classmethod
-    def validation_error(cls, call_id: str, tool_name: str,
-                         error_message: str) -> ToolCallResult:
+    def validation_error(cls, call_id: str, tool_name: str, error_message: str) -> ToolCallResult:
         return cls.error(call_id, tool_name, "validation_error", error_message)
 
 
 @dataclass
 class ToolExecutionPolicy:
     """Safety and resource bounds for tool execution."""
+
     max_total_calls: int = 4
     max_result_items: int = 20
     max_string_length: int = 2000
@@ -177,9 +199,12 @@ class EvidenceItem:
 
     Deterministic ID based on source_record_key.
     """
+
     evidence_id: str
     tool_name: str
-    evidence_type: str  # "complaint" | "recall" | "sql_result" | "graph_path" | "graph_neighborhood"
+    evidence_type: (
+        str  # "complaint" | "recall" | "sql_result" | "graph_path" | "graph_neighborhood"
+    )
     source_record_key: str
     source_entity_id: str | None = None
     text: str = ""
@@ -221,10 +246,7 @@ class EvidenceItem:
         if self.citation_id:
             return self.citation_id
         if self.relation_basis:
-            return (
-                f"cite-{self.evidence_type}-{self.relation_basis}-"
-                f"{self.source_record_key}"
-            )
+            return f"cite-{self.evidence_type}-{self.relation_basis}-{self.source_record_key}"
         return self.make_citation_id(self.evidence_type, self.source_record_key)
 
 
@@ -235,6 +257,7 @@ class EvidenceBundle:
 
     Built by EvidenceBundleBuilder — sanitized and size-bounded.
     """
+
     items: list[EvidenceItem] = field(default_factory=list)
     tool_calls: list[ToolCallResult] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -255,14 +278,17 @@ class EvidenceBundle:
         table = []
         for item in self.items:
             if item.citation_id:
-                table.append({
-                    "citation_id": item.citation_id,
-                    "source_type": item.evidence_type,
-                    "source_key": item.source_record_key,
-                    "label": item.citation_label or f"{item.evidence_type} {item.source_record_key}",
-                    "text_span": item.text[:500] if item.text else None,
-                    "score": item.score,
-                })
+                table.append(
+                    {
+                        "citation_id": item.citation_id,
+                        "source_type": item.evidence_type,
+                        "source_key": item.source_record_key,
+                        "label": item.citation_label
+                        or f"{item.evidence_type} {item.source_record_key}",
+                        "text_span": item.text[:500] if item.text else None,
+                        "score": item.score,
+                    }
+                )
         # Deduplicate by citation_id
         seen: dict[str, dict] = {}
         for row in table:

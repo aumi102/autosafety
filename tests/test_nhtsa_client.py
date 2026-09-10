@@ -140,6 +140,7 @@ class TestFetchComplaintsErrors:
     @patch("app.services.nhtsa_client.httpx.Client")
     def test_timeout(self, mock_client_cls):
         import httpx
+
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -175,7 +176,12 @@ class TestFetchRecalls:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "results": [
-                {"NHTSACampaignNumber": "22V176", "make": "Ford", "model": "F-150", "modelYear": "2022"},
+                {
+                    "NHTSACampaignNumber": "22V176",
+                    "make": "Ford",
+                    "model": "F-150",
+                    "modelYear": "2022",
+                },
             ]
         }
         mock_client = MagicMock()

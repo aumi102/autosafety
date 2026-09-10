@@ -44,6 +44,7 @@ def utcnow() -> datetime:
 
 class IngestionStats:
     """Track ingestion statistics."""
+
     def __init__(self) -> None:
         self.vehicles_seen: int = 0
         self.vehicles_inserted: int = 0
@@ -81,11 +82,15 @@ def _upsert_vehicle(session: Session, make: str, model: str, model_year: int) ->
     norm_make = _normalize_text(make)
     norm_model = _normalize_text(model)
 
-    existing = session.query(Vehicle).filter_by(
-        normalized_make=norm_make,
-        normalized_model=norm_model,
-        model_year=model_year,
-    ).first()
+    existing = (
+        session.query(Vehicle)
+        .filter_by(
+            normalized_make=norm_make,
+            normalized_model=norm_model,
+            model_year=model_year,
+        )
+        .first()
+    )
 
     if existing:
         return existing
@@ -140,8 +145,11 @@ def _upsert_complaint(
         source_record_key = f"nhtsa_complaint:{record.odi_number}"
     else:
         import hashlib
+
         key_source = f"nhtsa_complaint:{record.raw_json.get('ODIURL', '')}"
-        source_record_key = f"nhtsa_complaint:hash:{hashlib.sha256(key_source.encode()).hexdigest()[:16]}"
+        source_record_key = (
+            f"nhtsa_complaint:hash:{hashlib.sha256(key_source.encode()).hexdigest()[:16]}"
+        )
 
     # Check if already exists
     existing = session.query(Complaint).filter_by(source_record_key=source_record_key).first()
@@ -208,9 +216,11 @@ def _upsert_recall(
     if existing:
         stats.recalls_skipped += 1
         # Still create link if missing
-        link = session.query(RecallVehicleLink).filter_by(
-            recall_id=existing.id, vehicle_id=vehicle_id
-        ).first()
+        link = (
+            session.query(RecallVehicleLink)
+            .filter_by(recall_id=existing.id, vehicle_id=vehicle_id)
+            .first()
+        )
         if not link:
             link = RecallVehicleLink(recall_id=existing.id, vehicle_id=vehicle_id)
             session.add(link)
@@ -300,11 +310,13 @@ def run_nhtsa_phase1_ingestion(
     with open(seed_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            seed_vehicles.append((
-                row["make"].strip(),
-                row["model"].strip(),
-                int(row["model_year"].strip()),
-            ))
+            seed_vehicles.append(
+                (
+                    row["make"].strip(),
+                    row["model"].strip(),
+                    int(row["model_year"].strip()),
+                )
+            )
 
     if limit_vehicles:
         seed_vehicles = seed_vehicles[:limit_vehicles]

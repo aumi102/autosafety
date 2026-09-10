@@ -114,17 +114,23 @@ def get_vehicle_overview(vehicle_id: str) -> VehicleOverview:
             raise HTTPException(status_code=404, detail="Vehicle not found")
 
         complaint_count = session.query(Complaint).filter_by(vehicle_id=vehicle.id).count()
-        recall_ids = session.query(RecallVehicleLink.recall_id).filter_by(vehicle_id=vehicle.id).all()
+        recall_ids = (
+            session.query(RecallVehicleLink.recall_id).filter_by(vehicle_id=vehicle.id).all()
+        )
         recall_count = len(recall_ids)
 
         # Top components by complaint count
         from sqlalchemy import func
-        top_components = session.query(
-            Component.name,
-            func.count(Complaint.id).label("cnt")
-        ).join(Complaint, Complaint.component_id == Component.id).filter(
-            Complaint.vehicle_id == vehicle.id
-        ).group_by(Component.name).order_by(func.count(Complaint.id).desc()).limit(5).all()
+
+        top_components = (
+            session.query(Component.name, func.count(Complaint.id).label("cnt"))
+            .join(Complaint, Complaint.component_id == Component.id)
+            .filter(Complaint.vehicle_id == vehicle.id)
+            .group_by(Component.name)
+            .order_by(func.count(Complaint.id).desc())
+            .limit(5)
+            .all()
+        )
 
         return VehicleOverview(
             vehicle=VehicleResponse(
@@ -140,10 +146,11 @@ def get_vehicle_overview(vehicle_id: str) -> VehicleOverview:
                 "manufacturer_communication_count": 0,
             },
             top_components=[
-                ComponentSummary(component=c.name, complaint_count=c.cnt)
-                for c in top_components
+                ComponentSummary(component=c.name, complaint_count=c.cnt) for c in top_components
             ],
-            warnings=["Complaint volume alone does not prove a safety defect or official causality."],
+            warnings=[
+                "Complaint volume alone does not prove a safety defect or official causality."
+            ],
         )
     finally:
         session.close()
@@ -162,10 +169,14 @@ def get_vehicle_complaints(
         if not vehicle:
             raise HTTPException(status_code=404, detail="Vehicle not found")
 
-        complaints = session.query(Complaint).filter_by(vehicle_id=vehicle.id).offset(offset).limit(limit).all()
-        component_map = {
-            c.id: c.name for c in session.query(Component).all()
-        }
+        complaints = (
+            session.query(Complaint)
+            .filter_by(vehicle_id=vehicle.id)
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+        component_map = {c.id: c.name for c in session.query(Component).all()}
 
         return [
             ComplaintResponse(
@@ -198,13 +209,20 @@ def get_vehicle_recalls(
         if not vehicle:
             raise HTTPException(status_code=404, detail="Vehicle not found")
 
-        recall_ids = session.query(RecallVehicleLink.recall_id).filter_by(vehicle_id=vehicle.id).limit(limit).all()
+        recall_ids = (
+            session.query(RecallVehicleLink.recall_id)
+            .filter_by(vehicle_id=vehicle.id)
+            .limit(limit)
+            .all()
+        )
         recall_id_list = [r.recall_id for r in recall_ids]
 
-        recalls = session.query(Recall).filter(Recall.id.in_(recall_id_list)).all() if recall_id_list else []
-        component_map = {
-            c.id: c.name for c in session.query(Component).all()
-        }
+        recalls = (
+            session.query(Recall).filter(Recall.id.in_(recall_id_list)).all()
+            if recall_id_list
+            else []
+        )
+        component_map = {c.id: c.name for c in session.query(Component).all()}
 
         return [
             RecallResponse(
@@ -213,7 +231,9 @@ def get_vehicle_recalls(
                 component=component_map.get(r.component_id),
                 summary=r.summary,
                 remedy=r.remedy,
-                report_received_date=str(r.report_received_date) if r.report_received_date else None,
+                report_received_date=str(r.report_received_date)
+                if r.report_received_date
+                else None,
                 units_affected=r.units_affected,
             )
             for r in recalls

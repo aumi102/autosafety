@@ -32,53 +32,55 @@ GRAPHRAG_RETRIEVAL_DEFINITION = ToolDefinition(
         "Returns chunks, citations, graph paths, and confidence. "
         "No raw embeddings exposed. No synthesis performed."
     ),
-    input_schema=ToolInputSchema(fields={
-        "operation": ToolInputField(
-            type="enum",
-            description="Retrieval operation: retrieve both, complaints only, or recalls only",
-            required=True,
-            enum_values=SUPPORTED_OPERATIONS,
-        ),
-        "question": ToolInputField(
-            type="string",
-            description="Natural language question (max 500 characters)",
-            required=True,
-            max_length=500,
-        ),
-        "top_k": ToolInputField(
-            type="integer",
-            description="Maximum chunks to retrieve (default 5, max 20)",
-            required=False,
-            default=5,
-            min_value=1,
-            max_value=20,
-        ),
-        "make": ToolInputField(
-            type="string",
-            description="Vehicle make filter (e.g. Ford)",
-            required=False,
-            max_length=50,
-        ),
-        "model": ToolInputField(
-            type="string",
-            description="Vehicle model filter (e.g. F-150)",
-            required=False,
-            max_length=50,
-        ),
-        "model_year": ToolInputField(
-            type="integer",
-            description="Vehicle model year filter",
-            required=False,
-            min_value=1990,
-            max_value=2030,
-        ),
-        "include_graph": ToolInputField(
-            type="boolean",
-            description="Include Neo4j graph expansion (default true)",
-            required=False,
-            default=True,
-        ),
-    }),
+    input_schema=ToolInputSchema(
+        fields={
+            "operation": ToolInputField(
+                type="enum",
+                description="Retrieval operation: retrieve both, complaints only, or recalls only",
+                required=True,
+                enum_values=SUPPORTED_OPERATIONS,
+            ),
+            "question": ToolInputField(
+                type="string",
+                description="Natural language question (max 500 characters)",
+                required=True,
+                max_length=500,
+            ),
+            "top_k": ToolInputField(
+                type="integer",
+                description="Maximum chunks to retrieve (default 5, max 20)",
+                required=False,
+                default=5,
+                min_value=1,
+                max_value=20,
+            ),
+            "make": ToolInputField(
+                type="string",
+                description="Vehicle make filter (e.g. Ford)",
+                required=False,
+                max_length=50,
+            ),
+            "model": ToolInputField(
+                type="string",
+                description="Vehicle model filter (e.g. F-150)",
+                required=False,
+                max_length=50,
+            ),
+            "model_year": ToolInputField(
+                type="integer",
+                description="Vehicle model year filter",
+                required=False,
+                min_value=1990,
+                max_value=2030,
+            ),
+            "include_graph": ToolInputField(
+                type="boolean",
+                description="Include Neo4j graph expansion (default true)",
+                required=False,
+                default=True,
+            ),
+        }
+    ),
     read_only=True,
     max_result_items=20,
     timeout_seconds=15,
@@ -97,6 +99,7 @@ def build_graphrag_adapter(
                      model_year, include_graph
                      Must return: GraphRAGRetrievalResult
     """
+
     def adapter(*, call_id: str, arguments: dict[str, Any]) -> ToolCallResult:
         operation = arguments.get("operation")
         question = arguments.get("question", "")
@@ -121,20 +124,24 @@ def build_graphrag_adapter(
             )
 
             # Bound chunks to max_result_items
-            chunks = result.retrieved_chunks[:GRAPHRAG_RETRIEVAL_DEFINITION.max_result_items]
-            truncated_chunks = len(result.retrieved_chunks) > GRAPHRAG_RETRIEVAL_DEFINITION.max_result_items
+            chunks = result.retrieved_chunks[: GRAPHRAG_RETRIEVAL_DEFINITION.max_result_items]
+            truncated_chunks = (
+                len(result.retrieved_chunks) > GRAPHRAG_RETRIEVAL_DEFINITION.max_result_items
+            )
 
             # Build citation table
             citations = []
-            for c in result.citations[:GRAPHRAG_RETRIEVAL_DEFINITION.max_result_items]:
-                citations.append({
-                    "source_type": c.source_type,
-                    "source_id": c.source_id,
-                    "source_key": c.source_key,
-                    "citation_label": c.citation_label,
-                    "text_span": (c.text_span or "")[:500],
-                    "confidence": c.confidence,
-                })
+            for c in result.citations[: GRAPHRAG_RETRIEVAL_DEFINITION.max_result_items]:
+                citations.append(
+                    {
+                        "source_type": c.source_type,
+                        "source_id": c.source_id,
+                        "source_key": c.source_key,
+                        "citation_label": c.citation_label,
+                        "text_span": (c.text_span or "")[:500],
+                        "confidence": c.confidence,
+                    }
+                )
 
             # Bound graph paths
             graph_paths = result.graph_paths[:20]
@@ -158,11 +165,14 @@ def build_graphrag_adapter(
             warnings = list(result.warnings or [])
             truncated = truncated_chunks or truncated_paths
 
-            return ToolCallResult.ok(call_id, "graphrag_retrieval_tool", result_data, warnings, truncated)
+            return ToolCallResult.ok(
+                call_id, "graphrag_retrieval_tool", result_data, warnings, truncated
+            )
 
         except Exception as e:
             return ToolCallResult.error(
-                call_id, "graphrag_retrieval_tool",
+                call_id,
+                "graphrag_retrieval_tool",
                 "retrieval_error",
                 f"GraphRAG retrieval failed: {type(e).__name__}",
             )
@@ -201,7 +211,7 @@ def _path_to_dict(path: Any) -> dict:
     return {
         "path_text": path.path_text,
         "relation_source": path.relation_source,
-        "source_type": getattr(path, 'source_type', path.relation_source),
-        "source_key": getattr(path, 'source_key', ''),
+        "source_type": getattr(path, "source_type", path.relation_source),
+        "source_key": getattr(path, "source_key", ""),
         "confidence": path.confidence,
     }

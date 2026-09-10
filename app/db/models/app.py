@@ -21,31 +21,49 @@ from app.db.base import Base
 def utcnow() -> datetime:
     return datetime.now(UTC)
 
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="analyst")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
     # Phase 8 — retention/expiry anchor, refreshed on each guarded turn.
-    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False
+    )
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    __table_args__ = (CheckConstraint("role IN ('user', 'assistant', 'system')", name="chat_message_role_check"),)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'assistant', 'system')", name="chat_message_role_check"),
+    )
+
 
 class AgentRun(Base):
     """
@@ -56,37 +74,53 @@ class AgentRun(Base):
     provider raw response, no credential, no connection string, no raw SQL,
     and no raw Cypher.
     """
+
     __tablename__ = "agent_runs"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    message_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True
+    )
     intent: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="created")
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Phase 9 execution audit columns.
     conversation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=True, index=True
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     turn_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chat_turns.id", ondelete="CASCADE"), nullable=True, index=True
+        UUID(as_uuid=True),
+        ForeignKey("chat_turns.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     phase: Mapped[str | None] = mapped_column(String(20), nullable=True)
     surface: Mapped[str | None] = mapped_column(String(32), nullable=True)
     provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
     model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     synthesis_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=utcnow
+    )
     tool_call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     fallback_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     abstained: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     abstention_reason: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
+    confidence_score: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )  # score * 10000
     confidence_level: Mapped[str | None] = mapped_column(String(10), nullable=True)
     validation_outcome: Mapped[str | None] = mapped_column(String(32), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
 
 class ToolCall(Base):
     """
@@ -96,27 +130,35 @@ class ToolCall(Base):
     empty: raw tool arguments and raw tool output are never persisted. Only
     the allowlisted `operation` name and bounded counters are recorded.
     """
+
     __tablename__ = "tool_calls"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    agent_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    agent_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("agent_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     tool_name: Mapped[str] = mapped_column(Text, nullable=False)
     input_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     output_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
     # Phase 9 execution audit columns.
     call_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     operation: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=utcnow
+    )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     evidence_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     truncated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    __table_args__ = (
-        UniqueConstraint("agent_run_id", "call_id", name="uq_tool_call_run_call_id"),
-    )
+    __table_args__ = (UniqueConstraint("agent_run_id", "call_id", name="uq_tool_call_run_call_id"),)
 
 
 class ChatTurn(Base):
@@ -127,10 +169,14 @@ class ChatTurn(Base):
     provider prompts, provider raw responses, API keys, connection strings,
     raw SQL, or raw Cypher.
     """
+
     __tablename__ = "chat_turns"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     turn_index: Mapped[int] = mapped_column(Integer, nullable=False)
     user_message_id: Mapped[uuid.UUID] = mapped_column(
@@ -151,12 +197,16 @@ class ChatTurn(Base):
     provider: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     abstained: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     abstention_reason: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    confidence_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
+    confidence_score: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )  # score * 10000
     confidence_level: Mapped[str] = mapped_column(String(10), nullable=False, default="low")
     claim_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     citation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
     __table_args__ = (
         UniqueConstraint("session_id", "turn_index", name="uq_chat_turn_session_index"),
     )
@@ -170,13 +220,20 @@ class ChatTurnCitation(Base):
     lineage only: it never re-authorizes a later claim. Every accepted claim in
     every turn must still validate against that turn's own retrieved citations.
     """
+
     __tablename__ = "chat_turn_citations"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     turn_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chat_turns.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("chat_turns.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     session_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     turn_index: Mapped[int] = mapped_column(Integer, nullable=False)
     citation_id: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -186,8 +243,12 @@ class ChatTurnCitation(Base):
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     text_span: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    retrieval_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # score * 10000
+    retrieval_score: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )  # score * 10000
     relation_basis: Mapped[str | None] = mapped_column(String(64), nullable=True)
     tool_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cited_by_claim: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )

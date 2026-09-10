@@ -117,9 +117,7 @@ def verify_admin_token(
 
     if not expected:
         # Deliberately fail closed. The log line names the setting, never a value.
-        logger.error(
-            "Maintenance route refused: no usable ADMIN_API_TOKEN is configured."
-        )
+        logger.error("Maintenance route refused: no usable ADMIN_API_TOKEN is configured.")
         raise _unavailable()
 
     provided = (x_admin_token or "").strip()

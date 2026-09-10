@@ -120,14 +120,16 @@ class GraphRAGRetriever:
         """Build citation metadata from retrieved chunks."""
         citations: list[GraphRAGCitation] = []
         for chunk in chunks:
-            citations.append(GraphRAGCitation(
-                source_type=chunk.source_type,
-                source_id=chunk.source_entity_id,
-                source_key=chunk.source_record_key,
-                citation_label=chunk.citation_label,
-                text_span=chunk.text[:200] if chunk.text else None,
-                confidence=chunk.score,
-            ))
+            citations.append(
+                GraphRAGCitation(
+                    source_type=chunk.source_type,
+                    source_id=chunk.source_entity_id,
+                    source_key=chunk.source_record_key,
+                    citation_label=chunk.citation_label,
+                    text_span=chunk.text[:200] if chunk.text else None,
+                    confidence=chunk.score,
+                )
+            )
         return citations
 
     def _make_citation_label(
