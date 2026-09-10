@@ -35,7 +35,16 @@ PRE_COMMIT = REPO_ROOT / ".pre-commit-config.yaml"
 LINT_TREES = ("app", "tests", "scripts", "migrations")
 FORMAT_TREES = ("app", "tests", "scripts")
 
-REQUIRED_GATES = {"lint", "format", "typecheck", "tests", "eval-phase7", "eval-phase8"}
+REQUIRED_GATES = {
+    "lint",
+    "format",
+    "typecheck",
+    "tests",
+    "eval-phase7",
+    "eval-phase8",
+    # Phase 12 made agentic planning safety a mandatory gate.
+    "eval-phase12",
+}
 
 # Files exempt from E501 because they embed a DSL as a string constant, where a
 # line break changes what is transmitted rather than how it reads.
@@ -175,10 +184,11 @@ class TestCanonicalRunner:
     def test_format_gate_checks_without_reformatting(self):
         assert "--check" in _gate("format").command
 
-    def test_both_safety_evaluations_are_gates(self):
+    def test_every_safety_evaluation_is_a_gate(self):
         commands = " ".join(" ".join(gate.command) for gate in GATES)
         assert "evaluate_phase7_answers.py" in commands
         assert "evaluate_phase8_conversations.py" in commands
+        assert "evaluate_phase12_planning.py" in commands
 
     def test_no_gate_depends_on_docker_or_a_live_provider(self):
         """A developer must be able to run the whole gate with nothing running."""

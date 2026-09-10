@@ -66,6 +66,11 @@ GATES: tuple[Gate, ...] = (
         "Phase 8 multi-turn conversation evaluation",
         [sys.executable, "scripts/evaluate_phase8_conversations.py"],
     ),
+    Gate(
+        "eval-phase12",
+        "Phase 12 agentic tool-planning safety evaluation",
+        [sys.executable, "scripts/evaluate_phase12_planning.py"],
+    ),
 )
 
 

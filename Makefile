@@ -54,8 +54,9 @@ typecheck:
 # these mandatory CI gates. Both are fully offline: no database, no graph, no
 # external provider, no credential.
 evaluate:
-	python scripts/evaluate_phase7_answers.py
-	python scripts/evaluate_phase8_conversations.py
+	$(PYTHON) scripts/evaluate_phase7_answers.py
+	$(PYTHON) scripts/evaluate_phase8_conversations.py
+	$(PYTHON) scripts/evaluate_phase12_planning.py
 
 # The canonical pre-commit gate. It delegates to scripts/check.py rather than
 # repeating the commands, so the Makefile, CI, and a developer without `make`
