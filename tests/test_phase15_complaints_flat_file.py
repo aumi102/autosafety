@@ -211,7 +211,8 @@ class TestLiveFlatFileIngestion:
 
         assert source_run_id is not None
         # Complaints inserted: 6 matched (2 Fords + 1 Honda + 2 Toyotas + 1 dup) - but dup skipped
-        # Ford F-150 2020 (1), Ford F150 2021 (1), Honda Accord 2021 (1), Toyota Camry 2022 (2, different ODI)
+        # Ford F-150 2020 (1), Ford F150 2021 (1), Honda Accord 2021 (1),
+        # Toyota Camry 2022 (2, different ODI).
         # = 5 unique complaints
         # 6 matched rows: 2 Fords + 1 Honda + 2 Toyotas + 1 dup
         # 1 duplicate ODI 11420001 skipped; rest inserted
@@ -308,7 +309,8 @@ class TestDataQualityUpdates:
 
         summary = get_data_quality_summary(in_memory_db)
         assert len(summary.complaints_flat_file_runs) == 1
-        # Status is partial_success because fixture has 2 malformed rows (missing model, missing make)
+        # partial_success: the fixture has 2 malformed rows (missing model,
+        # missing make).
         assert summary.complaints_flat_file_runs[0]["status"] == "partial_success"
         assert summary.complaints_flat_file_runs[0]["row_count"] == 5
         assert summary.complaints_flat_file_runs[0]["row_count"] == 5

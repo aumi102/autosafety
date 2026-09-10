@@ -253,7 +253,8 @@ def run_complaints_flat_file_ingestion(
         seed_vehicles = seed_vehicles[:limit_vehicles]
 
     # Build normalized seed set for fast lookup
-    # Map: (normalized_make, normalized_model_stripped) -> list of (original_make, original_model, year)
+    # Map (normalized_make, normalized_model_stripped) to a list of
+    # (original_make, original_model, year) tuples.
     seed_map: dict[tuple[str, str], list[tuple]] = {}
     for make, model, year in seed_vehicles:
         norm_make = normalize_make(make)
@@ -399,7 +400,8 @@ def run_complaints_flat_file_ingestion(
                 if not vehicle:
                     stats.errors_count += 1
                     stats.errors.append(
-                        f"Failed to upsert vehicle: {row['make']} {row['model']} {row['model_year']}"
+                        f"Failed to upsert vehicle: {row['make']} {row['model']} "
+                        f"{row['model_year']}"
                     )
                     continue
                 vehicle_id = vehicle.id

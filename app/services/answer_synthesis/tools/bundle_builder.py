@@ -280,7 +280,8 @@ class EvidenceBundleBuilder:
             + str(data.get("model_year", "")),
             source_entity_id=vid,
             text=self._safe_truncate(
-                f"Vehicle resolution: {data.get('normalized_make', '')} {data.get('normalized_model', '')} {data.get('model_year', '')} — {status}"
+                f"Vehicle resolution: {data.get('normalized_make', '')} "
+                f"{data.get('normalized_model', '')} {data.get('model_year', '')} — {status}"
             ),
             metadata=_sanitize(
                 {

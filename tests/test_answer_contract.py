@@ -154,7 +154,8 @@ class TestAnswerResponse:
             ),
             sql=SqlResult(
                 used=True,
-                query="SELECT component_id, COUNT(*) FROM complaints WHERE vehicle_id = 'xxx' GROUP BY component_id",
+                query="SELECT component_id, COUNT(*) FROM complaints WHERE vehicle_id = 'xxx' "
+                "GROUP BY component_id",
                 columns=["component_id", "count"],
                 rows=[{"component_id": "SERVICE BRAKES", "count": 142}],
                 row_count=1,

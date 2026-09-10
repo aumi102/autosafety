@@ -271,7 +271,8 @@ def make_stub_response(
             sections=[
                 AnswerSection(
                     title="Phase 0 Status",
-                    content="GraphRAG agent, Text-to-SQL engine, and NHTSA ingestion deferred to Phase 1.",
+                    content="GraphRAG agent, Text-to-SQL engine, and NHTSA ingestion deferred to "
+                    "Phase 1.",
                     type="text",
                 )
             ],

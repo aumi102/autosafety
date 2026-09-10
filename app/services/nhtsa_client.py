@@ -159,13 +159,15 @@ def fetch_complaints_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaComplaintRec
     except httpx.RequestError as e:
         raise NhtsaApiError(f"Network error fetching complaints: {e}")
 
-    # NHTSA sometimes returns 400 with a body saying "Results returned successfully" — treat as empty
+    # NHTSA sometimes returns 400 with a body saying "Results returned
+    # successfully". Treat that as an empty result.
     if response.status_code == 400:
         try:
             body = response.json()
             if body.get("message", "").startswith("Results returned successfully"):
                 logger.info(
-                    f"No complaints found for {vehicle.make} {vehicle.model} {vehicle.model_year} (API returned 400 with empty results)"
+                    f"No complaints found for {vehicle.make} {vehicle.model} {vehicle.model_year} "
+                    f"(API returned 400 with empty results)"
                 )
                 return []
         except Exception:
@@ -186,7 +188,8 @@ def fetch_complaints_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaComplaintRec
 
     if results is None:
         logger.warning(
-            f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}"
+            f"NHTSA API returned null results for {vehicle.make} {vehicle.model} "
+            f"{vehicle.model_year}"
         )
         return []
 
@@ -241,7 +244,8 @@ def fetch_recalls_by_vehicle(vehicle: NhtsaVehicle) -> list[NhtsaRecallRecord]:
 
     if results is None:
         logger.warning(
-            f"NHTSA API returned null results for {vehicle.make} {vehicle.model} {vehicle.model_year}"
+            f"NHTSA API returned null results for {vehicle.make} {vehicle.model} "
+            f"{vehicle.model_year}"
         )
         return []
 

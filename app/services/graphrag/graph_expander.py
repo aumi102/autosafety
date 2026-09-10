@@ -98,7 +98,8 @@ def expand_complaint_neighborhood(
             campaign = recall["recall_campaign"]
             paths.append(
                 GraphRAGGraphPath(
-                    path_text=f"{make} {model} {year} recall {campaign} related to component {comp} (potential association)",
+                    path_text=f"{make} {model} {year} recall {campaign} related to component "
+                    f"{comp} (potential association)",
                     relation_source="potentially_related_by_shared_component",
                     source_type="recall",
                     source_key=campaign,
@@ -139,7 +140,8 @@ def expand_recall_neighborhood(
         # Path: recall -> affects vehicle (official)
         paths.append(
             GraphRAGGraphPath(
-                path_text=f"{make} {model} {year} recall {campaign_number} affects vehicle (official)",
+                path_text=f"{make} {model} {year} recall {campaign_number} affects vehicle "
+                f"(official)",
                 relation_source="official_recall_affects_vehicle",
                 source_type="recall",
                 source_key=campaign_number,
@@ -151,7 +153,8 @@ def expand_recall_neighborhood(
         if comp != "Unknown Component":
             paths.append(
                 GraphRAGGraphPath(
-                    path_text=f"{make} {model} {year} recall {campaign_number} related to component {comp}",
+                    path_text=f"{make} {model} {year} recall {campaign_number} related to "
+                    f"component {comp}",
                     relation_source="recall_related_to_component",
                     source_type="recall",
                     source_key=campaign_number,
@@ -166,7 +169,8 @@ def expand_recall_neighborhood(
             odi = complaint["complaint_odi"]
             paths.append(
                 GraphRAGGraphPath(
-                    path_text=f"{make} {model} {year} recall {campaign_number} potentially related to complaint {odi} via component {comp}",
+                    path_text=f"{make} {model} {year} recall {campaign_number} potentially related "
+                    f"to complaint {odi} via component {comp}",
                     relation_source="potentially_related_by_shared_component",
                     source_type="complaint",
                     source_key=odi,

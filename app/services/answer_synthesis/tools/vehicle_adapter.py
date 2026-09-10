@@ -134,7 +134,10 @@ def build_vehicle_resolution_adapter(
                             "normalized_model": norm_model,
                             "model_year": model_year,
                             "available_years": [v.model_year for v in candidates],
-                            "message": f"Model exists but year {model_year} not found. Available years: {[v.model_year for v in candidates]}",
+                            "message": (
+                                f"Model exists but year {model_year} not found. "
+                                f"Available years: {[v.model_year for v in candidates]}"
+                            ),
                         },
                     )
                 elif len(candidates) > 1:

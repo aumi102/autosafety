@@ -1,0 +1,81 @@
+# Pre-commit hooks for AutoSafety.
+#
+#   pip install -e ".[dev]"
+#   pre-commit install            # commit hooks
+#   pre-commit install --hook-type pre-push
+#
+# Commit hooks are deliberately fast: lint, format, and typecheck only. The full
+# suite and the safety evaluations run on pre-push and in CI, because a commit
+# hook that takes a minute gets bypassed with `--no-verify` instead of used.
+#
+# Revisions are pinned. A floating rev would mean two developers run different
+# checks, and `pre-commit autoupdate` is the intended way to move them.
+
+default_language_version:
+  python: python3.11
+
+# Hooks see only the staged files; these directories are never first-party.
+exclude: '^(\.venv|venv|build|dist|.*\.egg-info)/'
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      # Lint. `migrations/` is included, matching the enforced gate.
+      - id: ruff
+        name: ruff (lint)
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^(app|tests|scripts|migrations)/
+      # Format. `migrations/` is excluded: an applied revision records what ran.
+      - id: ruff-format
+        name: ruff (format)
+        files: ^(app|tests|scripts)/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        name: mypy (app, scripts, tests)
+        # `pass_filenames: false` plus an explicit target list makes the hook
+        # check the same trees as `scripts/check.py`, not just the staged files:
+        # a type error is usually introduced in one file and observed in another.
+        pass_filenames: false
+        args: [app/, scripts/, tests/]
+        additional_dependencies:
+          - pydantic>=2.9.0
+          - pydantic-settings>=2.5.0
+          - sqlalchemy>=2.0.0
+          - types-PyYAML>=6.0
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      # Refuse a commit that adds a large binary; DB dumps and volumes do not
+      # belong in this repository.
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      # The quality-invariant tests are fast and are the ones that catch a gate
+      # being weakened, so they run on every commit.
+      - id: quality-gate-tests
+        name: quality gate invariants
+        entry: python -m pytest tests/test_phase10_tooling.py tests/test_phase11_quality_gates.py -q
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Everything else runs before a push.
+      - id: canonical-check
+        name: full canonical gate (scripts/check.py)
+        entry: python scripts/check.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

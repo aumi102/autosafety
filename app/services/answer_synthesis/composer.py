@@ -80,7 +80,10 @@ def compose_answer(
             and c.relation_basis != "potentially_related_by_shared_component"
         )
         if is_applicable:
-            text = f"Official recall {c.source_record_key} applies to this vehicle per NHTSA records: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
+            text = (
+                f"Official recall {c.source_record_key} applies to this "
+                f"vehicle per NHTSA records: {c.text_span[:MAX_SNIPPET_CHARS]}"
+            ).strip()
             relation_citation = official_relations[c.source_record_key]
             citation_ids = list(dict.fromkeys([c.citation_id, relation_citation.citation_id]))
             add(
@@ -90,7 +93,10 @@ def compose_answer(
                 text,
             )
         elif c.relation_basis != "potentially_related_by_shared_component":
-            text = f"Recall record {c.source_record_key} exists in public NHTSA data: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
+            text = (
+                f"Recall record {c.source_record_key} exists in public "
+                f"NHTSA data: {c.text_span[:MAX_SNIPPET_CHARS]}"
+            ).strip()
             add(
                 ProviderClaim(
                     text=text, claim_type="official_recall", citation_ids=[c.citation_id]
@@ -105,7 +111,10 @@ def compose_answer(
                 "text inside the record was treated as untrusted evidence."
             )
         else:
-            text = f"A complaint record ({c.source_record_key}) reports: {c.text_span[:MAX_SNIPPET_CHARS]}".strip()
+            text = (
+                f"A complaint record ({c.source_record_key}) reports: "
+                f"{c.text_span[:MAX_SNIPPET_CHARS]}"
+            ).strip()
         add(
             ProviderClaim(
                 text=text, claim_type="complaint_observation", citation_ids=[c.citation_id]
@@ -114,7 +123,10 @@ def compose_answer(
         )
 
     for c in sql_citations:
-        text = f"SQL analytics result ({c.source_record_key}): {c.text_span[: MAX_SNIPPET_CHARS + 100]}".strip()
+        text = (
+            f"SQL analytics result ({c.source_record_key}): "
+            f"{c.text_span[: MAX_SNIPPET_CHARS + 100]}"
+        ).strip()
         add(ProviderClaim(text=text, claim_type="sql_fact", citation_ids=[c.citation_id]), text)
 
     if shared_citations and complaint_citations and len(claims) < MAX_COMPOSED_CLAIMS:
@@ -141,7 +153,10 @@ def compose_answer(
         add(ProviderClaim(text=text, claim_type="data_limitation", citation_ids=[]), text)
 
     if intent.is_causal:
-        text = "Causality between complaints and any recall cannot be established from the available evidence."
+        text = (
+            "Causality between complaints and any recall cannot be "
+            "established from the available evidence."
+        )
         add(ProviderClaim(text=text, claim_type="data_limitation", citation_ids=[]), text)
 
     if not lines:

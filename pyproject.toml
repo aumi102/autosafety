@@ -27,6 +27,8 @@ dev = [
     # tests/test_phase11_quality_gates.py parses .github/workflows/ci.yml.
     "pyyaml>=6.0",
     "types-PyYAML>=6.0",
+    # Pre-commit hooks; see .pre-commit-config.yaml.
+    "pre-commit>=3.7",
 ]
 
 [build-system]
@@ -53,20 +55,17 @@ src = ["app", "tests", "scripts"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 
-# `make lint` is the enforced gate and must stay green. E501 is excluded from it
-# and reported separately by `make lint-all`, which is advisory.
+# `make lint` is the enforced gate and must stay green.
 #
-# Rationale (Phase 10): after the safe autofix, 400 of the 492 remaining findings
-# were E501 alone, essentially all of them in stable Phase 0-9 code. Line length
-# is cosmetic; reflowing 400 lines across the guarded answer path, the tool
-# registry, and the conversation services would be a large diff through
-# security-sensitive code to fix nothing that can fail at runtime. The count is
-# baselined in docs/phase10_design.md and stays visible via `make lint-all`.
+# E501 is enforced. Phase 10 and Phase 11 both left it advisory; the Phase 11
+# completion pass adopted `ruff format` and hand-wrapped the residue, so the
+# only remaining exemptions are the four files listed below, each of which
+# embeds a query or prompt DSL where a line break changes what is transmitted.
 #
-# This is the only rule excluded globally. Correctness (F), import hygiene (I),
-# naming (N), and modernization (UP) are all enforced everywhere.
+# Correctness (F), import hygiene (I), naming (N), modernization (UP), and line
+# length (E501) are all enforced. Only N806 and UP042 are excluded globally,
+# each for a stated reason.
 ignore = [
-    "E501",
     # N806 fires on `Session = sessionmaker(...)` / `SessionLocal = sessionmaker(...)`.
     # These bind a *class*, and PascalCase is SQLAlchemy's own documented convention;
     # renaming them to satisfy a variable-naming rule would make the code less
@@ -86,7 +85,7 @@ ignore = [
 # and rewriting an applied revision to satisfy a style rule risks the one thing
 # Phase 9 fixed: a chain a fresh clone can replay. Correctness rules (F8xx, E7xx)
 # stay active here.
-"migrations/versions/*.py" = ["F401", "I001", "UP007", "UP035"]
+"migrations/versions/*.py" = ["F401", "I001", "UP007", "UP035", "E501"]
 # `env.py` imports every model so that Alembic autogenerate can see them on
 # `Base.metadata`. Those imports are load-bearing precisely because nothing
 # references them, and the `sys.path` bootstrap must run before them.
@@ -94,6 +93,22 @@ ignore = [
 # Star-imports every model so `Base.metadata.create_all()` sees all tables; the
 # names then read as "possibly undefined" (F405) at each use site.
 "tests/test_phase2_sql_analytics.py" = ["F405"]
+
+# The remaining E501 exemptions. Each of these files embeds a DSL as a string
+# constant, where a newline is not cosmetic:
+#
+#   *_queries / graph_expander -- Cypher sent to Neo4j. These are the fixed,
+#   allowlisted queries Phase 3-7 depend on; reflowing a MATCH pattern edits the
+#   text of a security-relevant query to satisfy a style rule.
+#
+#   prompt_builder / providers -- literal prompt text sent to the model. A line
+#   break changes the model's input, which is a behavior change, not formatting.
+#
+# Every other line-length finding in the repository is fixed, not exempted.
+"app/services/graph/graph_queries.py" = ["E501"]
+"app/services/graphrag/graph_expander.py" = ["E501"]
+"app/services/answer_synthesis/prompt_builder.py" = ["E501"]
+"app/services/answer_synthesis/providers.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

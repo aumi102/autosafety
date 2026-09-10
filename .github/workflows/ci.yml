@@ -49,26 +49,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      # Mirrors `make lint`. The enforced gate; expected green.
-      - name: Lint
-        run: ruff check app/ tests/ scripts/ migrations/
-
-      # Mirrors `make typecheck`. Zero errors since Phase 11.
-      - name: Typecheck
-        run: mypy app/
-
-      # The suite is hermetic: it passes with every container stopped, so no
-      # service containers are provisioned here.
-      - name: Tests
-        run: pytest tests/ -q
-
-      # Mandatory safety gates per docs/phase7_closeout_report.md. Both are
-      # offline and use the deterministic provider.
-      - name: Phase 7 guarded answer evaluation
-        run: python scripts/evaluate_phase7_answers.py
-
-      - name: Phase 8 multi-turn conversation evaluation
-        run: python scripts/evaluate_phase8_conversations.py
+      # The canonical gate. `make check` and pre-push run this exact script, so
+      # a developer and CI cannot drift apart. It runs, in order: ruff lint over
+      # app/ tests/ scripts/ migrations/, ruff format --check, mypy over app/
+      # scripts/ tests/, the full pytest suite, and the Phase 7 and Phase 8
+      # safety evaluations that docs/phase7_closeout_report.md makes mandatory.
+      #
+      # No service containers: the suite and both evaluations are hermetic and
+      # pass with every container stopped.
+      - name: Canonical quality gate
+        run: python scripts/check.py
 
       # The gate the whole repository depends on: a clone must be able to
       # rebuild its schema. This asserts the revision chain offline; the

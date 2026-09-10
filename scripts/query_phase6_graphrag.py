@@ -3,7 +3,8 @@
 CLI: Query GraphRAG semantic retrieval.
 
 Usage:
-    python scripts/query_phase6_graphrag.py --question "brake complaints for Ford F-150 2020" --top-k 5
+    python scripts/query_phase6_graphrag.py \
+        --question "brake complaints for Ford F-150 2020" --top-k 5
     python scripts/query_phase6_graphrag.py --question "recall evidence for Honda" --no-graph
 """
 

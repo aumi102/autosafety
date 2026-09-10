@@ -153,7 +153,8 @@ def _check_claim_type_support(
             return (
                 False,
                 [
-                    "potential_shared_component_association requires both complaint and recall citations"
+                    "potential_shared_component_association requires both complaint and recall "
+                    "citations"
                 ],
                 None,
                 "none",
@@ -172,7 +173,10 @@ def _check_claim_type_support(
             return (
                 False,
                 [
-                    f"sql_fact contains figures not present in cited SQL evidence: {sorted(unmatched)}"
+                    (
+                        "sql_fact contains figures not present in cited "
+                        f"SQL evidence: {sorted(unmatched)}"
+                    )
                 ],
                 None,
                 "none",
@@ -272,7 +276,12 @@ def validate_and_build_claims(
         claim_messages.extend(type_messages)
         if not ok:
             messages.append(
-                f"{claim_id}: rejected — {'; '.join(type_messages) if type_messages else 'insufficient supporting evidence'}"
+                f"{claim_id}: rejected — "
+                + (
+                    "; ".join(type_messages)
+                    if type_messages
+                    else "insufficient supporting evidence"
+                )
             )
             unsupported_claim_ids.append(claim_id)
             continue

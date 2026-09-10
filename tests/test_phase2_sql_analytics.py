@@ -286,7 +286,8 @@ class TestExecutor:
         # SQLite UUID storage strips dashes; normalize both sides for comparison
         result = execute_readonly_sql(
             in_memory_db,
-            "SELECT * FROM complaints WHERE REPLACE(CAST(vehicle_id AS TEXT), '-', '') = REPLACE(:vehicle_id, '-', '') LIMIT 10",
+            "SELECT * FROM complaints WHERE REPLACE(CAST(vehicle_id AS TEXT), '-', '') = "
+            "REPLACE(:vehicle_id, '-', '') LIMIT 10",
             params={"vehicle_id": str(vehicle.id)},
             max_rows=10,
         )

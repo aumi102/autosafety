@@ -296,7 +296,10 @@ class SqlAnalyticsService:
                 top = rows[0]
                 top_comp = top.get("component", "unknown")
                 top_cnt = top.get("complaint_count", 0)
-                summary = f"Top complaint component for {vehicle_desc} is **{top_comp}** with {top_cnt} complaints."
+                summary = (
+                    f"Top complaint component for {vehicle_desc} is "
+                    f"**{top_comp}** with {top_cnt} complaints."
+                )
                 sections.append(
                     AnswerSection(
                         title="Top Components",

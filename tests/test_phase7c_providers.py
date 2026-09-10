@@ -363,7 +363,8 @@ class TestDeterministicProvider:
         p = DeterministicProvider()
         req = _make_request(
             question="what recall campaigns affect this vehicle",
-            evidence_bundle_text="vehicle_resolution_tool resolved: true vehicle_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'",
+            evidence_bundle_text="vehicle_resolution_tool resolved: true vehicle_id: "
+            "'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'",
         )
         calls = p.plan_tool_calls(req)
         assert any(c.tool_name == "graph_evidence_tool" for c in calls)

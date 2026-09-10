@@ -262,7 +262,8 @@ class DeterministicProvider(SynthesisProvider):
 
         # Template answer
         lines = [
-            "Based on the retrieved evidence, here is what I found for your question about vehicle safety:"
+            "Based on the retrieved evidence, here is what I found for your question about vehicle "
+            "safety:"
         ]
         lines.append("")
         lines.append("Evidence Summary:")
@@ -918,7 +919,8 @@ def build_synthesis_provider(
     if provider_type == "openai_compatible":
         if not allow_external:
             logger.warning(
-                "openai_compatible provider requested but allow_external=false — using deterministic fallback"
+                "openai_compatible provider requested but allow_external=false — using "
+                "deterministic fallback"
             )
             return DeterministicProvider(config)
 

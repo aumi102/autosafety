@@ -2,7 +2,8 @@
 SQL query templates for Phase 2 analytics.
 
 Each template is a named, parameterized SQL string.
-Templates use bind-safe parameter notation (Python %s is NOT used — we use named params via executor).
+Templates use bind-safe parameter notation. Python %s is NOT used;
+named parameters are bound by the executor.
 """
 
 from dataclasses import dataclass

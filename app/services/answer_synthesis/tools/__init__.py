@@ -4,7 +4,8 @@ Controlled tool layer for Phase 7.
 Provides safe, application-owned tool execution for LLM orchestration.
 
 Modules:
-- base:       ToolDefinition, ToolCallRequest, ToolCallResult, EvidenceItem, EvidenceBundle, ToolExecutionPolicy
+- base:       ToolDefinition, ToolCallRequest, ToolCallResult,
+              EvidenceItem, EvidenceBundle, ToolExecutionPolicy
 - registry:   ToolRegistry, build_default_tool_registry
 - argument_validator: strict schema validation
 - sql_adapter:  sql_analytics_tool adapter (Phase 2 reuse)

@@ -223,7 +223,10 @@ def _make_spy_adapter(tool_name: str, data: dict):
 
 
 def _registry_with_spies():
-    """Build a registry and return (registry, sql_calls, graph_calls) so callers can assert on invocations."""
+    """Build a registry and return (registry, sql_calls, graph_calls).
+
+    Callers assert on the returned counters to see which tools ran.
+    """
     registry = ToolRegistry()
     registry.register(
         GRAPHRAG_RETRIEVAL_DEFINITION, build_graphrag_adapter(_default_retrieval_fn())

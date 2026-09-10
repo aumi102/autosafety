@@ -1,4 +1,4 @@
-.PHONY: install dev test lint lint-all lint-fix typecheck evaluate check clean \
+.PHONY: install dev test lint format format-check lint-fix typecheck evaluate check clean \
         db-up db-down db-reset migrate migrate-create \
         docker-up docker-down docker-build
 
@@ -23,25 +23,32 @@ test:
 # existed in this repository — so it silently checked nothing at all. See
 # docs/phase10_design.md.
 
+PYTHON ?= python
 LINT_PATHS = app/ tests/ scripts/ migrations/
+# migrations/ is linted but never reformatted: an applied revision is a record
+# of what ran, not a file to restyle.
+FORMAT_PATHS = app/ tests/ scripts/
 
 lint:
 	ruff check $(LINT_PATHS)
 
-# Advisory: adds the line-length rule excluded from the enforced gate. Expected
-# to report findings; not a blocker. Baseline count in docs/phase10_design.md.
-lint-all:
-	ruff check $(LINT_PATHS) --extend-select E501
+# Formatting gate. `ruff format` is the repository's formatter as of the Phase 11
+# completion pass; this fails if anything is unformatted.
+format-check:
+	ruff format --check $(FORMAT_PATHS)
+
+format:
+	ruff format $(FORMAT_PATHS)
 
 # Safe fixes only. Never pass --unsafe-fixes here.
 lint-fix:
 	ruff check $(LINT_PATHS) --fix
 
-# Enforced since Phase 11. mypy had never actually run before Phase 10 gave it a
-# target; it reported 47 errors, all now resolved without weakening the settings.
-# It is expected to stay at zero.
+# Enforced. Covers every first-party tree under the strictness policy in
+# pyproject.toml (including disallow_untyped_defs for app/). Expected to stay at
+# zero errors.
 typecheck:
-	mypy app/
+	mypy app/ scripts/ tests/
 
 # Phase 7 and Phase 8 safety evaluations. docs/phase7_closeout_report.md makes
 # these mandatory CI gates. Both are fully offline: no database, no graph, no
@@ -50,9 +57,12 @@ evaluate:
 	python scripts/evaluate_phase7_answers.py
 	python scripts/evaluate_phase8_conversations.py
 
-# The canonical pre-commit gate. Every part is expected to pass, and CI runs the
-# same four commands. Nothing here needs Docker, a secret, or a paid provider.
-check: lint typecheck test evaluate
+# The canonical pre-commit gate. It delegates to scripts/check.py rather than
+# repeating the commands, so the Makefile, CI, and a developer without `make`
+# all run exactly the same gates. Nothing here needs Docker, a secret, or a
+# paid provider.
+check:
+	$(PYTHON) scripts/check.py
 
 clean:
 	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache

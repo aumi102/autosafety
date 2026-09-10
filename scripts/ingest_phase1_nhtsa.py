@@ -107,7 +107,8 @@ def main():
         "--complaints-source",
         default="auto",
         choices=["api", "flat-file", "auto"],
-        help="Complaints source: api (Phase 1), flat-file (Phase 1.5), auto (prefer flat-file if --complaints-flat-file given)",
+        help="Complaints source: api (Phase 1), flat-file (Phase 1.5), auto (prefer flat-file if "
+        "--complaints-flat-file given)",
     )
 
     args = parser.parse_args()
@@ -157,7 +158,8 @@ def main():
                 logger.info(f"Limited to {args.limit_vehicles} vehicles")
             if args.recalls_only:
                 logger.warning(
-                    "--recalls-only is ignored in flat-file mode (flat-file currently only supports complaints)"
+                    "--recalls-only is ignored in flat-file mode (flat-file currently only "
+                    "supports complaints)"
                 )
 
             source_run_id, stats = run_complaints_flat_file_ingestion(

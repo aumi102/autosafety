@@ -7,7 +7,8 @@ Uses the DeterministicTestProvider for reproducible results.
 
 Usage:
     python scripts/evaluate_phase6_graphrag.py
-    python scripts/evaluate_phase6_graphrag.py --fixture tests/fixtures/phase6_graphrag_eval.json --verbose
+    python scripts/evaluate_phase6_graphrag.py \
+        --fixture tests/fixtures/phase6_graphrag_eval.json --verbose
 """
 
 import argparse
@@ -203,7 +204,8 @@ def main():
     print()
     print("=== Caveats ===")
     print(
-        "- Metrics reflect deterministic lexical embeddings (token overlap), not semantic understanding."
+        "- Metrics reflect deterministic lexical embeddings (token overlap), not semantic "
+        "understanding."
     )
     print("- Tiny local dataset — do not extrapolate to production quality.")
     print("- 5-query fixture is insufficient for statistical significance.")

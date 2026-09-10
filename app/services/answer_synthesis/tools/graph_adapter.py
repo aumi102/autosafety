@@ -120,7 +120,8 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
                 result_data = _recall_paths_to_dict(recall_paths, max_paths)
                 warnings.append(
                     "Recall links are potentially related — not official causality. "
-                    "Only Recall → AFFECTS → ModelYear is official when explicitly in campaign records."
+                    "Only Recall → AFFECTS → ModelYear is official when explicitly in campaign "
+                    "records."
                 )
 
             elif operation == "component_evidence_by_vehicle":
@@ -135,7 +136,8 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
                 result_data = _component_evidence_to_dict(component_evidence, max_paths)
                 warnings.append(
                     "Complaint component links are potential associations, not causality. "
-                    "Shared-component links may be zero if NHTSA recall records lack component data."
+                    "Shared-component links may be zero if NHTSA recall records lack component "
+                    "data."
                 )
 
             elif operation == "shared_component_recall_paths":

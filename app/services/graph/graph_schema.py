@@ -56,7 +56,8 @@ INDEXES = [
     # Speed up Complaint date range queries
     "CREATE INDEX complaint_received_date IF NOT EXISTS FOR (c:Complaint) ON (c.received_date)",
     # Speed up Recall date range queries
-    "CREATE INDEX recall_report_received_date IF NOT EXISTS FOR (r:Recall) ON (r.report_received_date)",
+    "CREATE INDEX recall_report_received_date IF NOT EXISTS FOR (r:Recall) ON "
+    "(r.report_received_date)",
     # Speed up Component category filtering
     "CREATE INDEX component_category IF NOT EXISTS FOR (c:Component) ON (c.category)",
 ]

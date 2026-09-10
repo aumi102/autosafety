@@ -23,7 +23,10 @@ from app.services.hybrid.hybrid_parser import (
 
 class TestHybridParser:
     def test_detects_top_complaint_with_related_recalls(self):
-        q = "Which component has the most complaints for Ford F-150 2020, and are there related recalls?"
+        q = (
+            "Which component has the most complaints for Ford F-150 2020, "
+            "and are there related recalls?"
+        )
         intent = parse_hybrid_question(q)
         assert intent.hybrid_type in HYBRID_INTENTS
         assert intent.wants_graph is True
@@ -60,7 +63,10 @@ class TestHybridParser:
         assert intent.hybrid_type == "sql_only"
 
     def test_is_hybrid_question_true_for_hybrid(self):
-        q = "Which component has the most complaints for Ford F-150 2020, and are there related recalls?"
+        q = (
+            "Which component has the most complaints for Ford F-150 2020, "
+            "and are there related recalls?"
+        )
         assert is_hybrid_question(q) is True
 
     def test_is_hybrid_question_false_for_sql_only(self):
@@ -68,7 +74,10 @@ class TestHybridParser:
         assert is_hybrid_question(q) is False
 
     def test_confidence_high_when_vehicle_and_graph(self):
-        q = "Which component has the most complaints for Ford F-150 2020, and are there related recalls?"
+        q = (
+            "Which component has the most complaints for Ford F-150 2020, "
+            "and are there related recalls?"
+        )
         intent = parse_hybrid_question(q)
         assert intent.confidence >= 0.6
 

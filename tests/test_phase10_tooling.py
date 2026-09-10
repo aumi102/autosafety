@@ -77,7 +77,9 @@ class TestLintTargets:
     def test_lint_target_actually_runs_ruff(self):
         assert "ruff check" in _target_body("lint")
 
-    @pytest.mark.parametrize("target", ["lint", "lint-all", "lint-fix", "typecheck", "check"])
+    @pytest.mark.parametrize(
+        "target", ["lint", "format", "format-check", "lint-fix", "typecheck", "check"]
+    )
     def test_quality_targets_exist(self, target):
         assert _target_body(target) is not None or target == "check"
 
@@ -136,8 +138,12 @@ class TestLintConfiguration:
             assert family in select
 
     def test_only_cosmetic_rules_are_globally_ignored(self):
-        """A blanket ignore would make the gate meaningless. Pin the exact set."""
-        assert set(_ruff_config()["lint"]["ignore"]) == {"E501", "N806", "UP042"}
+        """A blanket ignore would make the gate meaningless. Pin the exact set.
+
+        E501 left this set in the Phase 11 completion pass: it is enforced now,
+        with four narrowly named per-file exemptions.
+        """
+        assert set(_ruff_config()["lint"]["ignore"]) == {"N806", "UP042"}
 
     def test_no_correctness_rule_family_is_globally_ignored(self):
         ignored = _ruff_config()["lint"]["ignore"]
@@ -149,6 +155,12 @@ class TestLintConfiguration:
             "migrations/versions/*.py",
             "migrations/env.py",
             "tests/test_phase2_sql_analytics.py",
+            # E501 only: each embeds a Cypher query or prompt text where a line
+            # break would change what is transmitted.
+            "app/services/graph/graph_queries.py",
+            "app/services/graphrag/graph_expander.py",
+            "app/services/answer_synthesis/prompt_builder.py",
+            "app/services/answer_synthesis/providers.py",
         }
 
     def test_migration_exemptions_never_disable_correctness_checks(self):
