@@ -40,6 +40,33 @@ class AgentState(TypedDict):
 11. return_response
 ```
 
+## Model-driven tool planning (Phase 12)
+
+Between mandatory GraphRAG retrieval and final synthesis, a configured external
+provider is asked which additional allowlisted tools to run.
+
+```text
+mandatory GraphRAG base retrieval        application-driven, never model-chosen
+for round in range(max_tool_rounds)      bounded; no `while`
+    provider.plan_tool_calls(...)        real network round (Phase 12)
+    validate against the registry schema
+    ToolRegistry executes                application owns execution
+    bounded evidence joins the bundle
+final synthesis
+```
+
+The model names a `tool_name` and an `operation` from that tool's schema enum.
+It never supplies SQL, Cypher, a path, a URL, or a command; no tool schema
+accepts one, and a plan containing one is discarded rather than stripped.
+
+An empty plan is a correct answer: it means the mandatory GraphRAG evidence is
+sufficient. Every planning failure — timeout, 401, 429, malformed JSON —
+likewise yields an empty plan, and the answer proceeds on the evidence already
+gathered. Set `PHASE12_MODEL_PLANNING_ENABLED=false` to disable planning
+entirely.
+
+Full rationale in `docs/phase12_design.md`.
+
 ## Routing rules
 
 ### SQL route

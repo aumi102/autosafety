@@ -1172,3 +1172,68 @@ model, where a line break changes what is transmitted rather than how it reads.
 
 Design rationale is in `docs/phase11_design.md`; evidence in
 `docs/phase11_ci_quality_report.md`.
+
+---
+
+## Phase 12: Bounded Model-Driven Tool Planning
+
+`OpenAICompatibleProvider.plan_tool_calls()` returned `[]` unconditionally.
+Five phases recorded it in the same words — the Phase 7 external acceptance
+report put it plainly: **"Network-based `plan_tool_calls()`: NO."** The real
+provider never asked for a tool, so the orchestrator's planning loop was
+exercised only by deterministic heuristics. It is now a real network round.
+
+### What did not need building
+
+The orchestration loop already enforced every guarantee: mandatory GraphRAG
+before planning, a `for` over `range(max_tool_rounds)` with no `while`,
+per-call budget checks, deduplication, application-owned call ids, and
+`ToolRegistry` schema validation before dispatch. Phase 12 implements one
+method and the validation around it.
+
+```text
+the model REQUESTS a tool_name + operation + arguments
+the application VALIDATES against the registry schema
+ToolRegistry EXECUTES
+```
+
+### The model never gets a capability
+
+The planning prompt carries the question, the tool schemas, and a citation
+*label* summary — never evidence prose, rows, credentials, SQL, or Cypher. A
+test seeds a marker into the evidence text and asserts it never reaches the
+wire.
+
+Unknown tools, unknown operations, and undeclared argument keys matching
+`sql`/`cypher`/`command`/`path`/`url`/`secret` are refused. The tool schema is
+the allowlist. Raw SQL and Cypher are impossible at three independent layers,
+and shell, filesystem, and HTTP tools cannot be requested because they are not
+in the registry.
+
+Every failure returns an empty plan, which is safe: mandatory GraphRAG evidence
+is already gathered. Budgets are unchanged at 2 rounds / 4 calls.
+`PHASE12_MODEL_PLANNING_ENABLED=false` is the kill switch.
+
+### Proven with a real model
+
+```text
+LIVE PLANNING: latency=3956ms  proposed=2  rejections=[]
+  graph_evidence_tool  operation=recall_paths_by_vehicle
+  graph_evidence_tool  operation=component_evidence_by_vehicle
+REGISTRY EXECUTION: success=True, success=True
+```
+
+Live acceptance also caught a defect no offline test could: the forbidden
+markers are substrings, and `graph_evidence_tool` declares a legitimate
+property called `max_paths` — which contains `path`. A correct model plan was
+being thrown away. The schema is now the allowlist.
+
+### Phase 12 results
+
+- **1234 tests pass**, with every container stopped.
+- New mandatory gate `eval-phase12`: 20 agentic safety cases, `unsafe_acceptances = 0`.
+- `scripts/check.py` now runs 7 gates; Phase 7 and Phase 8 evaluations unchanged.
+- 4 live provider requests spent, all planning rounds.
+
+Design rationale is in `docs/phase12_design.md`; evidence in
+`docs/phase12_runtime_acceptance_report.md`.
