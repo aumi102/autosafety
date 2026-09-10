@@ -204,11 +204,98 @@ tests). Run with every container stopped.
 No live external request was made. Phase 11 concerns typing, gates, and CI; both
 evaluations use the deterministic provider, and CI has no provider credential.
 
-## 12. Verdict
+## 12. Completion pass — every deferred item closed
 
-**PHASE 11 CI AND QUALITY ACCEPTANCE PASSED WITH LIMITATIONS**
+The sections above record the original Phase 11 pass. This section records the
+completion pass that closed the four limitations it left.
 
-Remaining limitations: 398 E501 findings stay advisory by measured decision;
-`tests/` and `scripts/` are not yet type-checked; `make` is unavailable locally
-so Makefile validation is indirect; and the CI workflow has not yet had a real
-run on GitHub.
+### Typecheck
+
+```text
+before   mypy app/                     0 errors (106 files)   scripts/ and tests/ unchecked
+after    mypy app/ scripts/ tests/     0 errors (148 files)
+```
+
+Strictness enabled after measuring each flag: `disallow_untyped_defs`,
+`disallow_incomplete_defs`, `check_untyped_defs`, `no_implicit_optional`,
+`warn_redundant_casts`, `warn_unused_ignores`, `strict_equality`,
+`warn_return_any`. 93 newly reported errors, all resolved. Suppressions across
+`app/` and `scripts/`: three, all error-code scoped.
+
+### Line length
+
+```text
+before   398 findings, advisory
+after    0 findings in the enforced gate
+```
+
+`ruff format` applied to `app/`, `tests/`, `scripts/` in a dedicated
+formatting-only commit (98 files), then long f-strings split by an AST-verified
+transform and long comments rewritten by hand. Four files keep a named E501
+exemption because they embed Cypher or prompt text; `migrations/versions/*.py`
+keeps its existing one.
+
+### Canonical runner
+
+```text
+python scripts/check.py
+
+--- lint: PASS in 0.1s
+--- format: PASS in 0.1s
+--- typecheck: PASS in 0.5s
+--- tests: PASS in 17.6s
+--- eval-phase7: PASS in 0.7s
+--- eval-phase8: PASS in 1.1s
+All gates passed (6/6).
+```
+
+`make check` delegates to it; CI invokes it; pre-push runs it. The `make`
+limitation is gone: the canonical path is Python and runs anywhere.
+
+### Graph route coverage
+
+`tests/test_phase11_graph_routes.py` — 32 tests covering all seven routes in
+`graph.py`, including six cases for the recall-paths route that Phase 11 found
+broken. A final test fails if a new graph route ships without HTTP coverage.
+
+### Real GitHub Actions run
+
+The repository had **no git remote**; one was created with the user's explicit
+approval and the branch pushed.
+
+```text
+repository   github.com/aumi102/autosafety   (public)
+run id       34436853068
+trigger      push -> master
+conclusion   success
+
+  Lint, typecheck, tests, evaluations   success
+  Fresh-database migration              success
+```
+
+Both jobs passed on the first run. The `quality` job runs `scripts/check.py`;
+the `migrations` job creates an empty PostgreSQL database on
+`pgvector/pgvector:pg16`, applies the chain to head, and verifies the schema.
+
+### Branch protection
+
+Configured on `master` and read back from the API:
+
+```text
+required_checks       ["Lint, typecheck, tests, evaluations", "Fresh-database migration"]
+strict_up_to_date     true
+enforce_admins        true
+force_pushes_allowed  false
+deletions_allowed     false
+linear_history        true
+```
+
+`enforce_admins: true` means the repository owner cannot bypass the checks
+either.
+
+## 13. Verdict
+
+**PHASE 11 CI AND QUALITY ACCEPTANCE PASSED**
+
+No Phase 11 limitation remains. The register in `docs/phase11_design.md` §11
+lists all nine items with their disposition and evidence.

@@ -144,6 +144,48 @@ is relied on.
 ## 6. Result and suppression policy
 
 ```text
+mypy app/ scripts/ tests/    Success: no issues found in 148 source files
+```
+
+### Strictness (completion pass)
+
+Every flag was measured before enabling. `check_untyped_defs`,
+`no_implicit_optional`, `warn_redundant_casts`, `warn_unused_ignores`, and
+`strict_equality` were already clean. `disallow_untyped_defs` (with
+`disallow_incomplete_defs`) reported **88** errors and `warn_return_any` **5**;
+all 93 are resolved.
+
+`strict = true` is deliberately not used: it also turns on
+`disallow_any_generics` and `disallow_untyped_calls`, which would require
+annotating third-party generics and every SQLAlchemy/FastAPI boundary — churn,
+not safety.
+
+`tests/` and `scripts/` are exempt from `disallow_untyped_defs` **only**. Every
+other flag applies to them, and a test pins that the relaxation covers exactly
+those two module globs.
+
+Notable fixes rather than annotations:
+
+- `HybridIntent.vehicle` was typed `object`, making every attribute read on a
+  parsed vehicle unverifiable.
+- `AuditedGuardedAnswerService` is a transparent decorator, not a subclass, so
+  every call site declaring the concrete `GuardedAnswerService` was inaccurate.
+  A `GuardedAnswerLike` Protocol now states the substitutability both satisfy.
+- `isolated_settings()` replaces `Settings(_env_file=None)` across six modules,
+  so that one pydantic-settings suppression lives in one named place.
+- `pytest.raises(Exception)` became `pytest.raises(HTTPException)` where the
+  test already asserted on `.status_code` and `.detail` — strictly tighter.
+- The Phase 7 evaluation harness built a `CaseHarness` with `None` fields and
+  suppressed the error; it now closes over a `BaseCallCounter` and the
+  suppression is deleted rather than moved.
+
+Three suppressions remain across `app/` and `scripts/`, all error-code scoped:
+the pydantic-settings runtime keyword, and two optional dependencies that are
+not project requirements and ship no stubs (`sentence_transformers`, `redis`).
+
+### Original pass
+
+```text
 mypy app/    Success: no issues found in 106 source files
 ```
 
@@ -163,38 +205,64 @@ One pre-existing `# type: ignore[assignment]` was **removed**, by replacing a
 Tests enforce the policy: no bare `# type: ignore`, no `# mypy: ignore-errors`,
 and at most three suppressions in `app/`.
 
-## 7. E501 and formatting decision
+## 7. E501 and formatting decision — superseded
 
-Phase 10 excluded `E501` from the enforced gate and routed it to `make lint-all`.
-Phase 11 re-examined that with measurements rather than inheriting it:
+The original Phase 11 pass measured `ruff format` across the whole repository,
+found it would change 5539 lines and still leave 39 findings, and concluded that
+E501 could not become a hard gate either way. It stayed advisory.
+
+**The completion pass reversed that, because the measurement was wrong in one
+respect:** it counted the immutable Alembic revisions, which are never
+reformatted. Excluding them, the residue after formatting was **56**, not 398 —
+and 56 is hand-fixable.
+
+What was done:
 
 ```text
-ruff format would reformat  96 files, 5539 changed lines
-E501 in app/ after formatting  39   (down from 398 across all trees)
+ruff format app/ tests/ scripts/     98 files reformatted   (dedicated commit)
+long f-strings split                 implicit concatenation, AST-verified
+long comments and docstrings         rewritten
+remaining E501 in the gate           0
 ```
 
-**Decision: keep E501 advisory (Phase 10's option B), confirmed by measurement.**
+`E501` is now **enforced**. Four files keep an exemption, each named
+individually in `pyproject.toml`:
 
-The formatter cannot break long string literals, URLs, or comments, so 39
-findings survive it. Adopting it would therefore push 5539 lines of churn
-through stable, security-sensitive Phase 7–10 code **and still leave E501
-unable to serve as a hard gate**. The debt does not become zero; it becomes
-smaller and much more expensive to review.
+| File | Why |
+|---|---|
+| `graph_queries.py`, `graph_expander.py` | embed Cypher sent to Neo4j |
+| `prompt_builder.py`, `providers.py` | embed literal prompt text sent to the model |
 
-The debt stays visible and counted through `make lint-all` (398). This records
-the numbers so a future phase can revisit the trade-off with evidence rather
-than re-deriving it.
+In those four, a line break changes what is transmitted to a database or a
+model. That is a behavior change, not formatting. `migrations/versions/*.py`
+keeps its existing exemption: an applied revision is a record of what ran.
+
+Every other line-length finding in the repository is fixed rather than
+exempted, and `TestLintConfiguration` asserts the exemption set so it cannot
+quietly grow.
 
 ## 8. Quality gate architecture
 
-```make
-lint       ruff check app/ tests/ scripts/ migrations/   enforced, green
-typecheck  mypy app/                                     enforced, zero errors
-test       pytest tests/                                 enforced
-evaluate   Phase 7 + Phase 8 safety evaluations          enforced
-check      lint + typecheck + test + evaluate            the canonical gate
-lint-all   lint plus E501                                advisory
+`scripts/check.py` is the canonical gate and the single source of truth:
+
+```text
+lint        ruff check app/ tests/ scripts/ migrations/
+format      ruff format --check app/ tests/ scripts/
+typecheck   mypy app/ scripts/ tests/
+tests       pytest tests/
+eval-phase7 Phase 7 guarded answer evaluation
+eval-phase8 Phase 8 multi-turn conversation evaluation
 ```
+
+`make check` delegates to it. CI invokes it. Pre-push runs it. None of the three
+repeats the commands, so they cannot drift — and a test fails if the Makefile
+starts naming `ruff`, `mypy`, or `pytest` directly.
+
+It is a Python script rather than only a Make target because `make` is not
+available on a stock Windows install, which is where this repository is
+developed. The original Phase 11 pass recorded that as a limitation; this
+removes it. The runner stops at the first failure, propagates the exit code,
+uses no shell, and takes `--list` / `--only` / `--skip` for iterating.
 
 Adding `evaluate` matters beyond tidiness: `docs/phase7_closeout_report.md`
 already called those evaluations mandatory gates, but nothing ran them
@@ -251,13 +319,28 @@ Both offline, deterministic, network-free, and independent of the operator
 `.env`. They assert shape rather than whitespace, so ordinary edits do not break
 them — but removing a gate, widening a suppression, or introducing a secret does.
 
-## 11. Deferred
+## 11. Phase 11 debt register — final
 
-- **398 `E501` findings** — measured, visible through `make lint-all`; §7.
-- **`make` is not installed in the development environment.** The Makefile is
-  correct for developers and CI; locally its targets are validated by running
-  their commands directly and by parsing the file in tests.
-- **`tests/` and `scripts/` are not type-checked.** `app/` is the production
-  package and the primary gate; extending mypy outward is a future step.
-- `/v1/chat/*` removal, audit fail-open policy, live model-driven
-  `plan_tool_calls()`, and the retrieval/corpus debts are all unchanged.
+Every item the original Phase 11 pass deferred, and its disposition.
+
+| # | Debt | Disposition | Evidence |
+|---|---|---|---|
+| 1 | ~398 E501 findings advisory | **RESOLVED** | E501 enforced; 0 findings in the gate; 4 named DSL exemptions (§7) |
+| 2 | `tests/` not type-checked | **RESOLVED** | `mypy app/ scripts/ tests/` — 148 files, 0 errors |
+| 3 | `scripts/` not type-checked | **RESOLVED** | same command |
+| 4 | `make` unavailable, so `make check` never literally ran | **RESOLVED** | `scripts/check.py` is the canonical runner; `make` delegates to it |
+| 5 | CI never proven on GitHub | **RESOLVED** | run `34436853068`, both jobs green |
+| 6 | Branch protection unconfigured | **RESOLVED** | both checks required, `enforce_admins` on, force-push and deletion blocked |
+| 7 | No pre-commit hooks | **RESOLVED** | `.pre-commit-config.yaml`, all revs pinned |
+| 8 | Stronger typing deferred | **RESOLVED** | `disallow_untyped_defs` + 6 further flags (§3) |
+| 9 | `graph.py` HTTP routes uncovered | **RESOLVED** | `tests/test_phase11_graph_routes.py`, all 7 routes |
+
+**No Phase 11 item remains open, deferred, or advisory.**
+
+### Not Phase 11 scope
+
+These belong to other phases and are listed only so they are not confused with
+Phase 11 debt: `/v1/chat/*` retirement (Phase 9 decision, no milestone
+defined), audit fail-open policy (Phase 9, deliberate), live model-driven
+`plan_tool_calls()` (Phase 7), and corpus breadth / embedding quality
+(Phase 6/7).

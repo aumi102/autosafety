@@ -1118,28 +1118,57 @@ assert this. GitHub Actions cannot run locally, so validation was structural
 plus running each `quality` command directly against the checkout — stated as
 such rather than claimed as a green run.
 
-### Line length: measured, not hidden
+### One command before you commit
 
-`ruff format` would change **5539 lines across 96 files** and still leave 39
-`E501` findings, because it cannot split long strings, URLs, or comments. It
-would therefore push a large diff through security-sensitive Phase 7–10 code
-*and still* leave E501 unable to serve as a hard gate. E501 stays advisory and
-counted via `make lint-all` (398).
+```bash
+python scripts/check.py     # works without `make`, on any platform
+make check                  # delegates to the same script
+```
+
+`scripts/check.py` is the canonical gate and the single source of truth:
+
+```text
+lint -> format -> typecheck -> tests -> Phase 7 eval -> Phase 8 eval
+```
+
+CI invokes it and pre-push runs it, so a developer, the Makefile, and GitHub
+Actions cannot drift — a test fails if the Makefile starts naming `ruff`,
+`mypy`, or `pytest` directly.
+
+Install the hooks once with `pre-commit install` and
+`pre-commit install --hook-type pre-push`. Commit hooks stay fast; the full
+gate runs before a push.
+
+### Line length: enforced
+
+E501 was advisory through Phase 10 and Phase 11 on the measurement that
+formatting could not eliminate it. That measurement counted the immutable
+Alembic revisions. Excluding them, the residue after `ruff format` was **56**,
+not 398 — so it was formatted (in a dedicated commit) and the rest hand-wrapped.
+
+**Zero E501 findings remain in the gate.** Four files keep a named exemption
+because they embed Cypher sent to Neo4j or literal prompt text sent to the
+model, where a line break changes what is transmitted rather than how it reads.
 
 ### Phase 11 results
 
-- 1097 tests pass (1039 at entry, plus 58 new), with every container stopped.
-- `mypy app/` clean; `ruff` gate clean; Phase 7 and Phase 8 evaluations pass.
+- **1152 tests pass**, with every container stopped.
+- `mypy app/ scripts/ tests/` — **148 files, zero errors**, under
+  `disallow_untyped_defs` and seven further measured strict flags.
+- Ruff lint and format gates clean; Phase 7 and Phase 8 evaluations pass.
+- Every route in `graph.py` now has direct HTTP coverage — the gap that let a
+  500 ship for eight phases.
+- **Real CI verified:** run `34436853068` on `github.com/aumi102/autosafety`,
+  both jobs green.
+- **`master` is protected:** both CI jobs required, `enforce_admins` on, force
+  pushes and deletions blocked.
 - No safety boundary changed. Where mypy and an invariant disagreed, the
   annotation was corrected — never the guard.
 
-### Current limitations
+### Phase 11 technical debt
 
-- 398 `E501` findings remain advisory by measured decision.
-- `tests/` and `scripts/` are not yet type-checked; `app/` is the gate.
-- `make` is not installed in the development environment, so Makefile targets
-  are validated by running their commands directly and by parsing the file.
-- The CI workflow has not yet had a real run on GitHub.
+**None.** All nine deferred items are closed; the register with evidence is in
+`docs/phase11_design.md` §11.
 
 Design rationale is in `docs/phase11_design.md`; evidence in
 `docs/phase11_ci_quality_report.md`.

@@ -251,18 +251,35 @@ compliance obligation requires refusing service without an audit trail.
 ## 8. Quality gates
 
 ```bash
-make check       # the canonical gate: lint + typecheck + test + evaluate
-make lint        # enforced; expected green
-make typecheck   # enforced since Phase 11; expected zero errors
-make test        # full suite
-make evaluate    # Phase 7 and Phase 8 safety evaluations
-make lint-all    # advisory; adds line-length findings (398)
+python scripts/check.py    # the canonical gate; works without `make`
+make check                 # delegates to the same script
 ```
 
-Run `make check` before committing. Every part is offline: no Docker, no
-credential, no external provider. GitHub Actions runs the same commands on every
-push and pull request, plus a real fresh-database migration
-(`.github/workflows/ci.yml`).
+That runs, in order: ruff lint, ruff format check, mypy over `app/ scripts/
+tests/`, the full suite, and the Phase 7 and Phase 8 safety evaluations. It
+stops at the first failure. `--list`, `--only NAME`, and `--skip NAME` help when
+iterating on one gate.
+
+Individual gates remain available as `make lint`, `make format`,
+`make format-check`, `make typecheck`, `make test`, `make evaluate`.
+
+Every part is offline: no Docker, no credential, no external provider.
+
+Install the git hooks once:
+
+```bash
+pip install -e ".[dev]"
+pre-commit install
+pre-commit install --hook-type pre-push
+```
+
+Commit hooks are fast (lint, format, typecheck, quality-invariant tests); the
+full gate runs on pre-push.
+
+GitHub Actions runs the same script on every push and pull request, plus a real
+fresh-database migration (`.github/workflows/ci.yml`). `master` is protected:
+both CI jobs are required, and `enforce_admins` is on, so the checks cannot be
+bypassed.
 
 `make lint` covers `app/`, `tests/`, `scripts/`, and `migrations/`. Before
 Phase 10 it ran `ruff check autosafety/` — a directory that has never existed —
