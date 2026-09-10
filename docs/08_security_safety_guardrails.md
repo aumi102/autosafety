@@ -187,6 +187,42 @@ Neo4j driver both embed host, port, and user in their exception text.
 `/v1/ops/diagnostics` is admin-gated and reports configuration *shape* —
 `provider_credential_configured` is a boolean, never the credential.
 
+### Model-driven tool planning (Phase 12)
+
+A configured external provider now performs a real planning round and may
+request tools. It never executes them.
+
+```text
+the model REQUESTS a tool_name + operation + arguments
+the application VALIDATES against the registry schema
+ToolRegistry EXECUTES
+```
+
+The planning prompt carries the question, the tool schemas, and a citation
+*label* summary. It never carries evidence prose, database rows, credentials,
+SQL, or Cypher.
+
+```text
+rejected: unknown tool, unknown operation, non-object arguments, oversized
+          values, and any undeclared argument key matching sql/cypher/command/
+          path/url/secret/token/credential
+allowlist: the tool schema itself -- a declared property is permitted, an
+          undeclared lookalike is not
+bounded:  2 rounds, 4 calls (PHASE7_MAX_TOOL_ROUNDS / PHASE7_MAX_TOOL_CALLS);
+          the loop is a `for` over a range, never a `while`
+fail-safe: every planning failure returns an empty plan, and mandatory GraphRAG
+          evidence is already gathered, so the answer path is unaffected
+kill switch: PHASE12_MODEL_PLANNING_ENABLED=false restores Phase 7-11 behavior
+```
+
+Raw SQL and Cypher are impossible at three independent layers: the planning
+validator, `SynthesisOrchestrator._sanitize_tool_call`, and `ToolRegistry`
+schema validation. Filesystem, shell, and HTTP tools cannot be requested
+because they are not in the registry.
+
+Planning observability records counts and stable reason codes only. The
+planning prompt, the raw response, and argument values are never persisted.
+
 ## Observability requirements
 
 Every agent response must store:

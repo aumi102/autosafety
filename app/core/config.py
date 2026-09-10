@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     PHASE7_PROVIDER_API_KEY: SecretStr = SecretStr("")
     PHASE7_PROVIDER_BASE_URL: str = "https://api.openai.com/v1"
 
+    # Phase 12 - bounded model-driven tool planning.
+    # When true (the default), a configured external provider performs a real
+    # planning round and may request allowlisted tools. It never executes them:
+    # ToolRegistry remains the execution authority. Set false to restore the
+    # Phase 7-11 behavior where the provider proposes nothing.
+    PHASE12_MODEL_PLANNING_ENABLED: bool = True
+
     # Phase 8 — Conversation state and bounded multi-turn context
     PHASE8_MAX_CONTEXT_TURNS: int = 5
     PHASE8_MAX_TURNS_PER_CONVERSATION: int = 100

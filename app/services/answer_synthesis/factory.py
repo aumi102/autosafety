@@ -78,6 +78,7 @@ def _provider_config(config: SynthesisConfig) -> dict:
         "api_key": config.api_key,
         "base_url": config.base_url,
         "timeout_seconds": config.timeout_seconds,
+        "model_planning_enabled": config.model_planning_enabled,
     }
 
 

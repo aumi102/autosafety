@@ -34,6 +34,8 @@ Phase 10: maintainability and       phase10_design.md,
                                     phase10_operator_runbook.md
 Phase 11: type safety, CI, and      phase11_design.md,
           developer quality gates   phase11_ci_quality_report.md
+Phase 12: bounded model-driven      phase12_design.md,
+          tool planning             phase12_runtime_acceptance_report.md
 ```
 
 Before committing, run `python scripts/check.py` (or `make check`).
