@@ -179,7 +179,7 @@ def _operation_to_source_type(operation: str) -> str | None:
     return None  # "retrieve_complaints_and_recalls"
 
 
-def _chunk_to_dict(chunk) -> dict:
+def _chunk_to_dict(chunk: Any) -> dict:
     """Serialize a RetrievedChunk safely."""
     return {
         "chunk_id": chunk.chunk_id,
@@ -196,7 +196,7 @@ def _chunk_to_dict(chunk) -> dict:
     }
 
 
-def _path_to_dict(path) -> dict:
+def _path_to_dict(path: Any) -> dict:
     """Serialize a GraphRAGGraphPath safely."""
     return {
         "path_text": path.path_text,

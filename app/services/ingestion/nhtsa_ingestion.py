@@ -38,13 +38,13 @@ from app.services.nhtsa_client import (
 logger = logging.getLogger(__name__)
 
 
-def utcnow():
+def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
 class IngestionStats:
     """Track ingestion statistics."""
-    def __init__(self):
+    def __init__(self) -> None:
         self.vehicles_seen: int = 0
         self.vehicles_inserted: int = 0
         self.complaints_seen: int = 0

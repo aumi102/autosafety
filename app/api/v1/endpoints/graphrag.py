@@ -74,7 +74,7 @@ class GraphRAGHealthResponse(BaseModel):
 
 
 @router.get("/health", response_model=GraphRAGHealthResponse)
-def graphrag_health():
+def graphrag_health() -> GraphRAGHealthResponse:
     """
     Check GraphRAG vector backend availability.
 
@@ -90,7 +90,7 @@ def graphrag_health():
 
 
 @router.get("/status", response_model=GraphRAGStatusResponse)
-def graphrag_status():
+def graphrag_status() -> GraphRAGStatusResponse:
     """
     Return current GraphRAG index status.
 
@@ -115,7 +115,7 @@ def graphrag_status():
     response_model=GraphRAGIndexResponse,
     dependencies=[Depends(verify_admin_token)],
 )
-def graphrag_index(data: GraphRAGIndexRequest):
+def graphrag_index(data: GraphRAGIndexRequest) -> GraphRAGIndexResponse:
     """
     Index complaints and recalls as canonical evidence documents with embeddings.
 
@@ -154,7 +154,7 @@ def graphrag_index(data: GraphRAGIndexRequest):
 
 
 @router.post("/retrieve", response_model=GraphRAGRetrieveResponse)
-def graphrag_retrieve(data: GraphRAGRetrieveRequest):
+def graphrag_retrieve(data: GraphRAGRetrieveRequest) -> GraphRAGRetrieveResponse:
     """
     Perform semantic retrieval over indexed complaint and recall evidence.
 

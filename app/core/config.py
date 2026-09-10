@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Any
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -57,3 +58,15 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def isolated_settings(**overrides: Any) -> Settings:
+    """Build settings that ignore the operator `.env`.
+
+    Tests and evaluations must not inherit whatever an operator happens to have
+    configured locally -- a real provider key or admin token would silently
+    change what they exercise. `_env_file` is a pydantic-settings runtime
+    keyword that its generated `__init__` signature does not declare, so the
+    single suppression it needs lives here instead of at every call site.
+    """
+    return Settings(_env_file=None, **overrides)  # type: ignore[call-arg]

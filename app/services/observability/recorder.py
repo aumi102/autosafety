@@ -28,6 +28,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
+from types import TracebackType
 from typing import Any, Literal
 
 from sqlalchemy.orm import Session
@@ -272,7 +273,12 @@ class ExecutionAuditRecorder:
         def __enter__(self) -> Session:
             return self._session
 
-        def __exit__(self, exc_type, exc, tb) -> Literal[False]:
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> Literal[False]:
             try:
                 if exc_type is None:
                     self._session.commit()

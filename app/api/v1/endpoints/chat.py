@@ -233,7 +233,7 @@ def create_session(
     data: ChatSessionCreate,
     response: Response,
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ChatSession:
     """Create a real, persisted conversation and return it in the legacy shape."""
     _mark_deprecated(response)
     try:
@@ -269,7 +269,7 @@ def send_message(
     data: ChatMessageCreate,
     response: Response,
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ChatMessageResponse:
     """Answer through the full guarded path, mapped to the legacy answer contract."""
     _mark_deprecated(response)
     try:

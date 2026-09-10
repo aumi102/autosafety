@@ -4,7 +4,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 from app.services.sql_analytics.service import SqlAnalyticsService
@@ -12,7 +12,7 @@ from app.services.sql_analytics.service import SqlAnalyticsService
 router = APIRouter(tags=["sql-analytics"])
 
 
-def _get_sync_session():
+def _get_sync_session() -> Session:
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
     if "postgresql+asyncpg" in db_url:
@@ -27,7 +27,7 @@ class SqlAnalyticsRequest(BaseModel):
 
 
 @router.post("/query")
-def sql_analytics_query(data: SqlAnalyticsRequest):
+def sql_analytics_query(data: SqlAnalyticsRequest) -> dict:
     """
     Direct SQL analytics endpoint.
 

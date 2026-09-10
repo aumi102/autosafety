@@ -1,6 +1,6 @@
 """Phase 9 maintenance/admin route protection tests (fail-closed).
 
-Offline and deterministic. Settings come from explicit `Settings(_env_file=None)`
+Offline and deterministic. Settings come from explicit `isolated_settings()`
 fixtures, never the operator `.env`, and no real secret is required.
 
 Phase 8 shipped this guard fail-**open**: with no token configured, maintenance
@@ -20,7 +20,7 @@ import json
 
 import pytest
 from app.core import security as security_module
-from app.core.config import Settings
+from app.core.config import Settings, isolated_settings
 from app.core.security import (
     ADMIN_TOKEN_HEADER,
     MIN_ADMIN_TOKEN_CHARS,
@@ -28,6 +28,7 @@ from app.core.security import (
     verify_admin_token,
 )
 from app.main import app
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -50,7 +51,7 @@ OFFLINE_SAFE_READ_ONLY_ROUTES = ("/v1/conversations/status/config",)
 
 
 def _settings(**overrides) -> Settings:
-    return Settings(_env_file=None, **overrides)
+    return isolated_settings(**overrides)
 
 
 @pytest.fixture
@@ -91,7 +92,7 @@ class TestTokenResolution:
             PHASE8_ADMIN_TOKEN=SecretStr("legacy-token-value-long-enough"),
         )
         monkeypatch.setattr(security_module, "get_settings", lambda: settings)
-        assert verify_admin_token(VALID_TOKEN) is None
+        verify_admin_token(VALID_TOKEN)  # must not raise
 
     def test_short_token_is_rejected_as_unconfigured(self):
         short = "x" * (MIN_ADMIN_TOKEN_CHARS - 1)
@@ -115,42 +116,44 @@ class TestTokenResolution:
 
 class TestFailClosedDependency:
     def test_missing_server_config_fails_closed(self, unconfigured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token(VALID_TOKEN)
         assert exc.value.status_code == 503
+        assert isinstance(exc.value.detail, dict)
         assert exc.value.detail["error"]["code"] == "ADMIN_PROTECTION_UNAVAILABLE"
 
     def test_missing_server_config_fails_closed_without_a_header(self, unconfigured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token(None)
         assert exc.value.status_code == 503
 
     def test_missing_token_is_rejected_when_configured(self, configured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token(None)
         assert exc.value.status_code == 401
+        assert isinstance(exc.value.detail, dict)
         assert exc.value.detail["error"]["code"] == "ADMIN_TOKEN_REQUIRED"
 
     def test_wrong_token_is_rejected(self, configured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token("not-the-right-token-but-long-enough")
         assert exc.value.status_code == 401
 
     def test_empty_header_is_rejected(self, configured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token("   ")
         assert exc.value.status_code == 401
 
     def test_prefix_of_valid_token_is_rejected(self, configured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token(VALID_TOKEN[:-1])
         assert exc.value.status_code == 401
 
     def test_valid_token_is_accepted(self, configured):
-        assert verify_admin_token(VALID_TOKEN) is None
+        verify_admin_token(VALID_TOKEN)  # must not raise
 
     def test_surrounding_whitespace_is_tolerated(self, configured):
-        assert verify_admin_token(f"  {VALID_TOKEN}  ") is None
+        verify_admin_token(f"  {VALID_TOKEN}  ")  # must not raise
 
 
 # =============================================================================
@@ -190,7 +193,7 @@ class TestRouteEnforcement:
         """
         parameters = app.openapi()["paths"][route]["post"].get("parameters", [])
         assert any(p.get("name") == ADMIN_TOKEN_HEADER for p in parameters), route
-        assert verify_admin_token(VALID_TOKEN) is None
+        verify_admin_token(VALID_TOKEN)  # must not raise
 
     @pytest.mark.parametrize("route", READ_ONLY_ROUTES)
     def test_read_only_routes_do_not_declare_the_guard(self, route, unconfigured):
@@ -223,12 +226,12 @@ class TestRouteEnforcement:
 
 class TestSecretHandling:
     def test_rejection_never_reveals_the_expected_token(self, configured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token("wrong-token-value-long-enough")
         assert VALID_TOKEN not in json.dumps(exc.value.detail)
 
     def test_unavailable_response_never_reveals_configuration(self, unconfigured):
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             verify_admin_token(None)
         rendered = json.dumps(exc.value.detail).lower()
         assert "token" not in rendered.replace("administrator", "")

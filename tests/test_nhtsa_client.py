@@ -1,5 +1,6 @@
 """Tests for NHTSA client — mock-based, no live network."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -57,7 +58,7 @@ class TestBuildComplaintFromRaw:
         assert record.source_url == raw["ODIURL"]
 
     def test_minimal_record(self):
-        raw = {}
+        raw: dict[str, Any] = {}
         record = _build_complaint_from_raw(raw)
         assert record.odi_number is None
         assert record.model_year is None
@@ -89,7 +90,7 @@ class TestBuildRecallFromRaw:
         assert record.remedy == "Dealer will update software"
 
     def test_minimal_record(self):
-        raw = {}
+        raw: dict[str, Any] = {}
         record = _build_recall_from_raw(raw)
         assert record.campaign_number is None
         assert record.model_year is None

@@ -15,6 +15,7 @@ Verifies:
 """
 
 import uuid
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from app.services.graph.graph_models import ComponentEvidence, GraphBuildStats
@@ -159,7 +160,7 @@ class TestPhase5GraphBuilder:
         vid = uuid.uuid4()
         odi = "555555555"
         year_key = "F-150:2020"
-        comp_map = {}
+        comp_map: dict[str, Any] = {}
 
         mock_complaint = MagicMock()
         mock_complaint.id = uuid.uuid4()
@@ -192,7 +193,7 @@ class TestPhase5GraphBuilder:
 
         vid = uuid.uuid4()
         odi = "444444444"
-        comp_map = {}  # Empty - no known components
+        comp_map: dict[str, Any] = {}  # Empty - no known components
 
         mock_complaint = MagicMock()
         mock_complaint.id = uuid.uuid4()
@@ -262,7 +263,7 @@ class TestPhase5GraphBuilder:
             "remedy": "Fix it",
             "units_affected": None,
         }
-        comp_map = {}
+        comp_map: dict[str, Any] = {}
         mock_neo4j = MagicMock()
         stats = GraphBuildStats()
 

@@ -17,7 +17,7 @@ from app.api.v1.endpoints.answer_synthesis import (
     GuardedAnswerRequest,
     get_guarded_answer_service_dependency,
 )
-from app.core.config import Settings
+from app.core.config import isolated_settings
 from app.main import app
 from app.services.answer_synthesis.factory import (
     AnswerSynthesisStatus,
@@ -471,7 +471,7 @@ class TestFailureMapping:
 
 class TestDependencyWiring:
     def test_factory_builds_guarded_service_with_application_dependencies(self):
-        settings = Settings(_env_file=None)
+        settings = isolated_settings()
 
         def session_factory():
             return None
@@ -640,8 +640,7 @@ class TestSecurityAndCompatibility:
         assert "ProviderSynthesisResult" not in source
 
     def test_status_helper_never_serializes_api_key(self):
-        settings = Settings(
-            _env_file=None,
+        settings = isolated_settings(
             PHASE7_SYNTHESIS_PROVIDER="openai_compatible",
             PHASE7_SYNTHESIS_MODEL="configured-model",
             PHASE7_SYNTHESIS_ALLOW_EXTERNAL=True,

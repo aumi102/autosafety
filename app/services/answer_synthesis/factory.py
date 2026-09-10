@@ -148,7 +148,7 @@ def get_unaudited_guarded_answer_service() -> GuardedAnswerService:
 
 
 @lru_cache(maxsize=1)
-def get_guarded_answer_service():
+def get_guarded_answer_service() -> AuditedGuardedAnswerService:
     """Return the audited process-level service for FastAPI dependency injection.
 
     The wrapper is transparent: it forwards the question unchanged and returns

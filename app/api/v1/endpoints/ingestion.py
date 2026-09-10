@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 # Use sync engine for CLI-style ingestion in sync FastAPI context
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.v1.endpoints.ingestion_schemas import (
     ComplaintsFlatFileStatsResponse,
@@ -31,7 +31,7 @@ from app.services.ingestion.nhtsa_ingestion import run_nhtsa_phase1_ingestion
 router = APIRouter(tags=["ingestion"])
 
 
-def _get_sync_session():
+def _get_sync_session() -> Session:
     """Create a sync DB session for synchronous ingestion."""
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
@@ -47,7 +47,7 @@ def _get_sync_session():
     response_model=Phase1RunResponse,
     dependencies=[Depends(verify_admin_token)],
 )
-def run_phase1_ingestion(data: Phase1RunRequest):
+def run_phase1_ingestion(data: Phase1RunRequest) -> Phase1RunResponse:
     """
     Run Phase 1 NHTSA ingestion.
 
@@ -90,7 +90,7 @@ def run_phase1_ingestion(data: Phase1RunRequest):
 
 
 @router.get("/source-runs", response_model=SourceRunListResponse)
-def list_source_runs(limit: int = 20, offset: int = 0):
+def list_source_runs(limit: int = 20, offset: int = 0) -> SourceRunListResponse:
     """List all ingestion source runs."""
     session = _get_sync_session()
     try:
@@ -121,7 +121,7 @@ def list_source_runs(limit: int = 20, offset: int = 0):
 
 
 @router.get("/source-runs/{source_run_id}", response_model=SourceRunResponse)
-def get_source_run(source_run_id: str):
+def get_source_run(source_run_id: str) -> SourceRunResponse:
     """Get a specific source run by ID."""
     session = _get_sync_session()
     try:
@@ -149,7 +149,7 @@ def get_source_run(source_run_id: str):
     response_model=Phase15RunResponse,
     dependencies=[Depends(verify_admin_token)],
 )
-def run_phase15_complaints_flat_file(data: Phase15RunRequest):
+def run_phase15_complaints_flat_file(data: Phase15RunRequest) -> Phase15RunResponse:
     """
     Run Phase 1.5 flat-file complaint ingestion.
 
@@ -192,7 +192,7 @@ def run_phase15_complaints_flat_file(data: Phase15RunRequest):
 
 
 @router.get("/data-quality/summary", response_model=DataQualitySummaryResponse)
-def get_quality_summary():
+def get_quality_summary() -> DataQualitySummaryResponse:
     """Get data quality summary for all ingested data."""
     session = _get_sync_session()
     try:

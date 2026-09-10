@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.services.sql_analytics.question_parser import VehicleEntity
+
 # Hybrid intents that require both SQL + graph
 HYBRID_INTENTS = {
     "top_complaint_component_with_related_recalls",
@@ -31,7 +33,7 @@ class HybridIntent:
     vehicle_extracted: bool = False
     confidence: float = 0.5
     # Vehicle entity from Phase 2 parser (for graph lookup)
-    vehicle: object | None = None
+    vehicle: VehicleEntity | None = None
 
 
 @dataclass

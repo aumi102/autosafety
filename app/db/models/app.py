@@ -18,7 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 
-def utcnow():
+def utcnow() -> datetime:
     return datetime.now(UTC)
 
 class User(Base):

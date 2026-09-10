@@ -16,7 +16,7 @@ from app.services.answer_synthesis.factory import (
     get_answer_synthesis_status,
     get_guarded_answer_service,
 )
-from app.services.answer_synthesis.service import GuardedAnswerService
+from app.services.answer_synthesis.guarded_models import GuardedAnswerLike
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["graphrag-answer"])
@@ -148,10 +148,11 @@ class AnswerSynthesisStatusResponse(BaseModel):
     phase: Literal["phase_7"]
 
 
-def get_guarded_answer_service_dependency() -> GuardedAnswerService:
+def get_guarded_answer_service_dependency() -> GuardedAnswerLike:
     """Resolve cached application-owned service; map construction failure safely."""
     try:
-        return get_guarded_answer_service()
+        service: GuardedAnswerLike = get_guarded_answer_service()
+        return service
     except Exception as exc:
         logger.error("Guarded answer dependency unavailable: %s", type(exc).__name__)
         raise HTTPException(
@@ -169,8 +170,8 @@ def get_guarded_answer_service_dependency() -> GuardedAnswerService:
 @router.post("/answer", response_model=GuardedAnswerResponse)
 def guarded_answer(
     data: GuardedAnswerRequest,
-    service: GuardedAnswerService = Depends(get_guarded_answer_service_dependency),
-):
+    service: GuardedAnswerLike = Depends(get_guarded_answer_service_dependency),
+) -> GuardedAnswerResponse:
     """Return the final Phase 7 application-validated answer contract."""
     try:
         result = service.answer(data.question)
@@ -194,7 +195,7 @@ def guarded_answer(
 
 
 @router.get("/answer/status", response_model=AnswerSynthesisStatusResponse)
-def guarded_answer_status():
+def guarded_answer_status() -> AnswerSynthesisStatusResponse:
     """Return safe configuration status without probing an external provider."""
     status = get_answer_synthesis_status()
     return AnswerSynthesisStatusResponse.model_validate(status.to_dict())

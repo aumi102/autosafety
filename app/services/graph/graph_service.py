@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import create_engine, func
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
@@ -43,7 +44,7 @@ from app.services.graph.neo4j_client import Neo4jClient
 logger = logging.getLogger(__name__)
 
 
-def _pg_engine():
+def _pg_engine() -> Engine:
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
     if "postgresql+asyncpg" in db_url:

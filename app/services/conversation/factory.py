@@ -19,7 +19,7 @@ from app.services.answer_synthesis.factory import (
     build_execution_audit_recorder,
     get_unaudited_guarded_answer_service,
 )
-from app.services.answer_synthesis.service import GuardedAnswerService
+from app.services.answer_synthesis.guarded_models import GuardedAnswerLike
 from app.services.conversation.service import ConversationService
 from app.services.observability.context import AuditRecorder
 
@@ -62,7 +62,7 @@ def build_conversation_service(
     settings: Settings | None = None,
     *,
     session_factory: Callable[[], Session] | None = None,
-    guarded_service: GuardedAnswerService | None = None,
+    guarded_service: GuardedAnswerLike | None = None,
     audit_recorder: AuditRecorder | None = None,
 ) -> ConversationService:
     """Build the application-owned Phase 8 service dependency.

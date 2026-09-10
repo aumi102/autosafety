@@ -8,5 +8,5 @@ class HealthResponse(BaseModel):
     version: str = "0.1.0"
 
 @router.get("/", response_model=HealthResponse)
-def health():
+def health() -> HealthResponse:
     return HealthResponse(status="ok")

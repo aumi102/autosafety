@@ -1,6 +1,6 @@
 """Phase 10 tests for the audit-read API and operator diagnostics.
 
-Offline and deterministic. Settings come from explicit `Settings(_env_file=None)`
+Offline and deterministic. Settings come from explicit `isolated_settings()`
 fixtures, never the operator `.env`; the audit reader is driven by an in-memory
 SQLite session factory, so no test here needs Docker or a real secret.
 
@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.core import security as security_module
-from app.core.config import Settings
+from app.core.config import Settings, isolated_settings
 from app.core.security import ADMIN_TOKEN_HEADER
 from app.db.base import Base
 from app.db.models.app import AgentRun, ToolCall
@@ -58,7 +58,7 @@ SECRET_MARKERS = (
 
 
 def _settings(**overrides) -> Settings:
-    return Settings(_env_file=None, **overrides)
+    return isolated_settings(**overrides)
 
 
 @pytest.fixture

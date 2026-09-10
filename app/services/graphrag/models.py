@@ -219,7 +219,7 @@ class GraphRAGStatus:
 
 # ─── SQLAlchemy persistence models ──────────────────────────────────────────────
 
-def _utcnow():
+def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 

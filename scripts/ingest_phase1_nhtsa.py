@@ -40,7 +40,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
-def _print_stats_phase1(stats: IngestionStats, source_run_id, dry_run: bool):
+def _print_stats_phase1(
+    stats: IngestionStats, source_run_id: object, dry_run: bool
+) -> None:
     print("\n" + "=" * 60)
     print("PHASE 1 INGESTION SUMMARY (API-based)")
     print("=" * 60)
@@ -65,7 +67,9 @@ def _print_stats_phase1(stats: IngestionStats, source_run_id, dry_run: bool):
     print("=" * 60)
 
 
-def _print_stats_phase1_5(stats: ComplaintsFlatFileStats, source_run_id, dry_run: bool):
+def _print_stats_phase1_5(
+    stats: ComplaintsFlatFileStats, source_run_id: object, dry_run: bool
+) -> None:
     print("\n" + "=" * 60)
     print("PHASE 1.5 INGESTION SUMMARY (flat-file complaints)")
     print("=" * 60)
@@ -118,7 +122,9 @@ def main():
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
     if not db_url or "postgresql+asyncpg" in db_url:
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://") if db_url else None
+        db_url = (
+            db_url.replace("postgresql+asyncpg://", "postgresql://") if db_url else ""
+        )
 
     if not db_url:
         logger.error("DATABASE_URL_SYNC not configured. Set in .env or environment.")
@@ -170,7 +176,7 @@ def main():
             if args.recalls_only:
                 logger.info("Recalls only")
 
-            source_run_id, stats = run_nhtsa_phase1_ingestion(
+            source_run_id, phase1_stats = run_nhtsa_phase1_ingestion(
                 session=session,
                 seed_csv_path=args.seed,
                 dry_run=args.dry_run,
@@ -178,7 +184,7 @@ def main():
                 complaints_only=args.complaints_only,
                 recalls_only=args.recalls_only,
             )
-            _print_stats_phase1(stats, source_run_id, args.dry_run)
+            _print_stats_phase1(phase1_stats, source_run_id, args.dry_run)
 
     finally:
         session.close()

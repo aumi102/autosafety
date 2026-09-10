@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from sqlalchemy import text
@@ -81,7 +82,9 @@ def _classify(exc: BaseException) -> str:
     return "error"
 
 
-def _timed(name: str, required: bool, probe) -> DependencyStatus:
+def _timed(
+    name: str, required: bool, probe: Callable[[], None]
+) -> DependencyStatus:
     """Run one probe, converting any failure into a safe status."""
     started = time.monotonic()
     try:

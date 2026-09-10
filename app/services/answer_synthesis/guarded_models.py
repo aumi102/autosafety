@@ -12,6 +12,7 @@ Deterministic serialization. Bounded text and list sizes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Protocol
 
 MAX_CLAIMS = 8
 MAX_CITATIONS = 20
@@ -191,6 +192,17 @@ class GuardedTrace:
             "rejected_claim_count": self.rejected_claim_count,
             "abstention_reason": self.abstention_reason,
         }
+
+
+class GuardedAnswerLike(Protocol):
+    """What a caller needs from the guarded service.
+
+    `GuardedAnswerService` and the Phase 9 `AuditedGuardedAnswerService` wrapper
+    both satisfy this. The wrapper is a transparent decorator rather than a
+    subclass, so declaring the concrete class at a call site was inaccurate.
+    """
+
+    def answer(self, question: str) -> GuardedAnswerResult: ...
 
 
 @dataclass

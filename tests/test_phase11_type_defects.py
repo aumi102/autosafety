@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import inspect
 import typing
+from typing import cast
 
 import pytest
 from app.services.answer_contract import ConfidenceLabel, GraphPath, RelationSource
@@ -189,7 +190,7 @@ class TestVehicleScopedNarrowing:
 
         service = SqlAnalyticsService.__new__(SqlAnalyticsService)
         for intent in sorted(VEHICLE_SCOPED_INTENTS):
-            parsed = ParsedQuestion(intent=intent, vehicle=None, raw="x")
+            parsed = ParsedQuestion(intent=cast(QuestionIntent, intent), vehicle=None, raw="x")
             sql, params, resolved = service._build_template_sql(parsed)
             assert sql is None, intent
             assert params == {}

@@ -21,7 +21,7 @@ def recall_at_k(
     retrieved_source_keys: list[str],
     expected_source_keys: list[str],
     k: int,
-) -> float:
+) -> float | None:
     """
     Fraction of queries where expected source(s) appear in top-k results.
     Only computed for queries with non-empty expected_source_keys.

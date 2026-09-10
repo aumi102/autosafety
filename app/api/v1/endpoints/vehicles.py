@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 from app.db.models.domain import Complaint, Component, Recall, RecallVehicleLink, Vehicle
@@ -13,7 +13,7 @@ from app.db.models.domain import Complaint, Component, Recall, RecallVehicleLink
 router = APIRouter(tags=["vehicles"])
 
 
-def _get_sync_session():
+def _get_sync_session() -> Session:
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
     if "postgresql+asyncpg" in db_url:
@@ -79,7 +79,7 @@ def search_vehicles(
     make: str | None = Query(None),
     model: str | None = Query(None),
     model_year: int | None = Query(None),
-):
+) -> VehicleSearchResponse:
     """Search vehicles by make, model, year."""
     session = _get_sync_session()
     try:
@@ -105,7 +105,7 @@ def search_vehicles(
 
 
 @router.get("/{vehicle_id}/overview", response_model=VehicleOverview)
-def get_vehicle_overview(vehicle_id: str):
+def get_vehicle_overview(vehicle_id: str) -> VehicleOverview:
     """Get overview metrics for a vehicle."""
     session = _get_sync_session()
     try:
@@ -154,7 +154,7 @@ def get_vehicle_complaints(
     vehicle_id: str,
     limit: int = Query(50, le=200),
     offset: int = Query(0),
-):
+) -> list[ComplaintResponse]:
     """Get complaints for a vehicle."""
     session = _get_sync_session()
     try:
@@ -190,7 +190,7 @@ def get_vehicle_complaints(
 def get_vehicle_recalls(
     vehicle_id: str,
     limit: int = Query(50, le=200),
-):
+) -> list[RecallResponse]:
     """Get recalls for a vehicle."""
     session = _get_sync_session()
     try:

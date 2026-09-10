@@ -114,7 +114,7 @@ def _build_recall_from_raw(raw: dict) -> NhtsaRecallRecord:
     )
 
 
-def _safe_int(value) -> int | None:
+def _safe_int(value: str | int | float | None) -> int | None:
     """Safely convert value to int, return None on failure."""
     if value is None:
         return None

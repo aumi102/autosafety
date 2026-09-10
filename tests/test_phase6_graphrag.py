@@ -3,6 +3,7 @@ Phase 6 GraphRAG tests — document building, chunking, embedding, retrieval, se
 """
 
 import hashlib
+from typing import Any
 
 import pytest
 from app.services.graphrag.chunker import TextChunker, chunk_document, chunk_id
@@ -344,7 +345,8 @@ class TestServiceCitationLabel:
         from app.services.graphrag.retriever import GraphRAGRetriever
 
         # Patch the retriever's _make_citation_label
-        label = GraphRAGRetriever._make_citation_label(None, "complaint", "123456789", "Ford", "F-150")
+        make_label: Any = GraphRAGRetriever._make_citation_label
+        label = make_label(None, "complaint", "123456789", "Ford", "F-150")
         assert "Unknown" not in label
         assert "Ford" in label
         assert "F-150" in label
@@ -353,7 +355,8 @@ class TestServiceCitationLabel:
         """Recall citation label shows campaign and vehicle."""
         from app.services.graphrag.retriever import GraphRAGRetriever
 
-        label = GraphRAGRetriever._make_citation_label(None, "recall", "20V123000", "Honda", "Civic")
+        make_label: Any = GraphRAGRetriever._make_citation_label
+        label = make_label(None, "recall", "20V123000", "Honda", "Civic")
         assert "20V123000" in label
         assert "Honda" in label
         assert "Civic" in label

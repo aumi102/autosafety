@@ -30,6 +30,8 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql import Select
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.db.models.app import AgentRun, ToolCall
 from app.db.session import get_sync_engine
@@ -208,7 +210,7 @@ class ExecutionAuditReader:
             bind=get_sync_engine(), expire_on_commit=False
         )
 
-    def _filtered(self, query: AuditQuery):
+    def _filtered(self, query: AuditQuery) -> Select[tuple[AgentRun]]:
         statement = select(AgentRun)
         if query.status:
             statement = statement.where(AgentRun.status == query.status)
@@ -265,7 +267,7 @@ class ExecutionAuditReader:
         with self._session_factory() as session:
             recent = select(AgentRun).where(AgentRun.started_at >= cutoff).subquery()
 
-            def _count(condition=None) -> int:
+            def _count(condition: ColumnElement[bool] | None = None) -> int:
                 statement = select(func.count()).select_from(recent)
                 if condition is not None:
                     statement = statement.where(condition)

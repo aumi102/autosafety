@@ -5,6 +5,7 @@ Document builder — canonical evidence documents from PostgreSQL domain entitie
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from app.db.models.domain import Complaint, Recall, Vehicle
 
@@ -48,7 +49,7 @@ class EvidenceDocument:
     content_hash: str
 
 
-def _date_str(d) -> str | None:
+def _date_str(d: date | datetime | None) -> str | None:
     """Convert a date/datetime to ISO string or None."""
     if d is None:
         return None

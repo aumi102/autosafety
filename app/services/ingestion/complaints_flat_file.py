@@ -35,13 +35,13 @@ from app.services.ingestion.normalization import (
 logger = logging.getLogger(__name__)
 
 
-def utcnow():
+def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
 class ComplaintsFlatFileStats:
     """Track flat-file complaint ingestion statistics."""
-    def __init__(self):
+    def __init__(self) -> None:
         self.vehicles_seen: int = 0
         self.complaint_rows_seen: int = 0
         self.complaint_rows_matched: int = 0

@@ -26,6 +26,7 @@ dev = [
     "mypy>=1.11.0",
     # tests/test_phase11_quality_gates.py parses .github/workflows/ci.yml.
     "pyyaml>=6.0",
+    "types-PyYAML>=6.0",
 ]
 
 [build-system]
@@ -96,4 +97,32 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.11"
+# Not `strict = true`: that turns on disallow_any_generics and
+# disallow_untyped_calls, which would demand annotating third-party generics
+# and every SQLAlchemy/FastAPI boundary. Each flag below was measured against
+# the codebase and enabled deliberately.
 strict = false
+
+# The core of the Phase 11 completion policy: a production function can no
+# longer escape type checking by being unannotated.
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+# Already clean when enabled; they stay clean.
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+strict_equality = true
+
+# Returning Any from a typed function silently erases the annotation.
+warn_return_any = true
+
+# `scripts/` and `tests/` are first-party and type-checked, but they are not the
+# production package: a fixture or a CLI helper may stay unannotated where an
+# annotation would add noise rather than safety. Every other flag above still
+# applies to them.
+[[tool.mypy.overrides]]
+module = ["scripts.*", "tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false

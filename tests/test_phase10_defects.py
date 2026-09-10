@@ -8,6 +8,7 @@ directory that does not exist.
 from __future__ import annotations
 
 import inspect
+from typing import Any
 
 import pytest
 from app.services.answer_synthesis.tools import bundle_builder
@@ -37,7 +38,7 @@ class TestVehicleNeighborhoodShadowing:
 
     def test_query_layer_function_is_imported_under_a_distinct_name(self):
         """The alias is what stops the redefinition from coming back."""
-        aliased = graph_service.get_neighborhood_for_vehicle
+        aliased: Any = graph_service.get_neighborhood_for_vehicle
         assert list(inspect.signature(aliased).parameters)[:4] == [
             "client",
             "make",
@@ -54,10 +55,12 @@ class TestVehicleNeighborhoodShadowing:
 
     def test_calling_with_the_query_signature_would_still_be_a_type_error(self):
         """Proves the two signatures really are incompatible, so the bug was real."""
+        # Called dynamically on purpose: the point is that the two signatures
+        # are incompatible at runtime, which a statically-checked call cannot
+        # express.
+        public: Any = graph_service.get_vehicle_neighborhood
         with pytest.raises(TypeError):
-            graph_service.get_vehicle_neighborhood(
-                object(), make="Ford", model="F-150", year=2019, vehicle_id="x"
-            )
+            public(object(), make="Ford", model="F-150", year=2019, vehicle_id="x")
 
 
 # =============================================================================

@@ -31,7 +31,7 @@ class VehicleEntity:
     normalized_model: str
     model_year: int | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.normalized_make = normalize_make(self.make)
         self.normalized_model = normalize_model(self.model)
 

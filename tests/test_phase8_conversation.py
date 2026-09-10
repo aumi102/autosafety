@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import inspect
 from datetime import UTC
+from typing import Any
 
 import pytest
 from app.core.config import Settings
@@ -58,7 +59,7 @@ RECALL_Q = "What about recalls?"
 
 
 def _settings(**overrides) -> Settings:
-    base = {
+    base: dict[str, Any] = {
         "_env_file": None,
         "PHASE8_MAX_CONTEXT_TURNS": 5,
         "PHASE8_MAX_TURNS_PER_CONVERSATION": 100,
@@ -169,7 +170,8 @@ class StubGuardedService:
         self.questions.append(question)
         if self._results:
             result = self._results.pop(0)
-            return result(question) if callable(result) else result
+            produced: GuardedAnswerResult = result(question) if callable(result) else result
+            return produced
         return _result(query=question)
 
 

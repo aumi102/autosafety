@@ -54,7 +54,8 @@ def _target_body(name: str) -> str:
 
 def _ruff_config() -> dict:
     with PYPROJECT.open("rb") as handle:
-        return tomllib.load(handle)["tool"]["ruff"]
+        config: dict = tomllib.load(handle)["tool"]["ruff"]
+        return config
 
 
 # =============================================================================

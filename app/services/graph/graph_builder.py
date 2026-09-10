@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterator
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 BATCH_SIZE = 50
 
 
-def _date_str(d) -> str | None:
+def _date_str(d: date | datetime | None) -> str | None:
     """Convert a date/datetime to ISO string or None."""
     if d is None:
         return None
@@ -340,7 +341,7 @@ def _process_vehicle(
 
 
 def _upsert_complaint(
-    complaint,
+    complaint: Complaint,
     neo4j_client: Neo4jClient,
     year_key: str,
     component_map: dict[str, dict],

@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.core.config import Settings
+from app.core.config import Settings, isolated_settings
 from app.db.base import Base
 from app.services.answer_synthesis.guarded_models import GuardedAnswerResult
 from app.services.answer_synthesis.service import GuardedAnswerService
@@ -53,8 +53,7 @@ CAUSAL_PHRASES = ("caused", "because of", "led to", "resulted in", "due to the c
 
 def _settings() -> Settings:
     """Deterministic evaluation settings, independent of the operator `.env`."""
-    return Settings(
-        _env_file=None,
+    return isolated_settings(
         PHASE8_MAX_CONTEXT_TURNS=5,
         PHASE8_MAX_TURNS_PER_CONVERSATION=100,
         PHASE8_MAX_CONTEXT_CHARS=300,
@@ -129,7 +128,8 @@ def load_fixture(path: Path | str = DEFAULT_FIXTURE) -> dict[str, Any]:
                 raise ValueError(f"case {case['id']} has an empty turn question")
             if "expected" not in turn:
                 raise ValueError(f"case {case['id']} has a turn with no expected contract")
-    return payload
+    fixture: dict[str, Any] = payload
+    return fixture
 
 
 def _turn_question(turn: dict[str, Any]) -> str:

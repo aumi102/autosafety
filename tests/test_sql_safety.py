@@ -63,53 +63,54 @@ class TestValidateSqlBlocked:
     def test_drop_blocked(self):
         result = validate_sql("DROP TABLE vehicles")
         assert result.valid is False
-        assert "DROP" in result.reason
+        assert result.reason is not None and "DROP" in result.reason
 
     def test_delete_blocked(self):
         result = validate_sql("DELETE FROM vehicles WHERE id = '123'")
         assert result.valid is False
-        assert "DELETE" in result.reason
+        assert result.reason is not None and "DELETE" in result.reason
 
     def test_update_blocked(self):
         result = validate_sql("UPDATE vehicles SET make = 'Ford' WHERE id = '123'")
         assert result.valid is False
-        assert "UPDATE" in result.reason
+        assert result.reason is not None and "UPDATE" in result.reason
 
     def test_insert_blocked(self):
         result = validate_sql("INSERT INTO vehicles (make, model) VALUES ('Ford', 'F-150')")
         assert result.valid is False
         # Validator hits one of INSERT or INTO first (set iteration order)
+        assert result.reason is not None
         assert "INSERT" in result.reason or "INTO" in result.reason
 
     def test_alter_blocked(self):
         result = validate_sql("ALTER TABLE vehicles ADD COLUMN test TEXT")
         assert result.valid is False
-        assert "ALTER" in result.reason
+        assert result.reason is not None and "ALTER" in result.reason
 
     def test_truncate_blocked(self):
         result = validate_sql("TRUNCATE TABLE vehicles")
         assert result.valid is False
-        assert "TRUNCATE" in result.reason
+        assert result.reason is not None and "TRUNCATE" in result.reason
 
     def test_create_blocked(self):
         result = validate_sql("CREATE TABLE test (id INT)")
         assert result.valid is False
-        assert "CREATE" in result.reason
+        assert result.reason is not None and "CREATE" in result.reason
 
     def test_grant_blocked(self):
         result = validate_sql("GRANT SELECT ON vehicles TO public")
         assert result.valid is False
-        assert "GRANT" in result.reason
+        assert result.reason is not None and "GRANT" in result.reason
 
     def test_revoke_blocked(self):
         result = validate_sql("REVOKE SELECT ON vehicles FROM public")
         assert result.valid is False
-        assert "REVOKE" in result.reason
+        assert result.reason is not None and "REVOKE" in result.reason
 
     def test_copy_blocked(self):
         result = validate_sql("COPY vehicles TO '/tmp/file.csv'")
         assert result.valid is False
-        assert "COPY" in result.reason
+        assert result.reason is not None and "COPY" in result.reason
 
 
 class TestValidateSqlInjection:
@@ -118,12 +119,12 @@ class TestValidateSqlInjection:
     def test_multiple_statements_blocked(self):
         result = validate_sql("SELECT * FROM vehicles; DROP TABLE vehicles;")
         assert result.valid is False
-        assert ";" in result.reason
+        assert result.reason is not None and ";" in result.reason
 
     def test_sql_comment_blocked(self):
         result = validate_sql("SELECT * FROM vehicles -- DROP TABLE")
         assert result.valid is False
-        assert "--" in result.reason
+        assert result.reason is not None and "--" in result.reason
 
     def test_block_comment_blocked(self):
         result = validate_sql("SELECT * FROM vehicles /* DROP */")
@@ -198,7 +199,7 @@ class TestValidationResult:
     def test_empty_query_invalid(self):
         result = validate_sql("")
         assert result.valid is False
-        assert "Empty" in result.reason
+        assert result.reason is not None and "Empty" in result.reason
 
     def test_whitespace_only_invalid(self):
         result = validate_sql("   ")

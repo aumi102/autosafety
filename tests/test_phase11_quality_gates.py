@@ -61,7 +61,8 @@ def _target_prerequisites(name: str) -> list[str]:
 
 
 def _workflow() -> dict:
-    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    parsed: dict = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    return parsed
 
 
 def _workflow_source() -> str:
@@ -216,6 +217,7 @@ class TestContinuousIntegration:
         workflow = _workflow()
         # PyYAML parses a bare `on:` key as the boolean True.
         triggers = workflow.get("on", workflow.get(True))
+        assert triggers is not None
         assert set(triggers) >= {"push", "pull_request"}
 
     @pytest.mark.parametrize(

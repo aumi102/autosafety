@@ -7,8 +7,15 @@ Uses predefined Cypher. No raw Cypher. No mutation. Max 20 paths.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.services.graph.graph_models import (
+        ComponentEvidence,
+        RecallPathResult,
+        VehicleNeighborhood,
+    )
 
 from app.services.answer_synthesis.tools.base import (
     ToolCallResult,
@@ -165,7 +172,7 @@ def build_graph_evidence_adapter() -> Callable[..., ToolCallResult]:
     return adapter
 
 
-def _neighborhood_to_dict(result, max_paths: int) -> dict:
+def _neighborhood_to_dict(result: VehicleNeighborhood, max_paths: int) -> dict:
     """Serialize VehicleNeighborhood safely."""
     return {
         "operation": "vehicle_neighborhood",
@@ -183,7 +190,7 @@ def _neighborhood_to_dict(result, max_paths: int) -> dict:
     }
 
 
-def _recall_paths_to_dict(result, max_paths: int) -> dict:
+def _recall_paths_to_dict(result: RecallPathResult, max_paths: int) -> dict:
     """Serialize RecallPathResult safely."""
     recalls = []
     for r in result.recalls[:max_paths]:
@@ -208,7 +215,7 @@ def _recall_paths_to_dict(result, max_paths: int) -> dict:
     }
 
 
-def _component_evidence_to_dict(result, max_paths: int) -> dict:
+def _component_evidence_to_dict(result: ComponentEvidence, max_paths: int) -> dict:
     """Serialize ComponentEvidence safely."""
     shared_recalls = []
     for r in (result.shared_recalls or [])[:max_paths]:
@@ -233,7 +240,7 @@ def _component_evidence_to_dict(result, max_paths: int) -> dict:
     }
 
 
-def _serialize_nodes(nodes) -> list[dict]:
+def _serialize_nodes(nodes: Iterable[Any]) -> list[dict]:
     """Serialize neighborhood nodes safely."""
     result = []
     for n in nodes:
@@ -245,7 +252,7 @@ def _serialize_nodes(nodes) -> list[dict]:
     return result
 
 
-def _serialize_edges(edges) -> list[dict]:
+def _serialize_edges(edges: Iterable[Any]) -> list[dict]:
     """Serialize neighborhood edges safely."""
     result = []
     for e in edges:

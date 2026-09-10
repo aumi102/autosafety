@@ -28,6 +28,7 @@ import logging
 import time
 import uuid as uuid_module
 from collections.abc import Callable
+from types import TracebackType
 from typing import Literal
 
 from sqlalchemy.orm import Session
@@ -35,12 +36,12 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.services.answer_synthesis.guarded_models import (
     ConfidenceResult,
+    GuardedAnswerLike,
     GuardedAnswerResult,
     GuardedTrace,
     RetrievalSummary,
 )
 from app.services.answer_synthesis.policy import UNCITED_ALLOWED_CLAIM_TYPES
-from app.services.answer_synthesis.service import GuardedAnswerService
 from app.services.conversation.context import resolve_context
 from app.services.conversation.models import (
     MAX_QUESTION_CHARS,
@@ -86,7 +87,7 @@ class ConversationService:
         self,
         *,
         session_factory: Callable[[], Session],
-        guarded_service: GuardedAnswerService,
+        guarded_service: GuardedAnswerLike,
         settings: Settings | None = None,
         audit_recorder: AuditRecorder | None = None,
     ):
@@ -202,7 +203,7 @@ class ConversationService:
 
     # ------------------------------------------------------------------ audit
 
-    def _start_audit_run(self, conversation_id) -> AuditRunContext | None:
+    def _start_audit_run(self, conversation_id: uuid_module.UUID) -> AuditRunContext | None:
         """Open a Phase 9 audit run. Never fails the request."""
         if self._audit is None:
             return None
@@ -217,8 +218,8 @@ class ConversationService:
     def _finish_audit_run(
         self,
         audit: AuditRunContext | None,
-        guarded,
-        result,
+        guarded: GuardedAnswerResult,
+        result: ConversationTurnResult,
         started: float,
     ) -> None:
         """Close the audit run and link the persisted conversation and turn."""
@@ -388,7 +389,12 @@ class ConversationService:
         def __enter__(self) -> Session:
             return self._session
 
-        def __exit__(self, exc_type, exc, tb) -> Literal[False]:
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> Literal[False]:
             try:
                 if exc_type is None:
                     self._session.commit()

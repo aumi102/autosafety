@@ -94,7 +94,7 @@ class GraphHealthResponse(BaseModel):
 
 
 @router.get("/health", response_model=GraphHealthResponse)
-def graph_health():
+def graph_health() -> GraphHealthResponse:
     """
     Check Neo4j connectivity.
 
@@ -110,7 +110,7 @@ def graph_health():
     response_model=GraphSchemaResponse,
     dependencies=[Depends(verify_admin_token)],
 )
-def graph_schema_setup():
+def graph_schema_setup() -> GraphSchemaResponse:
     """
     Create Neo4j schema constraints and indexes.
 
@@ -133,7 +133,7 @@ def graph_schema_setup():
     response_model=GraphBuildResponse,
     dependencies=[Depends(verify_admin_token)],
 )
-def graph_build(data: GraphBuildRequest):
+def graph_build(data: GraphBuildRequest) -> GraphBuildResponse:
     """
     Build graph projection from PostgreSQL into Neo4j.
 
@@ -155,7 +155,7 @@ def graph_build(data: GraphBuildRequest):
 
 
 @router.get("/status", response_model=GraphStatusResponse)
-def graph_status():
+def graph_status() -> GraphStatusResponse:
     """
     Return current graph database status.
 
@@ -179,7 +179,7 @@ def graph_status():
 
 
 @router.get("/vehicles/{vehicle_id}/neighborhood", response_model=GraphNeighborhoodResponse)
-def graph_vehicle_neighborhood(vehicle_id: str):
+def graph_vehicle_neighborhood(vehicle_id: str) -> GraphNeighborhoodResponse:
     """
     Retrieve graph neighborhood for a vehicle by its PostgreSQL UUID.
 
@@ -205,7 +205,7 @@ def graph_vehicle_neighborhood(vehicle_id: str):
 
 
 @router.get("/vehicles/{vehicle_id}/recall-paths", response_model=GraphRecallPathsResponse)
-def graph_recall_paths(vehicle_id: str):
+def graph_recall_paths(vehicle_id: str) -> GraphRecallPathsResponse:
     """
     Retrieve recall paths for a vehicle from the graph.
 
@@ -231,7 +231,7 @@ def graph_recall_paths(vehicle_id: str):
 
 
 @router.get("/vehicles/{vehicle_id}/component-evidence", response_model=ComponentEvidenceResponse)
-def graph_component_evidence(vehicle_id: str):
+def graph_component_evidence(vehicle_id: str) -> ComponentEvidenceResponse:
     """
     Retrieve component-level evidence for a vehicle.
 

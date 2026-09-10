@@ -216,7 +216,7 @@ def _failed(code: str, message: str, status_code: int = 500) -> HTTPException:
 def create_conversation(
     data: ConversationCreateRequest,
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ConversationResponse:
     """Create an empty conversation."""
     try:
         summary = service.start_conversation(data.title)
@@ -230,7 +230,7 @@ def create_conversation(
 def get_conversation(
     conversation_id: str,
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ConversationResponse:
     """Return safe conversation metadata."""
     try:
         summary = service.get_conversation(conversation_id)
@@ -247,7 +247,7 @@ def list_conversation_turns(
     conversation_id: str,
     limit: int = Query(default=MAX_TURNS_RETURNED, ge=1, le=MAX_TURNS_RETURNED),
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ConversationTurnListResponse:
     """Return this conversation's stored turns. Scoped to one conversation only."""
     try:
         turns = service.list_turns(conversation_id, limit)
@@ -271,7 +271,7 @@ def send_conversation_message(
     conversation_id: str,
     data: ConversationMessageRequest,
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ConversationTurnResponse:
     """Answer one turn through the Phase 7 guarded path and persist the outcome."""
     try:
         result = service.answer(conversation_id, data.question)
@@ -298,7 +298,7 @@ def send_conversation_message(
 def delete_conversation(
     conversation_id: str,
     service: ConversationService = Depends(get_conversation_service_dependency),
-):
+) -> ConversationDeleteResponse:
     """Hard-delete a conversation and every turn, message, and citation it owns."""
     try:
         deleted = service.delete_conversation(conversation_id)
@@ -313,6 +313,6 @@ def delete_conversation(
 
 
 @router.get("/status/config", response_model=ConversationStatusResponse)
-def conversation_status():
+def conversation_status() -> ConversationStatusResponse:
     """Return safe conversation bounds and policy posture. No credentials."""
     return ConversationStatusResponse.model_validate(get_conversation_status().to_dict())

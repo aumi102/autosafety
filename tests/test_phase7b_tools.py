@@ -8,6 +8,7 @@ No network, no LLM, no real DB required for unit tests.
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -96,7 +97,7 @@ class TestToolCallResult:
         r = ToolCallResult.validation_error("call-1", "test", "unknown arg")
         assert r.success is False
         assert r.error_code == "validation_error"
-        assert "unknown arg" in r.error_message
+        assert r.error_message is not None and "unknown arg" in r.error_message
 
     def test_to_dict_no_traceback(self):
         r = ToolCallResult.error("call-1", "test", "err", "message")
@@ -334,6 +335,7 @@ class TestToolRegistry:
         result = registry.execute(req)
         assert not result.success
         assert result.error_code == "validation_error"
+        assert result.error_message is not None
         assert "unknown" in result.error_message.lower()
 
     def test_validation_before_execution(self):
@@ -366,7 +368,7 @@ class TestToolRegistry:
         result = registry.execute(req)
         assert not result.success
         assert result.error_code == "adapter_error"
-        assert "RuntimeError" in result.error_message
+        assert result.error_message is not None and "RuntimeError" in result.error_message
         assert "traceback" not in result.error_message.lower()
 
     def test_list_definitions_sorted(self):
@@ -715,10 +717,13 @@ class TestSanitization:
         assert result["nested"]["safe"] == "value"
 
     def test_sanitize_preserves_non_dict(self):
-        assert _sanitize("string") == "string"
-        assert _sanitize(123) == 123
-        assert _sanitize(None) is None
-        assert _sanitize([{"a": 1}, {"b": 2}]) == [{"a": 1}, {"b": 2}]
+        # Called dynamically: the contract under test is that non-dict input
+        # passes through untouched, which the dict-typed signature cannot state.
+        sanitize: Any = _sanitize
+        assert sanitize("string") == "string"
+        assert sanitize(123) == 123
+        assert sanitize(None) is None
+        assert sanitize([{"a": 1}, {"b": 2}]) == [{"a": 1}, {"b": 2}]
 
     def test_format_table_bounded(self):
         rows = [{"a": 1, "b": 2}] * 20
@@ -727,7 +732,9 @@ class TestSanitization:
 
     def test_format_table_empty(self):
         assert _format_table([], []) == "No results."
-        assert _format_table(None, None) == "No results."
+        # None is accepted defensively at runtime; assert that explicitly.
+        format_table: Any = _format_table
+        assert format_table(None, None) == "No results."
 
 
 # =============================================================================

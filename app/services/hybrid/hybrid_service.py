@@ -12,7 +12,7 @@ import logging
 import time
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 from app.services.graph import (
@@ -27,11 +27,13 @@ from app.services.graph import (
 from app.services.graph import (
     get_vehicle_shared_component_recalls as graph_vehicle_shared_component_recalls,
 )
+from app.services.graph.graph_models import ComponentEvidence, RecallPathResult
 from app.services.hybrid.answer_composer import compose_hybrid_answer
 from app.services.hybrid.hybrid_models import (
     HYBRID_INTENTS,
     GraphEvidenceItem,
     HybridAnswerResult,
+    HybridIntent,
 )
 from app.services.hybrid.hybrid_parser import (
     is_hybrid_question,
@@ -128,7 +130,7 @@ def _run_sql_analytics(question: str) -> dict:
 
 
 def _run_graph_retrieval(
-    intent,
+    intent: HybridIntent,
 ) -> tuple[list[GraphEvidenceItem], bool, str | None]:
     """
     Retrieve graph evidence using make/model/year from parsed intent.
@@ -226,7 +228,7 @@ def _find_vehicle_id(make: str, model: str, year: int) -> str | None:
     return None
 
 
-def _summarize_recall_paths(recall_result) -> str:
+def _summarize_recall_paths(recall_result: RecallPathResult) -> str:
     """Build summary text for recall paths."""
     if not recall_result.recalls:
         return "No recalls found for this vehicle in the graph."
@@ -238,7 +240,7 @@ def _summarize_recall_paths(recall_result) -> str:
     return " ".join(parts)
 
 
-def _summarize_component_evidence(comp_evidence) -> str:
+def _summarize_component_evidence(comp_evidence: ComponentEvidence) -> str:
     """Build summary text for component evidence."""
     if not comp_evidence.complaint_components:
         return "No complaint-component links found in the graph."
@@ -250,7 +252,7 @@ def _summarize_component_evidence(comp_evidence) -> str:
     return " ".join(parts)
 
 
-def _summarize_shared_component_recalls(shared_result) -> str:
+def _summarize_shared_component_recalls(shared_result: ComponentEvidence) -> str:
     """Build summary text for shared component recalls."""
     if not shared_result.shared_recalls:
         return "No recalls linked via shared components in the graph."
@@ -262,7 +264,7 @@ def _summarize_shared_component_recalls(shared_result) -> str:
     return " ".join(parts)
 
 
-def _get_pg_session():
+def _get_pg_session() -> Session:
     """Create synchronous PostgreSQL session."""
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC

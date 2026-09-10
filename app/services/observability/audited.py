@@ -35,7 +35,7 @@ class AuditedGuardedAnswerService:
         """The wrapped guarded service. Kept accessible for tests and diagnostics."""
         return self._inner
 
-    def answer(self, question: str):
+    def answer(self, question: str) -> Any:
         """Run the guarded path, recording an audit run around it."""
         context = None
         try:

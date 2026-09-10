@@ -10,6 +10,7 @@ import logging
 import time
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -20,7 +21,10 @@ from app.services.graphrag.document_builder import (
     build_complaint_document,
     build_recall_document,
 )
-from app.services.graphrag.embedding_provider import get_embedding_provider
+from app.services.graphrag.embedding_provider import (
+    EmbeddingProvider,
+    get_embedding_provider,
+)
 from app.services.graphrag.graph_expander import expand_sources
 from app.services.graphrag.models import (
     GraphRAGGraphPath,
@@ -33,7 +37,7 @@ from app.services.graphrag.retriever import GraphRAGRetriever
 from app.services.graphrag.vector_store import VectorStore
 
 
-def _pg_engine():
+def _pg_engine() -> Engine:
     settings = get_settings()
     db_url = settings.DATABASE_URL_SYNC
     if "postgresql+asyncpg" in db_url:
@@ -41,7 +45,7 @@ def _pg_engine():
     return create_engine(db_url, echo=False)
 
 
-def _pg_session():
+def _pg_session() -> Session:
     engine = _pg_engine()
     Session = sessionmaker(bind=engine)
     return Session()
@@ -128,7 +132,7 @@ def index_graphrag_documents(
 def _index_complaints(
     session: Session,
     vector_store: VectorStore,
-    provider,
+    provider: EmbeddingProvider,
     stats: GraphRAGIndexStats,
     dry_run: bool,
     limit: int | None,
@@ -199,7 +203,7 @@ def _index_complaints(
 def _index_recalls(
     session: Session,
     vector_store: VectorStore,
-    provider,
+    provider: EmbeddingProvider,
     stats: GraphRAGIndexStats,
     dry_run: bool,
     limit: int | None,

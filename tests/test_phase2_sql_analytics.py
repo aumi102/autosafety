@@ -126,6 +126,7 @@ class TestParseQuestion:
     def test_toyota_camry_2022_recall_count(self):
         result = parse_question("How many recalls does Toyota Camry 2022 have?")
         assert result.intent == "recall_count_by_vehicle"
+        assert result.vehicle is not None
         assert result.vehicle.model_year == 2022
 
     def test_vehicles_by_complaint_count(self):
@@ -272,7 +273,7 @@ class TestExecutor:
         )
         assert result.validated is True
         assert result.columns is not None
-        assert len(result.rows) == 1
+        assert result.rows is not None and len(result.rows) == 1
         assert result.row_count == 1
         assert result.truncated is False
 
@@ -326,7 +327,7 @@ class TestSqlAnalyticsService:
         assert result.intent == "sql"
         assert result.sql.used is True
         assert result.sql.query is not None
-        assert result.sql.row_count >= 0
+        assert result.sql.row_count is not None and result.sql.row_count >= 0
         assert any("complaint volume" in w.lower() for w in result.warnings)
         assert result.confidence.label in ("low", "medium", "high")
 
@@ -343,7 +344,7 @@ class TestSqlAnalyticsService:
         assert result.intent == "sql"
         assert result.sql.used is True
         # Ford F-150 has 3 complaints
-        assert result.sql.row_count >= 1
+        assert result.sql.row_count is not None and result.sql.row_count >= 1
 
     def test_clarification_needed_missing_year(self, in_memory_db):
         service = SqlAnalyticsService(in_memory_db)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from typing import Any
 
 import httpx
 import pytest
@@ -51,7 +52,7 @@ from app.services.answer_synthesis.tools.base import (
 
 
 def _make_request(**overrides) -> ProviderSynthesisRequest:
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         question="What brake complaints and recalls exist for Ford F-150 2020?",
         evidence_bundle_text="[cite-complaint-11420001] COMPLAINT: brake pedal failure\n",
         citation_table=[
@@ -642,7 +643,7 @@ class TestOpenAICompatibleRealRequest:
         _patch_client(monkeypatch, response=_openai_response(_valid_llm_payload(id="x" * 10000)))
         p = OpenAICompatibleProvider(api_key="sk-x", model="gpt-4o")
         result = p.synthesize(_make_request())
-        assert len(result.request_id) <= 200
+        assert result.request_id is not None and len(result.request_id) <= 200
 
     def test_finish_reason_parsed(self, monkeypatch):
         _patch_client(monkeypatch, response=_openai_response(_valid_llm_payload()))
@@ -875,7 +876,7 @@ class TestPromptBuilder:
 
     def test_deterministic_prompt(self):
         bundle = _bundle_with_item("stable text")
-        kwargs = dict(question="q", evidence_bundle=bundle, available_tools=[], safety_rules="rules", config={})
+        kwargs: dict[str, Any] = dict(question="q", evidence_bundle=bundle, available_tools=[], safety_rules="rules", config={})
         r1 = build_synthesis_prompt(**kwargs)
         r2 = build_synthesis_prompt(**kwargs)
         assert r1.to_dict() == r2.to_dict()

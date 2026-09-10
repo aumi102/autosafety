@@ -18,7 +18,9 @@ app = FastAPI(
 
 
 @app.exception_handler(RequestValidationError)
-async def safe_request_validation_error(_request: Request, exc: RequestValidationError):
+async def safe_request_validation_error(
+    _request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """Return normal 422 details without reflecting rejected request values."""
     safe_errors = [
         {key: value for key, value in error.items() if key not in {"input", "ctx", "url"}}
@@ -27,15 +29,18 @@ async def safe_request_validation_error(_request: Request, exc: RequestValidatio
     return JSONResponse(status_code=422, content={"detail": safe_errors})
 
 @app.get("/")
-def root():
+def root() -> dict:
     return {"message": "AutoSafety GraphQL Copilot", "version": "0.1.0", "phase": "phase_10"}
 
 @app.get("/healthz")
-def healthz():
+def healthz() -> dict:
     return {"status": "ok"}
 
-@app.get("/readyz")
-def readyz():
+# response_model=None: the handler returns either a plain dict or a
+# JSONResponse (503), and FastAPI cannot build a response model from that
+# union. The shape is documented in docs/06_api_contract.md.
+@app.get("/readyz", response_model=None)
+def readyz() -> dict | JSONResponse:
     """Real readiness: probes required dependencies and 503s when one is down.
 
     This used to return a hardcoded {"status": "ready"}, so an orchestrator kept

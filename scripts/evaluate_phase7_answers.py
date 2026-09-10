@@ -13,7 +13,7 @@ import json
 import re
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -87,11 +87,28 @@ class RecordingOrchestrator(SynthesisOrchestrator):
 
 
 @dataclass
+class BaseCallCounter:
+    """Counts base retrievals during construction.
+
+    The retrieval adapter has to exist before the service that uses it, so it
+    cannot close over the finished `CaseHarness`. It closes over this counter
+    instead, which keeps `CaseHarness` fully populated the moment it is built.
+    """
+
+    count: int = 0
+
+
+@dataclass
 class CaseHarness:
     service: GuardedAnswerService
     orchestrator: RecordingOrchestrator
     adapter_calls: dict[str, int]
-    base_calls: int = 0
+    _base_calls: BaseCallCounter = field(default_factory=BaseCallCounter)
+
+    @property
+    def base_calls(self) -> int:
+        """Base retrievals so far. Read live: the adapter counts during answer()."""
+        return self._base_calls.count
 
 
 @dataclass
@@ -134,10 +151,11 @@ def load_fixture(path: Path | str = DEFAULT_FIXTURE) -> dict[str, Any]:
             raise ValueError(f"case {case['id']} has empty question")
         if "expected" not in case:
             raise ValueError(f"case {case['id']} has no expected contract")
-    return payload
+    fixture: dict[str, Any] = payload
+    return fixture
 
 
-def _build_retrieval(case: dict[str, Any], harness: CaseHarness | None = None):
+def _build_retrieval(case: dict[str, Any], counter: BaseCallCounter | None = None):
     evidence = case.get("evidence", {})
 
     def retrieve(
@@ -151,8 +169,8 @@ def _build_retrieval(case: dict[str, Any], harness: CaseHarness | None = None):
         include_graph: bool,
     ) -> GraphRAGRetrievalResult:
         del make, model, model_year
-        if harness is not None:
-            harness.base_calls += 1
+        if counter is not None:
+            counter.count += 1
 
         raw_chunks = [
             chunk
@@ -289,10 +307,10 @@ def build_case_harness(case: dict[str, Any]) -> CaseHarness:
     """Build actual Phase 7 path with controlled read-only adapters."""
     adapter_calls = {"sql": 0, "graph": 0, "vehicle": 0}
     registry = ToolRegistry()
-    placeholder = CaseHarness(service=None, orchestrator=None, adapter_calls=adapter_calls)  # type: ignore[arg-type]
+    base_calls = BaseCallCounter()
     registry.register(
         GRAPHRAG_RETRIEVAL_DEFINITION,
-        build_graphrag_adapter(_build_retrieval(case, placeholder)),
+        build_graphrag_adapter(_build_retrieval(case, base_calls)),
     )
 
     def sql_adapter(*, call_id: str, arguments: dict[str, Any]) -> ToolCallResult:
@@ -355,9 +373,12 @@ def build_case_harness(case: dict[str, Any]) -> CaseHarness:
         ),
     )
     service = GuardedAnswerService(orchestrator)
-    placeholder.service = service
-    placeholder.orchestrator = orchestrator
-    return placeholder
+    return CaseHarness(
+        service=service,
+        orchestrator=orchestrator,
+        adapter_calls=adapter_calls,
+        _base_calls=base_calls,
+    )
 
 
 def _public_claim_text(result: GuardedAnswerResult) -> str:

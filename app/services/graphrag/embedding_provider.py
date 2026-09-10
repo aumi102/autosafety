@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import math
 from abc import ABC, abstractmethod
+from typing import Any
 
 from app.core.config import get_settings
 
@@ -136,7 +137,7 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
     def dimension(self) -> int:
         return self._dimension
 
-    def _load_model(self):
+    def _load_model(self) -> Any:
         """Lazy-load and return the sentence-transformer model."""
         if self._model is None:
             try:
@@ -157,7 +158,8 @@ class LocalSentenceTransformerProvider(EmbeddingProvider):
     def embed_text(self, text: str) -> list[float]:
         model = self._load_model()
         embedding = model.encode(text, normalize_embeddings=True)
-        return embedding.tolist()
+        values: list[float] = embedding.tolist()
+        return values
 
 
 def get_embedding_provider() -> EmbeddingProvider:

@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
+from typing import Any
 
 from app.services.answer_synthesis.tools.argument_validator import (
     validate_tool_arguments,
@@ -37,7 +38,7 @@ class ToolRegistry:
       5. No eval, no exec, no dynamic imports
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # name -> (ToolDefinition, adapter callable)
         self._tools: dict[str, tuple[ToolDefinition, Callable[..., ToolCallResult]]] = {}
         self._policy = ToolExecutionPolicy()
@@ -145,9 +146,9 @@ class ToolRegistry:
 
 def build_default_tool_registry(
     *,
-    sql_session_factory=None,
+    sql_session_factory: Callable[[], Any] | None = None,
     neo4j_available: bool = True,
-    graphrag_retrieval_fn=None,
+    graphrag_retrieval_fn: Callable[..., Any] | None = None,
 ) -> ToolRegistry:
     """
     Build the default Phase 7B tool registry with all available adapters.

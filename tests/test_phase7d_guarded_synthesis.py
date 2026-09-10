@@ -11,6 +11,7 @@ fake GraphRAG retrieval callable (matching the Phase 7C test pattern).
 from __future__ import annotations
 
 import dataclasses
+from typing import Any
 
 from app.services.answer_synthesis.citation_validator import validate_and_build_claims
 from app.services.answer_synthesis.composer import compose_answer
@@ -803,7 +804,7 @@ class TestConfidence:
     def test_deterministic_same_input_same_score(self):
         citations = [_citation("cite-complaint-1", "complaint")]
         suff = _sufficiency()
-        kwargs = dict(
+        kwargs: dict[str, Any] = dict(
             citations=citations, sufficiency=suff, validation=self._validation(),
             accepted_claim_count=1, considered_claim_count=1, fallback_used=False,
             repaired=False, tool_calls_total=1, tool_calls_failed=0,

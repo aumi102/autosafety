@@ -13,9 +13,10 @@ from __future__ import annotations
 
 import inspect
 import uuid
+from typing import cast
 
 import pytest
-from app.core.config import Settings
+from app.core.config import Settings, isolated_settings
 from app.db.base import Base
 from app.db.models.app import AgentRun, ToolCall
 from app.services.answer_synthesis.guarded_models import (
@@ -41,6 +42,7 @@ from app.services.observability import (
     ExecutionAuditRecorder,
     audit_run,
 )
+from app.services.observability.context import AuditRecorder
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -66,7 +68,7 @@ def recorder(session_factory):
 
 
 def _settings(**overrides) -> Settings:
-    return Settings(_env_file=None, **overrides)
+    return isolated_settings(**overrides)
 
 
 def _guarded_result(
@@ -152,7 +154,8 @@ class StubGuardedService:
 def _runs(session_factory) -> list[AgentRun]:
     session = session_factory()
     try:
-        return session.query(AgentRun).order_by(AgentRun.created_at).all()
+        runs: list[AgentRun] = session.query(AgentRun).order_by(AgentRun.created_at).all()
+        return runs
     finally:
         session.close()
 
@@ -160,7 +163,8 @@ def _runs(session_factory) -> list[AgentRun]:
 def _tool_calls(session_factory) -> list[ToolCall]:
     session = session_factory()
     try:
-        return session.query(ToolCall).all()
+        calls: list[ToolCall] = session.query(ToolCall).all()
+        return calls
     finally:
         session.close()
 
@@ -185,7 +189,7 @@ class TestAgentRunLifecycle:
         assert run.status == "completed"
         assert run.started_at is not None
         assert run.finished_at is not None
-        assert run.latency_ms >= 0
+        assert run.latency_ms is not None and run.latency_ms >= 0
 
     def test_run_records_provider_and_synthesis_mode(self, session_factory, recorder):
         AuditedGuardedAnswerService(StubGuardedService(), recorder).answer("q")
@@ -364,7 +368,7 @@ class TestToolCallRecording:
         call = _tool_calls(session_factory)[0]
         assert call.started_at is not None
         assert call.completed_at is not None
-        assert call.latency_ms >= 0
+        assert call.latency_ms is not None and call.latency_ms >= 0
 
     def test_no_run_in_scope_records_nothing(self, session_factory, recorder):
         _registry().execute(
@@ -387,6 +391,7 @@ class TestToolCallRecording:
                 )
             )
         assert result.success is True
+        assert result.data is not None
         assert result.data["items"] == [{"a": 1}, {"b": 2}]
 
 
@@ -560,7 +565,7 @@ class TestAuditFailurePolicy:
             session_factory=session_factory,
             guarded_service=StubGuardedService(),
             settings=_settings(),
-            audit_recorder=BrokenRecorder(),
+            audit_recorder=cast("AuditRecorder", BrokenRecorder()),
         )
         conversation = service.start_conversation()
         result = service.answer(conversation.conversation_id, "Brake complaints?")
@@ -645,9 +650,10 @@ class TestAuditPrivacy:
 
     def test_error_codes_are_bounded_and_not_tracebacks(self, session_factory, recorder):
         context = recorder.start_run(surface="test")
+        assert context is not None
         recorder.fail_run(context.run_id, "x" * 500)
         run = _runs(session_factory)[0]
-        assert len(run.error_code) <= 64
+        assert run.error_code is not None and len(run.error_code) <= 64
 
 
 # =============================================================================

@@ -16,7 +16,7 @@ class HybridQueryRequest(BaseModel):
 
 
 @router.post("/query")
-def hybrid_query(data: HybridQueryRequest):
+def hybrid_query(data: HybridQueryRequest) -> dict:
     """
     Answer a hybrid SQL + graph question.
 

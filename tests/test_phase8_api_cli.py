@@ -11,6 +11,8 @@ import inspect
 import io
 import json
 import uuid
+from collections.abc import Callable
+from typing import cast
 
 import pytest
 from app.api.v1.endpoints import conversations as api_module
@@ -18,11 +20,12 @@ from app.api.v1.endpoints.conversations import (
     ConversationMessageRequest,
     get_conversation_service_dependency,
 )
-from app.core.config import Settings
+from app.core.config import isolated_settings
 from app.main import app
 from app.services.answer_synthesis.guarded_models import (
     CitationValidationResult,
     ConfidenceResult,
+    GuardedAnswerLike,
     GuardedAnswerResult,
     GuardedCitation,
     GuardedClaim,
@@ -40,8 +43,10 @@ from app.services.conversation.models import (
     ResolvedContext,
     TurnCitationProvenance,
 )
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from scripts import query_phase8_conversation as cli
+from sqlalchemy.orm import Session
 
 CONVERSATION_ID = "11111111-2222-3333-4444-555555555555"
 ABSTENTION_TEXT = (
@@ -402,7 +407,7 @@ class TestConversationApiErrors:
             raise RuntimeError("no database")
 
         monkeypatch.setattr(api_module, "get_conversation_service", boom)
-        with pytest.raises(Exception) as exc:
+        with pytest.raises(HTTPException) as exc:
             api_module.get_conversation_service_dependency()
         assert exc.value.status_code == 503
         assert "no database" not in json.dumps(exc.value.detail)
@@ -558,9 +563,9 @@ class TestConversationCli:
 class TestFactoryWiring:
     def test_factory_accepts_injected_dependencies(self):
         service = build_conversation_service(
-            Settings(_env_file=None),
-            session_factory=lambda: None,
-            guarded_service=object(),
+            isolated_settings(),
+            session_factory=cast("Callable[[], Session]", lambda: None),
+            guarded_service=cast("GuardedAnswerLike", object()),
         )
         assert service is not None
 

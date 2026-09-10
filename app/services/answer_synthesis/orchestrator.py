@@ -24,6 +24,7 @@ from typing import Any
 from app.services.answer_synthesis.models import (
     OrchestrationResult,
     OrchestrationTrace,
+    ProviderSynthesisRequest,
     ProviderSynthesisResult,
     ProviderToolCall,
     SynthesisConfig,
@@ -360,7 +361,7 @@ class SynthesisOrchestrator:
 
     def _synthesize_with_fallback(
         self,
-        request,
+        request: ProviderSynthesisRequest,
         trace: OrchestrationTrace,
     ) -> ProviderSynthesisResult:
         """Attempt synthesis with primary provider, fallback on failure."""

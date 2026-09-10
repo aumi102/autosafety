@@ -121,7 +121,9 @@ class TestRevisionChain:
         parsed = dict(_parse(p) for p in _revision_files())
         referenced = {down for down in parsed.values() if down is not None}
         head = next(rev for rev in parsed if rev not in referenced)
-        walked, cursor = [], head
+        walked: list[str] = []
+        # The base revision's down_revision is None; that is the loop's exit.
+        cursor: str | None = head
         while cursor is not None:
             assert cursor not in walked, "cycle detected in revision chain"
             walked.append(cursor)

@@ -7,7 +7,9 @@ Supports dependency injection for tests via constructor override.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import Any
 
 from neo4j import Driver, GraphDatabase
 
@@ -77,7 +79,7 @@ class Neo4jClient:
             self._driver = None
 
     @contextmanager
-    def session(self, **kwargs):
+    def session(self, **kwargs: Any) -> Iterator[Any]:
         """Context manager for a Neo4j session."""
         session = self.driver.session(**kwargs)
         try:

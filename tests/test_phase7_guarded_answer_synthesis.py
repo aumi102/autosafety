@@ -268,7 +268,8 @@ def test_vehicle_resolution_reuses_injected_session_factory():
         call_id="vehicle-test",
         arguments={"make": "Ford", "model": "F-150", "model_year": 2020},
     )
-    assert result.success and result.data["resolved"]
+    assert result.success
+    assert result.data is not None and result.data["resolved"]
     factory.assert_called_once_with()
     session.close.assert_called_once_with()
     assert "create_engine" not in inspect.getsource(build_vehicle_resolution_adapter)
