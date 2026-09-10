@@ -30,6 +30,8 @@ class SynthesisConfig:
     max_evidence_chars: int = 16000
     max_output_chars: int = 8000
     max_claims: int = 8
+    # Phase 12: whether a configured external provider may run a planning round.
+    model_planning_enabled: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -45,6 +47,7 @@ class SynthesisConfig:
             "max_evidence_chars": self.max_evidence_chars,
             "max_output_chars": self.max_output_chars,
             "max_claims": self.max_claims,
+            "model_planning_enabled": self.model_planning_enabled,
         }
 
 
@@ -161,6 +164,11 @@ class OrchestrationTrace:
     tool_calls_rejected: int = 0
     provider_attempts: int = 0
     fallback_used: bool = False
+    # Phase 12 planning counters. Counts and stable reason codes only -- never
+    # the planning prompt, the raw response, or any argument value.
+    planning_rounds: int = 0
+    planning_calls_proposed: int = 0
+    planning_rejections: list[str] = field(default_factory=list)
     timings: dict[str, float] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     # Each entry: {tool_name, arguments, executed, rejected_reason}
@@ -171,6 +179,9 @@ class OrchestrationTrace:
             "provider": self.provider,
             "model": self.model,
             "tool_rounds": self.tool_rounds,
+            "planning_rounds": self.planning_rounds,
+            "planning_calls_proposed": self.planning_calls_proposed,
+            "planning_rejections": list(self.planning_rejections),
             "tool_calls_requested": self.tool_calls_requested,
             "tool_calls_executed": self.tool_calls_executed,
             "tool_calls_rejected": self.tool_calls_rejected,

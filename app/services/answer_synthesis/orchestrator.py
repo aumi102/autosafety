@@ -45,6 +45,9 @@ from app.services.answer_synthesis.tools.registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
+# Bound on planning reason codes kept in one trace.
+MAX_TRACE_PLANNING_REJECTIONS = 40
+
 
 class SynthesisOrchestrator:
     """
@@ -160,11 +163,21 @@ class SynthesisOrchestrator:
 
             # Ask provider to plan tool calls
             trace.provider_attempts += 1
+            trace.planning_rounds += 1
             try:
                 requested_calls = self._primary.plan_tool_calls(prompt_req)
             except Exception as e:
-                logger.warning(f"plan_tool_calls failed: {e}")
+                # A planning failure is never fatal: mandatory GraphRAG evidence
+                # is already gathered, so synthesis proceeds without extra tools.
+                logger.warning(f"plan_tool_calls failed: {type(e).__name__}")
                 requested_calls = []
+                trace.planning_rejections.append("planning_exception")
+
+            trace.planning_calls_proposed += len(requested_calls)
+            # Bounded, non-identifying reason codes from the provider.
+            for code in getattr(self._primary, "last_planning_rejections", []) or []:
+                if len(trace.planning_rejections) < MAX_TRACE_PLANNING_REJECTIONS:
+                    trace.planning_rejections.append(str(code)[:64])
 
             # Validate and execute approved tool calls
             for call in requested_calls:
@@ -473,6 +486,7 @@ def build_config_from_settings(settings: Any) -> SynthesisConfig:
         max_evidence_items=settings.PHASE7_MAX_EVIDENCE_ITEMS,
         max_evidence_chars=settings.PHASE7_MAX_EVIDENCE_CHARS,
         max_output_chars=settings.PHASE7_MAX_OUTPUT_CHARS,
+        model_planning_enabled=settings.PHASE12_MODEL_PLANNING_ENABLED,
         max_claims=settings.PHASE7_MAX_CLAIMS,
     )
 
