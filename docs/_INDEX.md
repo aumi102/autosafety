@@ -36,4 +36,6 @@ Phase 11: type safety, CI, and      phase11_design.md,
           developer quality gates   phase11_ci_quality_report.md
 ```
 
+Before committing, run `python scripts/check.py` (or `make check`).
+
 Operators start at `phase10_operator_runbook.md`.
