@@ -50,6 +50,7 @@ GRAPH_TOOL = {
             ],
         },
         "vehicle_id": {"type": "string", "required": True, "max_length": 64},
+        "max_paths": {"type": "integer", "required": False},
     },
 }
 
@@ -431,7 +432,10 @@ class TestRejectedPlans:
         assert "forbidden_argument" in provider.last_planning_rejections
 
     def test_every_forbidden_marker_is_actually_enforced(self):
+        declared = {"operation", "vehicle_id", "max_paths", "make", "model"}
         for marker in PLANNING_FORBIDDEN_ARGUMENT_MARKERS:
+            if marker in declared:
+                continue
             calls = _run(
                 _provider(),
                 _request(),
@@ -479,6 +483,47 @@ class TestRejectedPlans:
             ),
         )
         assert calls == []
+
+    def test_a_schema_property_is_never_treated_as_forbidden(self):
+        """Regression: live acceptance rejected a valid plan over `max_paths`.
+
+        The forbidden markers are substrings, and `max_paths` contains "path".
+        A real model requested it, correctly, and the plan was thrown away. The
+        tool schema is the allowlist: a declared property is always permitted,
+        and only undeclared keys are matched against the markers.
+        """
+        provider = _provider()
+        calls = _run(
+            provider,
+            _request(),
+            _plan(
+                {
+                    "tool_name": "graph_evidence_tool",
+                    "operation": "recall_paths_by_vehicle",
+                    "arguments": {"vehicle_id": "v-1", "max_paths": 10},
+                },
+            ),
+        )
+        assert [c.tool_name for c in calls] == ["graph_evidence_tool"]
+        assert calls[0].arguments["max_paths"] == 10
+        assert "forbidden_argument" not in provider.last_planning_rejections
+
+    def test_an_undeclared_lookalike_key_is_still_rejected(self):
+        """`file_path` is not a schema property, so the marker still applies."""
+        provider = _provider()
+        calls = _run(
+            provider,
+            _request(),
+            _plan(
+                {
+                    "tool_name": "graph_evidence_tool",
+                    "operation": "recall_paths_by_vehicle",
+                    "arguments": {"vehicle_id": "v-1", "file_path": "/etc/passwd"},
+                },
+            ),
+        )
+        assert calls == []
+        assert "forbidden_argument" in provider.last_planning_rejections
 
     def test_a_bad_call_does_not_discard_a_good_one(self):
         calls = _run(

@@ -130,6 +130,15 @@ def _extract_planning_object(content: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _schema_properties(tool: dict[str, Any]) -> set[str]:
+    """Property names a tool's schema declares. These are always permitted."""
+    try:
+        schema = tool.get("input_schema") or {}
+        return {str(name) for name in schema}
+    except Exception:
+        return set()
+
+
 def _schema_operation_enum(tool: dict[str, Any]) -> list[str] | None:
     """Return the allowed `operation` values for a tool, or None if unconstrained.
 
@@ -878,7 +887,7 @@ class OpenAICompatibleProvider(SynthesisProvider):
                     self._reject("unknown_operation")
                     continue
 
-            cleaned = self._clean_planned_arguments(arguments)
+            cleaned = self._clean_planned_arguments(arguments, _schema_properties(tool))
             if cleaned is None:
                 continue
 
@@ -894,8 +903,20 @@ class OpenAICompatibleProvider(SynthesisProvider):
 
         return planned
 
-    def _clean_planned_arguments(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
-        """Drop forbidden keys and bound sizes, or reject the call entirely."""
+    def _clean_planned_arguments(
+        self,
+        arguments: dict[str, Any],
+        schema_properties: set[str],
+    ) -> dict[str, Any] | None:
+        """Drop forbidden keys and bound sizes, or reject the call entirely.
+
+        The tool schema is the allowlist. A key the schema declares is always
+        permitted -- `graph_evidence_tool.max_paths` is a legitimate property
+        that happens to contain the substring "path", and rejecting it would
+        block a valid plan. Only keys the schema does *not* declare are matched
+        against the forbidden markers, because those are the ones a model could
+        be using to smuggle something executable.
+        """
         if len(arguments) > MAX_PLANNING_ARGUMENTS:
             self._reject("invalid_arguments")
             return None
@@ -906,7 +927,9 @@ class OpenAICompatibleProvider(SynthesisProvider):
                 self._reject("invalid_arguments")
                 return None
             lowered = key.lower()
-            if any(marker in lowered for marker in PLANNING_FORBIDDEN_ARGUMENT_MARKERS):
+            if key not in schema_properties and any(
+                marker in lowered for marker in PLANNING_FORBIDDEN_ARGUMENT_MARKERS
+            ):
                 # A model asking for a `sql` or `cypher` argument is asking for
                 # something no tool accepts. Reject the whole call rather than
                 # executing a stripped-down remainder.
